@@ -38,7 +38,7 @@ optimizations and scaling on this basis (for scale >= 4).
 But not so sure that the optimizations are really important, most of ones are
 just avoid √ operations, but hypot is already really fast in Julia.
 """
-function original_get_biome(end_noise::EndNoise, x, z, scale::Val{4})
+function original_get_biome(end_noise::EndNoise, x, z, ::Scale{4})
     x >>= 2
     z >>= 2
 
@@ -181,14 +181,14 @@ end
 
 # equivalent to `biome_from_height_sample ∘ get_height_sample`
 function get_biome_unsafe(
-    elevation_getter::T, x, z, scale::Val{16}, range::Integer=12
+    elevation_getter::T, x, z, ::Scale{16}, range::Integer=12
 ) where {T<:Union{EndNoise,AbstractMatrix{UInt16}}}
     height_sample = get_height_sample(elevation_getter, x, z, 14_401, range)
     return biome_from_height_sample(height_sample)
 end
 
 function get_biome(
-    elevation_getter::T, x, z, scale::Val{16}, version::MCVersion, range::Integer=12
+    elevation_getter::T, x, z, ::Scale{16}, version::MCVersion, range::Integer=12
 ) where {T}
     if version <= MC_1_0
         throw(
@@ -200,7 +200,7 @@ function get_biome(
     version <= MC_1_8 && return the_end
     x^2 + z^2 <= 4096 && return the_end
     has_bug_mc_159283(version, x, z) && return small_end_islands
-    return get_biome_unsafe(elevation_getter, x, z, Val(16), range)
+    return get_biome_unsafe(elevation_getter, x, z, Scale(16), range)
 end
 
 # helper functions for scale 4 and 64.
@@ -214,11 +214,11 @@ for func_name in (:get_biome_unsafe, :get_biome),
             height_getter::T,
             x,
             z,
-            scale::Val{$S},
+            ::Scale{$S},
             version::MCVersion,
             range::Integer=$range,
         ) where {T}
-            return $func_name(height_getter, x >> $ω, z >> $ω, Val(16), version, range)
+            return $func_name(height_getter, x >> $ω, z >> $ω, Scale(16), version, range)
         end
     end
 end

@@ -69,7 +69,7 @@ function gen_biomes_unsafe! end
 #==========================================================================================#
 
 function get_biome(
-    nn::NetherNoise, x, z, y=0; scale::Val{S}=Val(1), version::MCVersion=MC_UNDEF
+    nn::NetherNoise, x, z, y=0, scale::Scale{S}=Scale(1), version::MCVersion=MC_UNDEF
 ) where {S}
     (version <= MC_1_15 && version != MC_UNDEF) && return nether_wastes
     S == 1 && return get_biome_unsafe(nn, x, z, y, scale)
@@ -83,12 +83,12 @@ end
 # and then take the biome with this new coordinates.
 # The source_x and source_z DEPENDS on x, z AND on y.
 # i.e., if y is modified, source_x and source_z could be modified too.
-function get_biome_unsafe(nn::NetherNoise{UInt64}, x, z, y, scale::Val{1})
+function get_biome_unsafe(nn::NetherNoise{UInt64}, x, z, y, scale::Scale{1})
     source_x, source_z, _ = voronoi_access_3d(nn.sha, x, z, y)
-    return get_biome_unsafe(nn, source_x, source_z, Val(4))
+    return get_biome_unsafe(nn, source_x, source_z, Scale(4))
 end
 
-function get_biome_unsafe(nn::NetherNoise, x, z, scale::Val{4})
+function get_biome_unsafe(nn::NetherNoise, x, z, scale::Scale{4})
     temperature = sample(nn.temperature, x, 0, z)
     humidity = sample(nn.humidity, x, 0, z)
     return find_closest_biomes(temperature, humidity)[1]
@@ -182,7 +182,7 @@ end
 
 # Assume out is filled with BIOME_NONE
 function gen_biomes_unsafe!(
-    nn::NetherNoise, map2D::MCMap{2}, scale::Val{S}, confidence=1
+    nn::NetherNoise, map2D::MCMap{2}, ::Scale{S}, confidence=1
 ) where {S}
     S <= 3 && throw(ArgumentError(lazy"Scale must be >= 4"))
     scale = S ÷ 4
@@ -211,7 +211,7 @@ function gen_biomes_unsafe!(
 end
 
 function gen_biomes_unsafe!(
-    nn::NetherNoise, map3d::MCMap{3}, scale::Val{S}, confidence=1
+    nn::NetherNoise, map3d::MCMap{3}, scale::Scale{S}, confidence=1
 ) where {S}
     # At scale != 1, the biome does not change with the y coordinate
     # So we simply take the first y coordinate and fill the other ones with the same biome
@@ -226,7 +226,7 @@ function gen_biomes_unsafe!(
 end
 
 function gen_biomes!(
-    nn::NetherNoise, mc_map::MCMap, scale::Val{S}, confidence=1, version::MCVersion=MC_UNDEF
+    nn::NetherNoise, mc_map::MCMap, scale::Scale{S}, confidence=1, version::MCVersion=MC_UNDEF
 ) where {S}
     fill!(mc_map, BIOME_NONE)
     _manage_less_1_15!(mc_map, version) && return nothing
@@ -243,7 +243,7 @@ end
 function gen_biomes_unsafe!(
     nn::NetherNoise{UInt64},
     map3D::MCMap{3},
-    ::Val{scale},
+    ::Scale{scale},
     confidence=1,
     version::MCVersion=MC_UNDEF,
 ) where {scale}
@@ -251,13 +251,13 @@ function gen_biomes_unsafe!(
     # If there is only one value, simple wrapper around get_biome_unsafe
     if length(map3D) == 1
         x, z, y = origin_coords(map3D)
-        map3D[1] = get_biome_unsafe(nn, x, z, y, Val(4))
+        map3D[1] = get_biome_unsafe(nn, x, z, y, Scale(4))
         return nothing
     end
 
     # The minimal map where we are sure we can find the source coordinates at scale 4
     biome_parents = get_voronoi_src_map2D(map3D)
-    gen_biomes!(nn, biome_parents, Val(4), confidence, version)
+    gen_biomes!(nn, biome_parents, Scale(4), confidence, version)
 
     # Generate the biomes at scale 4
     sha = nn.sha
@@ -272,18 +272,18 @@ function gen_biomes_unsafe!(
 end
 
 function gen_biomes!(
-    nn::NetherNoise, map3D::MCMap{3}, ::Val{1}, confidence=1, version::MCVersion=MC_UNDEF
+    nn::NetherNoise, map3D::MCMap{3}, ::Scale{1}, confidence=1, version::MCVersion=MC_UNDEF
 )
     _manage_less_1_15!(map3D, version) && return nothing
     # we do not need to fill with BIOME_NONE in this case
-    gen_biomes_unsafe!(nn, map3D, Val(1), confidence, version)
+    gen_biomes_unsafe!(nn, map3D, Scale(1), confidence, version)
     return nothing
 end
 
 function gen_biomes!(
     nn::NetherNoise{UInt64},
     map2D::MCMap{2},
-    ::Val{1},
+    ::Scale{1},
     confidence=1,
     version::MCVersion=MC_UNDEF,
 )

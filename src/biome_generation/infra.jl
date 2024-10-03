@@ -66,6 +66,21 @@ function similar_expand(
 end
 
 """
+    Scale{N}
+    Scale(N::Integer)
+
+The scale of a map. It represents the ratio between the size of the map an the real world.
+For example, a 1:4 scale map means that each block in the map represents a 4x4 area
+in the real world. So the coordinates (5, 5) are equal to the real world coordinates
+(20, 20).
+
+The supported values for N are usually 1, 4, 16, 64, 256. But it can vary from the function
+that uses it. Read the documentation of the function that uses it to know the supported values.
+"""
+struct Scale{N} end
+Scale(N::Integer) = Scale{N}()
+
+"""
     get_voronoi_src_cube(cube::Cube{1})
 
 Get the cube of the 1:1 scale that corresponds to the 1:4 scale cube.
