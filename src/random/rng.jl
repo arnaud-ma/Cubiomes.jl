@@ -348,7 +348,7 @@ end
 
 clamped_lerp(part, from, to) = lerp(clamp(part, 0, 1), from, to)
 
-mulinv(x, m) = error(lazy"Use `Base.invmod` instead.")
+mulinv(x, m) = throw(ErrorException(lazy"Use `Base.invmod` instead."))
 
 #=============================================================================#
 #                    SHA                                                      #
