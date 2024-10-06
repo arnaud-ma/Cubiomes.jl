@@ -1,7 +1,7 @@
 module Cubiomes
 
 export DIM_NETHER, DIM_END, DIM_OVERWORLD
-export Noise, MCMap, Scale, @scale_str, gen_biomes!, gen_biomes, get_biome
+export Noise, MCMap, Scale, @scale_str, @📏_str, gen_biomes!, gen_biomes, get_biome
 
 include("utils.jl")
 include("constants.jl")

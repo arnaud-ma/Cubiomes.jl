@@ -87,6 +87,7 @@ macro scale_str(str)
     end
     return Scale(parse(Int, x[2]))
 end
+const var"@📏_str" = var"@scale_str"
 
 """
     get_voronoi_src_cube(cube::Cube{1})
