@@ -90,7 +90,7 @@ function next🎲(rng::JavaRNG, ::Type{Int32}; start::Integer=0, stop::Integer):
     while true
         bits = next🎲(rng, 31)
         val = bits % stop
-        (bits - val + m >= 0) && break
+        (bits - val + m < 0) || break
     end
     return val
 end

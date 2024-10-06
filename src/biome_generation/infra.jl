@@ -80,6 +80,14 @@ that uses it. Read the documentation of the function that uses it to know the su
 struct Scale{N} end
 Scale(N::Integer) = Scale{N}()
 
+macro scale_str(str)
+    x = split(str, ':')
+    if length(x) != 2 || x[1] != "1"
+        throw(ArgumentError("Bad scale format."))
+    end
+    return Scale(parse(Int, x[2]))
+end
+
 """
     get_voronoi_src_cube(cube::Cube{1})
 
