@@ -17,7 +17,6 @@ any random numbers.
 """
 randjump🎲
 
-
 #=============================================================================#
 #                    Implementation of Java Random                            #
 #=============================================================================#
@@ -25,7 +24,7 @@ randjump🎲
 const MAGIC_JAVA_INT32 = 0x5DEECE66D
 const MAGIC_JAVA_ADDEND = 0xB
 
-_new_seed(seed) = (unsigned(seed) ⊻ MAGIC_JAVA_INT32) & ((1 << 48) - 1)
+_new_seed(seed::UInt64) = (seed ⊻ MAGIC_JAVA_INT32) & ((1 << 48) - 1)
 
 """
     JavaRNG(seed::Integer)
@@ -44,11 +43,11 @@ julia> next_int32_range!(rng, 10)
 mutable struct JavaRNG <: AbstractRNG_MC
     seed::UInt64
     # https://docs.oracle.com/javase/7/docs/api/java/util/Random.html#setSeed(long)
-    JavaRNG(seed) = new(_new_seed(seed))
+    JavaRNG(seed) = new(_new_seed(UInt64(seed)))
+    JavaRNG(seed::Int64) = JavaRNG(unsigned(seed))
     JavaRNG() = new(rand(UInt64))
 end
 
-# JavaRNG(seed::Unsigned)
 Base.copy(rng::JavaRNG) = JavaRNG(rng.seed)
 function Base.copy!(dst::JavaRNG, src::JavaRNG)
     dst.seed = src.seed
@@ -57,7 +56,7 @@ end
 Base.hash(a::JavaRNG, h::UInt) = hash(a.seed, h)
 
 function set_seed!(rng::JavaRNG, seed::Integer)
-    rng.seed = _new_seed(seed)
+    rng.seed = _new_seed(Int64(seed))
     return nothing
 end
 
@@ -73,29 +72,29 @@ end
 # Java's next method
 function next🎲(rng::JavaRNG, bits::Int32)::Int32
     rng.seed = (rng.seed * MAGIC_JAVA_INT32 + MAGIC_JAVA_ADDEND) & ((1 << 48) - 1)
-    result = reinterpret(Int64, rng.seed) >> (48 - bits)
-    return cast_convert(Int32, UInt32, result)
+    result = rng.seed >> (48 - bits)
+    return signed(UInt32(result))
 end
 next🎲(rng::JavaRNG, bits::Integer) = next🎲(rng, Int32(bits))
 
 # Java's nextInt method
 function next🎲(rng::JavaRNG, ::Type{Int32}; start::Integer=0, stop::Integer)::Int32
     iszero(start) || return next🎲(rng, Int32; stop=stop - start) + start
-    stop += 1 # to include n in the range (difference of perspective between Java and Julia)
-    m = stop - 1
+    stop::Int32 = stop + 1 # to include n in the range (difference of perspective between Java and Julia)
+    m = stop - one(Int32)
     if iszero(stop & m) # i.e., n is a power of 2
-        x::UInt64 = stop * reinterpret(UInt64, Int64(next🎲(rng, 31)))
-        return Int32(reinterpret(Int64, x) >> 31)
+        return (stop * Int64(next🎲(rng, 31))) >> 31
     end
 
     val = zero(Int32)
     while true
         bits = next🎲(rng, 31)
         val = bits % stop
-        bits - val + m < 0 || break
+        (bits - val + m >= 0) && break
     end
     return val
 end
+
 
 # Java's nextLong method
 next🎲(rng::JavaRNG, ::Type{Int64}) = (Int64(next🎲(rng, 32)) << 32) + next🎲(rng, 32)
@@ -108,7 +107,6 @@ function next🎲(rng::JavaRNG, ::Type{Float64})
     x += next🎲(rng, 27)
     return reinterpret(Int64, x) / reinterpret(Int64, one(UInt64) << 53)
 end
-
 
 function randjump🎲(rng::JavaRNG, ::Type{Int32}, n::Integer)
     # Initialize multiplier and addend for the transformation
@@ -245,7 +243,7 @@ function next🎲(rng::XoshiroMC, ::Type{Float32})
     return (next🎲(rng, UInt64) >> (64 - 24)) * 5.9604645e-8
 end
 
-function randjump🎲(rng::XoshiroMC, ::T, n::I) where {T, I<:Integer}
+function randjump🎲(rng::XoshiroMC, ::T, n::I) where {T,I<:Integer}
     i = one(I)
     while i < n
         next🎲(rng, T)
