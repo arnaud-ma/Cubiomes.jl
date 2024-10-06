@@ -21,8 +21,8 @@ randjump🎲
 #                    Implementation of Java Random                            #
 #=============================================================================#
 
-const MAGIC_JAVA_INT32 = 0x5DEECE66D
-const MAGIC_JAVA_ADDEND = 0xB
+const MAGIC_JAVA_INT32::UInt64 = 0x5DEECE66D
+const MAGIC_JAVA_ADDEND::UInt64 = 0xB
 
 _new_seed(seed::UInt64) = (seed ⊻ MAGIC_JAVA_INT32) & ((1 << 48) - 1)
 
@@ -43,9 +43,8 @@ julia> next_int32_range!(rng, 10)
 mutable struct JavaRNG <: AbstractRNG_MC
     seed::UInt64
     # https://docs.oracle.com/javase/7/docs/api/java/util/Random.html#setSeed(long)
-    JavaRNG(seed) = new(_new_seed(UInt64(seed)))
-    JavaRNG(seed::Int64) = JavaRNG(unsigned(seed))
-    JavaRNG() = new(rand(UInt64))
+    JavaRNG(seed) = new(_new_seed(UInt64(unsigned(seed))))
+    JavaRNG(seed::UInt64) = new(seed)
 end
 
 Base.copy(rng::JavaRNG) = JavaRNG(rng.seed)
@@ -54,19 +53,11 @@ function Base.copy!(dst::JavaRNG, src::JavaRNG)
     return dst
 end
 Base.hash(a::JavaRNG, h::UInt) = hash(a.seed, h)
+Base.:(==)(a::JavaRNG, b::JavaRNG) = a.seed == b.seed
 
 function set_seed!(rng::JavaRNG, seed::Integer)
     rng.seed = _new_seed(Int64(seed))
     return nothing
-end
-
-"""
-    cast_convert(CAST, CONV, x)
-
-Equivalent to `reinterpret(CAST, CONV(x))`.
-"""
-function cast_convert(::Type{CAST}, ::Type{CONV}, x) where {CAST,CONV}
-    return reinterpret(CAST, CONV(x))
 end
 
 # Java's next method
@@ -95,11 +86,10 @@ function next🎲(rng::JavaRNG, ::Type{Int32}; start::Integer=0, stop::Integer):
     return val
 end
 
-
 # Java's nextLong method
 next🎲(rng::JavaRNG, ::Type{Int64}) = (Int64(next🎲(rng, 32)) << 32) + next🎲(rng, 32)
 # Java's nextFloat method
-next🎲(rng::JavaRNG, ::Type{Float32}) = next🎲(rng, 24) / (one(Float32) << 24)
+next🎲(rng::JavaRNG, ::Type{Float32}) = next🎲(rng, 24) / Float32(1 << 24)
 # Java's nextDouble method
 function next🎲(rng::JavaRNG, ::Type{Float64})
     x = reinterpret(UInt64, Int64(next🎲(rng, 26)))
@@ -112,18 +102,13 @@ function randjump🎲(rng::JavaRNG, ::Type{Int32}, n::Integer)
     # Initialize multiplier and addend for the transformation
     multiplier = one(UInt64)
     addend = zero(UInt64)
-
-    # Constants for the Java RNG algorithm
-    initial_multiplier = UInt64(MAGIC_JAVA_INT32)
-    initial_addend = UInt64(MAGIC_JAVA_ADDEND)
-
-    # Copy the step count to a local variable
-    steps_remaining = n
+    initial_multiplier = MAGIC_JAVA_INT32
+    initial_addend = MAGIC_JAVA_ADDEND
 
     # Loop to apply the transformation `n` times
-    while !iszero(steps_remaining)
+    while !iszero(n)
         # If the least significant bit of steps_remaining is 1, update multiplier and addend
-        if Bool(steps_remaining & 1)
+        if Bool(n & 1)
             multiplier *= initial_multiplier
             addend = muladd(initial_multiplier, addend, initial_addend)
         end
@@ -133,7 +118,7 @@ function randjump🎲(rng::JavaRNG, ::Type{Int32}, n::Integer)
         initial_multiplier *= initial_multiplier
 
         # Right shift steps_remaining by 1 to process the next bit
-        steps_remaining >>= 1
+        n >>= 1
     end
 
     # Update the RNG seed with the computed multiplier and addend

@@ -129,11 +129,10 @@ function get_voronoi_src_map2D(mc_map::MCMap)::MCMap{2}
     return MCMap(x:(x + sx - 1), z:(z + sz - 1))
 end
 
-function get_voronoi_cell(sha::UInt64, x, z, y)::Tuple{Int32,Int32,Int32}
+function get_voronoi_cell(
+    sha::UInt64, x::UInt64, z::UInt64, y::UInt64
+)::Tuple{Int32,Int32,Int32}
     s = sha
-    x = cast_convert(UInt64, Int64, x)
-    y = cast_convert(UInt64, Int64, y)
-    z = cast_convert(UInt64, Int64, z)
 
     s = mc_step_seed(s, x)
     s = mc_step_seed(s, y)
@@ -150,6 +149,10 @@ function get_voronoi_cell(sha::UInt64, x, z, y)::Tuple{Int32,Int32,Int32}
     new_z = (((s >> 24) & 1023) - 512) * 36
 
     return signed(new_x), signed(new_z), signed(new_y)
+end
+
+function get_voronoi_cell(sha::UInt64, x::Int64, z::Int64, y::Int64)
+    get_voronoi_cell(sha, unsigned(x), unsigned(z), unsigned(y))
 end
 
 # TODO: change this following docstring
