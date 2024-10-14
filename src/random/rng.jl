@@ -27,49 +27,49 @@ const MAGIC_JAVA_ADDEND::UInt64 = 0xB
 _new_seed(seed::UInt64) = (seed ⊻ MAGIC_JAVA_INT32) & ((1 << 48) - 1)
 
 """
-    JavaRNG(seed::Integer)
+    JavaRandom(seed::Integer)
 
 A pseudorandom number generator that mimics the behavior of Java's
 [`java.util.Random`](https://docs.oracle.com/javase/7/docs/api/java/util/Random.html) class.
 
 # Examples
 ```jldoctest
-julia> rng = JavaRNG(1234);
-JavaRNG(0x00000005deece2bf)
+julia> rng = JavaRandom(1234);
+JavaRandom(0x00000005deece2bf)
 julia> next_int32_range!(rng, 10)
 3
 ```
 """
-mutable struct JavaRNG <: AbstractRNG_MC
+mutable struct JavaRandom <: AbstractRNG_MC
     seed::UInt64
     # https://docs.oracle.com/javase/7/docs/api/java/util/Random.html#setSeed(long)
-    JavaRNG(seed) = new(_new_seed(UInt64(unsigned(seed))))
-    JavaRNG(seed::UInt64) = new(seed)
+    JavaRandom(seed) = new(_new_seed(UInt64(unsigned(seed))))
+    JavaRandom(seed::UInt64) = new(seed)
 end
 
-Base.copy(rng::JavaRNG) = JavaRNG(rng.seed)
-function Base.copy!(dst::JavaRNG, src::JavaRNG)
+Base.copy(rng::JavaRandom) = JavaRandom(rng.seed)
+function Base.copy!(dst::JavaRandom, src::JavaRandom)
     dst.seed = src.seed
     return dst
 end
-Base.hash(a::JavaRNG, h::UInt) = hash(a.seed, h)
-Base.:(==)(a::JavaRNG, b::JavaRNG) = a.seed == b.seed
+Base.hash(a::JavaRandom, h::UInt) = hash(a.seed, h)
+Base.:(==)(a::JavaRandom, b::JavaRandom) = a.seed == b.seed
 
-function set_seed!(rng::JavaRNG, seed::Integer)
+function set_seed!(rng::JavaRandom, seed::Integer)
     rng.seed = _new_seed(Int64(seed))
     return nothing
 end
 
 # Java's next method
-function next🎲(rng::JavaRNG, bits::Int32)::Int32
+function next🎲(rng::JavaRandom, bits::Int32)::Int32
     rng.seed = (rng.seed * MAGIC_JAVA_INT32 + MAGIC_JAVA_ADDEND) & ((1 << 48) - 1)
     result = rng.seed >> (48 - bits)
     return signed(UInt32(result))
 end
-next🎲(rng::JavaRNG, bits::Integer) = next🎲(rng, Int32(bits))
+next🎲(rng::JavaRandom, bits::Integer) = next🎲(rng, Int32(bits))
 
 # Java's nextInt method
-function next🎲(rng::JavaRNG, ::Type{Int32}; start::Integer=0, stop::Integer)::Int32
+function next🎲(rng::JavaRandom, ::Type{Int32}; start::Integer=0, stop::Integer)::Int32
     iszero(start) || return next🎲(rng, Int32; stop=stop - start) + start
     stop::Int32 = stop + 1 # to include n in the range (difference of perspective between Java and Julia)
     m = stop - one(Int32)
@@ -87,18 +87,18 @@ function next🎲(rng::JavaRNG, ::Type{Int32}; start::Integer=0, stop::Integer):
 end
 
 # Java's nextLong method
-next🎲(rng::JavaRNG, ::Type{Int64}) = (Int64(next🎲(rng, 32)) << 32) + next🎲(rng, 32)
+next🎲(rng::JavaRandom, ::Type{Int64}) = (Int64(next🎲(rng, 32)) << 32) + next🎲(rng, 32)
 # Java's nextFloat method
-next🎲(rng::JavaRNG, ::Type{Float32}) = next🎲(rng, 24) / Float32(1 << 24)
+next🎲(rng::JavaRandom, ::Type{Float32}) = next🎲(rng, 24) / Float32(1 << 24)
 # Java's nextDouble method
-function next🎲(rng::JavaRNG, ::Type{Float64})
+function next🎲(rng::JavaRandom, ::Type{Float64})
     x = reinterpret(UInt64, Int64(next🎲(rng, 26)))
     x <<= 27
     x += next🎲(rng, 27)
     return reinterpret(Int64, x) / reinterpret(Int64, one(UInt64) << 53)
 end
 
-function randjump🎲(rng::JavaRNG, ::Type{Int32}, n::Integer)
+function randjump🎲(rng::JavaRandom, ::Type{Int32}, n::Integer)
     # Initialize multiplier and addend for the transformation
     multiplier = one(UInt64)
     addend = zero(UInt64)

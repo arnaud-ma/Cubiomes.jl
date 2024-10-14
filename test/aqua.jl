@@ -1,7 +1,6 @@
-using Cubiomes
 using Test
 using Aqua
-
+using Cubiomes
 @testset "Aqua.jl" begin
     # Test ambiguities separately without Base and Core
     # Ref: https://github.com/JuliaTesting/Aqua.jl/issues/77

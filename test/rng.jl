@@ -4,17 +4,29 @@ using Test
 using JavaCall
 JavaCall.init()
 
-const java_random = @jimport "java.util.Random"
+const java_random_factory = @jimport "java.util.random.RandomGeneratorFactory"
+const java_rng = @jimport "java.util.random.RandomGenerator"
 
-const seed_gen = Data.Integers{Int64}()
-const rng_gen = @composed function rng_gen_(seed=Data.Integers{Int64}())
-    rng_java = java_random((jlong,), seed)
-    rng_jl = Cubiomes.JavaRNG(seed)
-    return (java=rng_java, jl=rng_jl)
+# need to use a macro instead of a higher-order function
+# because Supposition want the generator not to be nested
+macro rng_gen(algorithm::String, rng_jl_type, seed_gen)
+    quote
+        @composed function rng_gen(seed=$seed_gen)
+            rng_factory = jcall(
+                java_random_factory, "of", java_random_factory, (JString,), $algorithm
+            )
+            rng = jcall(rng_factory, "create", java_rng, (jlong,), seed)
+            rng_jl = $rng_jl_type(seed)
+            return (java=rng, jl=rng_jl)
+        end
+    end
 end
 
-@testset "JavaRNG" begin
+@testset "JavaRandom" begin
+    seed_gen = Data.Integers{Int64}()
+    rng_gen = @rng_gen("Random", Cubiomes.JavaRandom, Data.Integers{Int64}())
     stop_gen = filter(>=(0), Data.Integers{Int32}())
+
     @check function next_Int_stop(rng=rng_gen, stop=stop_gen)
         jcall(rng.java, "nextInt", jint, (jint,), stop + 1) ==
         Cubiomes.next🎲(rng.jl, Int32; stop=stop)
@@ -32,9 +44,8 @@ end
         jcall(rng.java, "nextLong", jlong, ()) == Cubiomes.next🎲(rng.jl, Int64)
     end
 
-    nb_jump_gen = Data.Integers(0, 1000)
-    @check function randjump_int(seed=seed_gen, nb=nb_jump_gen)
-        rng = Cubiomes.JavaRNG(seed)
+    @check function randjump_int(seed=seed_gen, nb=Data.Integers(0, 1000))
+        rng = Cubiomes.JavaRandom(seed)
         rng2 = copy(rng)
         Cubiomes.randjump🎲(rng2, Int32, nb)
         for _ in 1:nb
@@ -42,4 +53,7 @@ end
         end
         rng == rng2
     end
+end
+
+@testset "JavaXoshiro" begin
 end

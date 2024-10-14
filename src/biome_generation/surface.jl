@@ -18,7 +18,7 @@
 #     # octaves::Vector{PerlinNoise}
 # end
 
-# function _init_octaves_surface_noise(rng::JavaRNG)
+# function _init_octaves_surface_noise(rng::JavaRandom)
 #     return (
 #         OctaveNoise🎲(rng, Val(16), -15), # octave_min
 #         OctaveNoise🎲(rng, Val(16), -15), # octave_max
@@ -26,7 +26,7 @@
 #     )
 # end
 
-# _init_octaves_surface_noise(seed::Integer) = _init_octaves_surface_noise(JavaRNG(seed))
+# _init_octaves_surface_noise(seed::Integer) = _init_octaves_surface_noise(JavaRandom(seed))
 
 # function SurfaceNoise(seed::Integer, dim::Val{DIM_END})
 #     omin, omax, om = _init_octaves_surface_noise(seed)

@@ -19,7 +19,7 @@ Noise(seed, ::Val{DIM_END}) = EndNoise(seed)
 Noise(seed, sha, ::Val{DIM_END}) = EndNoise(seed, sha)
 
 function _get_perlin_end(seed)
-    rng = JavaRNG(seed)
+    rng = JavaRandom(seed)
     randjump🎲(rng, Int32, 17_292)
     return PerlinNoise🎲(rng)
 end
@@ -211,12 +211,7 @@ for func_name in (:get_biome_unsafe, :get_biome),
 
     @eval begin
         function $func_name(
-            height_getter::T,
-            x,
-            z,
-            ::Scale{$S},
-            version::MCVersion,
-            range::Integer=$range,
+            height_getter::T, x, z, ::Scale{$S}, version::MCVersion, range::Integer=$range
         ) where {T}
             return $func_name(height_getter, x >> $ω, z >> $ω, Scale(16), version, range)
         end

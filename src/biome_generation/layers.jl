@@ -94,7 +94,7 @@ function set_seed!(layer::Layer, world_seed::UInt64)
     isnothing(layer.parent1) || set_seed!(layer.parent1, world_seed)
     isnothing(layer.parent2) || set_seed!(layer.parent2, world_seed)
     if !isnothing(layer.noise)
-        layer.noise = PerlinNoise🎲(JavaRNG(world_seed))
+        layer.noise = PerlinNoise🎲(JavaRandom(world_seed))
     end
     ls = layer.salt
     # TODO: maybe dispatch instead of if-else

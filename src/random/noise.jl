@@ -14,7 +14,7 @@ See also: [`sample_simplex`](@ref), [`PerlinNoise`](@ref), [`OctaveNoise`](@ref)
 
 # Examples
 ```julia-repl
-julia> rng = JavaRNG(1);
+julia> rng = JavaRandom(1);
 julia> noise = PerlinNoise🎲(rng);
 julia> sample(noise, 0, 0, 0)
 0.10709059654197663
@@ -315,7 +315,7 @@ See also: [`sample`], [`PerlinNoise`](@ref), [`DoublePerlinNoise`](@ref)
 OctaveNoise{N} = SizedVector{N,PerlinNoise}
 
 """
-    OctaveNoise!🎲(rng::JavaRNG, octaves::OctaveNoise{N}, octave_min) -> Nothing where {N}
+    OctaveNoise!🎲(rng::JavaRandom, octaves::OctaveNoise{N}, octave_min) -> Nothing where {N}
     OctaveNoise!🎲(rng::XoshiroMC, octaves::OctaveNoise{N}, amplitudes::NTuple{N,Float64}, octave_min::Int) -> Nothing where {N}
 
 Initialize the octaves using the `rng` generator. The condition `octave_min <= 1 - N`
@@ -332,7 +332,7 @@ See also: [`PerlinNoise`](@ref), [`OctaveNoise`](@ref), [`sample`](@ref)
 function OctaveNoise!🎲 end
 
 """
-    OctaveNoise🎲(rng::JavaRNG, nb::Val{N}, octave_min) where {N}
+    OctaveNoise🎲(rng::JavaRandom, nb::Val{N}, octave_min) where {N}
     OctaveNoise🎲(rng::XoshiroMC, amplitudes::NTuple{N,Float64}, octave_min) where {N}
 
 Same as [`OctaveNoise!🎲`](@ref) but generate the octaves at the same time instead of modify
@@ -342,7 +342,7 @@ See also: [`OctaveNoise!🎲`](@ref)
 """
 function OctaveNoise🎲 end
 
-function OctaveNoise!🎲(rng::JavaRNG, octaves::OctaveNoise{N}, octave_min) where {N}
+function OctaveNoise!🎲(rng::JavaRandom, octaves::OctaveNoise{N}, octave_min) where {N}
     end_ = octave_min + N - 1
     if N < 1 || end_ > 0
         throw(
@@ -416,7 +416,7 @@ function OctaveNoise!🎲(
     return nothing
 end
 
-function OctaveNoise🎲(rng::JavaRNG, nb::Val{N}, octave_min) where {N}
+function OctaveNoise🎲(rng::JavaRandom, nb::Val{N}, octave_min) where {N}
     octaves = OctaveNoise{N}(undef)
     OctaveNoise!🎲(rng, octaves, octave_min)
     return octaves
@@ -430,7 +430,7 @@ end
 
 # TODO: doc of OctaveNoise_beta
 function OctaveNoise_beta!🎲(
-    rng::JavaRNG,
+    rng::JavaRandom,
     octaves::OctaveNoise{N},
     lacunarity,
     lacunarity_multiplier,
@@ -449,7 +449,7 @@ function OctaveNoise_beta!🎲(
 end
 
 function OctaveNoiseBeta🎲(
-    rng::JavaRNG,
+    rng::JavaRandom,
     nb::Val{N},
     lacunarity,
     lacunarity_multiplier,
@@ -538,7 +538,7 @@ mutable struct DoublePerlinNoise{N}
 end
 
 """
-    DoublePerlinNoise!🎲(rng::JavaRNG, octavesA::OctaveNoise{N}, octavesB::OctaveNoise{N}, octave_min)::DoublePerlinNoise{N} where {N}
+    DoublePerlinNoise!🎲(rng::JavaRandom, octavesA::OctaveNoise{N}, octavesB::OctaveNoise{N}, octave_min)::DoublePerlinNoise{N} where {N}
     DoublePerlinNoise!🎲(rng::XoshiroMC, octavesA::OctaveNoise{N}, octavesB::OctaveNoise{N}, amplitudes::NTuple{N}, octave_min)::DoublePerlinNoise{N} where {N}
 
 Construct a DoublePerlinNoise object using a random generator. See the documentation
@@ -550,7 +550,7 @@ See also: [`DoublePerlinNoise🎲`](@ref)
 function DoublePerlinNoise!🎲 end
 
 function DoublePerlinNoise!🎲(
-    rng::JavaRNG, octavesA::OctaveNoise{N}, octavesB::OctaveNoise{N}, octave_min
+    rng::JavaRandom, octavesA::OctaveNoise{N}, octavesB::OctaveNoise{N}, octave_min
 )::DoublePerlinNoise{N} where {N}
     amplitude = (10 / 6) * N / (N + 1)
     OctaveNoise!🎲(rng, octavesA, octave_min)
@@ -559,7 +559,7 @@ function DoublePerlinNoise!🎲(
 end
 
 """
-    DoublePerlinNoise🎲(rng::JavaRNG, nb::Val{N}, octave_min) where {N}
+    DoublePerlinNoise🎲(rng::JavaRandom, nb::Val{N}, octave_min) where {N}
     DoublePerlinNoise🎲(rng::XoshiroMC, amplitudes::NTuple{N,Float64}, octave_min) where {N}
 
 Same as [`DoublePerlinNoise!🎲`](@ref) but generate the octaves at the same time instead of modify
@@ -581,7 +581,7 @@ function DoublePerlinNoise!🎲(
     return DoublePerlinNoise{N}(AMPLITUDE_INI[N + 1], octavesA, octavesB)
 end
 
-function DoublePerlinNoise🎲(rng::JavaRNG, nb::Val{N}, octave_min) where {N}
+function DoublePerlinNoise🎲(rng::JavaRandom, nb::Val{N}, octave_min) where {N}
     return DoublePerlinNoise!🎲(
         rng, OctaveNoise{N}(undef), OctaveNoise{N}(undef), octave_min
     )

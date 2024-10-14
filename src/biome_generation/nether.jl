@@ -45,9 +45,9 @@ function NetherNoise(seed::Integer; with_sha::Bool=true)
 end
 
 function _get_temp_humid(seed)
-    rng_temp = JavaRNG(seed)
+    rng_temp = JavaRandom(seed)
     temperature = DoublePerlinNoise🎲(rng_temp, Val(2), -7)
-    rng_humidity = JavaRNG(seed + 1)
+    rng_humidity = JavaRandom(seed + 1)
     humidity = DoublePerlinNoise🎲(rng_humidity, Val(2), -7)
     return temperature, humidity
 end
@@ -226,7 +226,11 @@ function gen_biomes_unsafe!(
 end
 
 function gen_biomes!(
-    nn::NetherNoise, mc_map::MCMap, scale::Scale{S}, confidence=1, version::MCVersion=MC_UNDEF
+    nn::NetherNoise,
+    mc_map::MCMap,
+    scale::Scale{S},
+    confidence=1,
+    version::MCVersion=MC_UNDEF,
 ) where {S}
     fill!(mc_map, BIOME_NONE)
     _manage_less_1_15!(mc_map, version) && return nothing
