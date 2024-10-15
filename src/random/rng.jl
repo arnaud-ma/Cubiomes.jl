@@ -1,6 +1,6 @@
 using StaticArrays: SizedVector
 
-abstract type AbstractRNG_MC end
+abstract type AbstractJavaRNG end
 
 """
     next🎲(rng::AbstractRNG_MC, ::Type{T}) where T
@@ -40,7 +40,7 @@ julia> next_int32_range!(rng, 10)
 3
 ```
 """
-mutable struct JavaRandom <: AbstractRNG_MC
+mutable struct JavaRandom <: AbstractJavaRNG
     seed::UInt64
     # https://docs.oracle.com/javase/7/docs/api/java/util/Random.html#setSeed(long)
     JavaRandom(seed) = new(_new_seed(UInt64(unsigned(seed))))
@@ -69,8 +69,7 @@ end
 next🎲(rng::JavaRandom, bits::Integer) = next🎲(rng, Int32(bits))
 
 # Java's nextInt method
-function next🎲(rng::JavaRandom, ::Type{Int32}; start::Integer=0, stop::Integer)::Int32
-    iszero(start) || return next🎲(rng, Int32; stop=stop - start) + start
+function next🎲(rng::JavaRandom, ::Type{Int32}, stop)::Int32
     stop::Int32 = stop + 1 # to include n in the range (difference of perspective between Java and Julia)
     m = stop - one(Int32)
     if iszero(stop & m) # i.e., n is a power of 2
@@ -86,16 +85,19 @@ function next🎲(rng::JavaRandom, ::Type{Int32}; start::Integer=0, stop::Intege
     return val
 end
 
+function next🎲(rng::JavaRandom, ::Type{Int32}, start, stop)
+    return next🎲(rng, Int32; stop=stop - start) + start
+end
+
 # Java's nextLong method
 next🎲(rng::JavaRandom, ::Type{Int64}) = (Int64(next🎲(rng, 32)) << 32) + next🎲(rng, 32)
 # Java's nextFloat method
 next🎲(rng::JavaRandom, ::Type{Float32}) = next🎲(rng, 24) / Float32(1 << 24)
 # Java's nextDouble method
 function next🎲(rng::JavaRandom, ::Type{Float64})
-    x = reinterpret(UInt64, Int64(next🎲(rng, 26)))
-    x <<= 27
-    x += next🎲(rng, 27)
-    return reinterpret(Int64, x) / reinterpret(Int64, one(UInt64) << 53)
+    x = Int64(next🎲(rng, 26))
+    x = (x << 27) + next🎲(rng, 27)
+    return x / (1 << 53)
 end
 
 function randjump🎲(rng::JavaRandom, ::Type{Int32}, n::Integer)
@@ -131,19 +133,19 @@ end
 #                    Implementation of Xoshiro 128 MC                         #
 #=============================================================================#
 
-abstract type XoshiroMC <: AbstractRNG_MC end
+"""
+    JavaXoroshiro128PlusPlus(lo::UInt64, hi::UInt64)
+    JavaXoroshiro128PlusPlus(seed::Integer)
 
-mutable struct XoshiroMCOld <: XoshiroMC
+A pseudo-random number generator that mimics the behavior of Java's implementation of
+[`Xoroshiro128PlusPlus`](http://prng.di.unimi.it/xoshiro128plusplus.c) PRNG.
+"""
+mutable struct JavaXoroshiro128PlusPlus <: AbstractJavaRNG
     lo::UInt64
     hi::UInt64
 end
 
-mutable struct XoshiroMCNew <: XoshiroMC
-    lo::UInt64
-    hi::UInt64
-end
-
-function XoshiroMC(::Type{T}, seed::UInt64) where {T<:XoshiroMC}
+function JavaXoroshiro128PlusPlus(seed::UInt64)
     XL::UInt64 = 0x9e3779b97f4a7c15
     XH::UInt64 = 0x6a09e667f3bcc909
     A::UInt64 = 0xbf58476d1ce4e5b9
@@ -156,21 +158,22 @@ function XoshiroMC(::Type{T}, seed::UInt64) where {T<:XoshiroMC}
     h = (h ⊻ (h >> 27)) * B
     l = l ⊻ (l >> 31)
     h = h ⊻ (h >> 31)
-    return T(l, h)
+    return JavaXoroshiro128PlusPlus(l, h)
 end
-XoshiroMC(x::Type{T}, seed::Integer) where {T<:XoshiroMC} = XoshiroMC(x, UInt64(seed))
-XoshiroMCNew(seed::Integer) = XoshiroMC(XoshiroMCNew, seed)
-XoshiroMCOld(seed::Integer) = XoshiroMC(XoshiroMCOld, seed)
+function JavaXoroshiro128PlusPlus(seed::Integer)
+    return JavaXoroshiro128PlusPlus(UInt64(unsigned(seed)))
+end
 
-Base.copy(rng::T) where {T<:XoshiroMC} = T(rng.lo, rng.hi)
-function Base.copy!(dst::XoshiroMC, src::XoshiroMC)
+Base.copy(rng::JavaXoroshiro128PlusPlus) = JavaXoroshiro128PlusPlus(rng.lo, rng.hi)
+function Base.copy!(dst::JavaXoroshiro128PlusPlus, src::JavaXoroshiro128PlusPlus)
     dst.lo = src.lo
     dst.hi = src.hi
     return dst
 end
-Base.hash(a::XoshiroMC, h::UInt) = hash((a.lo, a.hi), h)
+Base.hash(a::JavaXoroshiro128PlusPlus, h::UInt) = hash((a.lo, a.hi), h)
 
-function _old_next_int64🎲(rng::XoshiroMC)
+# nextLong method
+function next🎲(rng::JavaXoroshiro128PlusPlus, ::Type{UInt64})
     l, h = rng.lo, rng.hi
     n = bitrotate(l + h, 17) + l
     h ⊻= l
@@ -178,57 +181,40 @@ function _old_next_int64🎲(rng::XoshiroMC)
     rng.hi = bitrotate(h, 28)
     return n
 end
-next🎲(rng::XoshiroMCOld, ::Type{UInt64}) = _old_next_int64🎲(rng)
+next🎲(rng::JavaXoroshiro128PlusPlus, ::Type{Int64}) = signed(next🎲(rng, UInt64))
 
-function next🎲(rng::XoshiroMCNew, ::Type{UInt64})::UInt64
-    a = UInt32(_old_next_int64🎲(rng) >> 32)
-    b = reinterpret(Int32, UInt32(_old_next_int64🎲(rng) >> 32))
-    return (UInt64(a) << 32) + b
+# nextDouble method
+function next🎲(rng::JavaXoroshiro128PlusPlus, ::Type{Float64})
+    return (next🎲(rng, UInt64) >> (64 - 53)) * 1.1102230246251565e-16
 end
 
-function _next🎲(rng::XoshiroMCOld, ::Type{Int32}; stop::Integer)::Int32
-    stop += 1
-    mask = typemax(UInt32)
-    r = (next🎲(rng, UInt64) & mask) * stop
-    if (r & mask) < stop
-        while (r & mask) < ((~stop + 1) % stop)
-            r = (next🎲(rng, UInt64) & mask) * stop
-        end
-    end
-    return r >> 32
+# nextFloat method
+function next🎲(rng::JavaXoroshiro128PlusPlus, ::Type{Float32})
+    return Float32(next🎲(rng, UInt64) >> (64 - 24)) * 5.9604645f-8
 end
 
-function _next🎲(rng::XoshiroMCNew, ::Type{Int32}; stop::Integer)::Int32
-    stop += 1
-    m = stop - 1
-    if iszero(m & stop)
-        x::UInt64 = stop * (_old_next_int64🎲(rng) >> 33)
-        return Int64(x) >> 31
-    end
+# nextInt method
+next🎲(rng::JavaXoroshiro128PlusPlus, ::Type{Int32})::Int32 = next🎲(rng, Int64) >> 32
+
+function next🎲(rng::JavaXoroshiro128PlusPlus, ::Type{Int32}, stop)::Int32
+    stop = Int32(stop) + one(Int32)
+    m = stop - one(Int32)
+    iszero(m & stop) && return next🎲(rng, Int32) & m
 
     val = zero(Int32)
     while true
-        bits::Int32 = _old_next_int64🎲(rng) >> 33
+        bits::Int32 = next🎲(rng, UInt64) >> 33
         val = bits % stop
-        (bits - val + m) < 0 || break
+        (bits + m - val) < 0 || break
     end
     return val
 end
 
-function next🎲(
-    rng::T, ::Type{Int32}; start::Integer=0, stop::Integer
-)::Int32 where {T<:XoshiroMC}
-    return _next🎲(rng, Int32; stop=stop - start) + start
+function next🎲(rng::JavaXoroshiro128PlusPlus, ::Type{Int32}, start, stop)::Int32
+    return next🎲(rng, Int32, stop - start) + start
 end
 
-function next🎲(rng::XoshiroMC, ::Type{Float64})
-    return (next🎲(rng, UInt64) >> (64 - 53)) * 1.1102230246251565e-16
-end
-function next🎲(rng::XoshiroMC, ::Type{Float32})
-    return (next🎲(rng, UInt64) >> (64 - 24)) * 5.9604645e-8
-end
-
-function randjump🎲(rng::XoshiroMC, ::T, n::I) where {T,I<:Integer}
+function randjump🎲(rng::JavaXoroshiro128PlusPlus, ::T, n::I) where {T,I<:Integer}
     i = one(I)
     while i < n
         next🎲(rng, T)
@@ -237,9 +223,7 @@ function randjump🎲(rng::XoshiroMC, ::T, n::I) where {T,I<:Integer}
     return nothing
 end
 
-function next🎲(
-    rng::AbstractRNG_MC, ::Type{Float64}; start::Real=zero(Float64), stop::Real
-)::Float64
+function next🎲(rng::AbstractJavaRNG, ::Type{Float64}; start=zero(Float64), stop)::Float64
     return muladd(stop - start, next🎲(rng, Float64), start)
 end
 
@@ -254,16 +238,14 @@ end
 mc_step_seed(seed::UInt64, salt::Integer) = mc_step_seed(seed, unsigned(Int64(salt)))
 
 function mc_first_int(seed::UInt64, mod::Integer)
-    ret::Int32 = reinterpret(Int64, seed) % mod
+    ret = signed(seed) % mod
     if ret < 0
         ret += mod
     end
     return ret
 end
 
-function mc_first_is_zero(seed::UInt64, mod::Integer)
-    return ((reinterpret(Int64, seed) >> 24) % mod) == 0
-end
+mc_first_is_zero(seed::UInt64, mod::Integer) = iszero((signed(seed) >> 24) % mod)
 
 function get_chunk_seed(seed::UInt64, x::UInt64, z::UInt64)::UInt64
     chunk_seed = seed + x

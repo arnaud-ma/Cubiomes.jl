@@ -187,7 +187,7 @@ function init_climate_seed!(
     xlo ⊻= magic_xlo(noise_param; large=large)
     xhi ⊻= magic_xhi(noise_param; large=large)
     return DoublePerlinNoise!🎲(
-        XoshiroMCOld(xlo, xhi),
+        JavaXoroshiro128PlusPlus(xlo, xhi),
         octaves[1],
         octaves[2],
         amplitudes(noise_param),
@@ -215,7 +215,7 @@ end
     ]
 
     return quote
-        rng = XoshiroMCOld(seed)
+        rng = JavaXoroshiro128PlusPlus(seed)
         xlo = next🎲(rng, UInt64)
         xhi = next🎲(rng, UInt64)
 

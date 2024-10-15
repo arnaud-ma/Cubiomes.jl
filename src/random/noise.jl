@@ -57,7 +57,7 @@ end
 Crate a PerlinNoise type, given a random generator `rng`. It takes
 random values from the rng so it modify its state.
 """
-function PerlinNoise🎲(rng::AbstractRNG_MC)::PerlinNoise
+function PerlinNoise🎲(rng::AbstractJavaRNG)::PerlinNoise
     x = next🎲(rng, Float64; stop=256)
     y = next🎲(rng, Float64; stop=256)
     z = next🎲(rng, Float64; stop=256)
@@ -74,18 +74,48 @@ function PerlinNoise🎲(rng::AbstractRNG_MC)::PerlinNoise
 end
 
 """
+    next_perlin🎲(rng::JavaRandom, ::Type{Int32}; start=0, stop) -> Int32
+    next_perlin🎲(rng::JavaXoroshiro128PlusPlus, ::Type{Int32}; start=0, stop) -> Int3
+
+Same as [`next🎲`](@ref) but with a different implementation specific for the perlin noise.
+Don't ask why this is different, it's just how Minecraft does it.
+
+See also: [`next🎲`](@ref)
+"""
+function next_perlin🎲 end
+
+function next_perlin🎲(rng::JavaRandom, ::Type{Int32}; start=0, stop)
+    next🎲(rng, Int32; start=start, stop=stop)
+end
+
+function next_perlin🎲(
+    rng::JavaXoroshiro128PlusPlus, ::Type{Int32}; start=0, stop::Integer
+)::Int32
+    iszero(start) || return next_perlin🎲(rng, Int32; stop=stop - start) + start
+    stop += 1
+    mask = typemax(UInt32)
+    r = (next🎲(rng, UInt64) & mask) * stop
+    if (r & mask) < stop
+        while (r & mask) < ((~stop + 1) % stop)
+            r = (next🎲(rng, UInt64) & mask) * stop
+        end
+    end
+    return r >> 32
+end
+
+"""
     fill_permutations!🎲(rng::AbstractRNG_MC, perms::PermsType)
 
 Fill the permutations vector with the values [|0, 255|] in a random order.
 """
-function fill_permutations!🎲(rng::AbstractRNG_MC, perms::PermsType)
+function fill_permutations!🎲(rng::AbstractJavaRNG, perms::PermsType)
     @inbounds for i in 0:255
         perms[i] = i
     end
     # shuffle the values
     @inbounds for i in 0:255
         # j is random integer between i and 255
-        j = next🎲(rng, Int32; start=i, stop=255)
+        j = next_perlin🎲(rng, Int32; start=i, stop=255)
         perms[i], perms[j] = perms[j], perms[i]
     end
     perms[256] = perms[0]
@@ -316,7 +346,7 @@ OctaveNoise{N} = SizedVector{N,PerlinNoise}
 
 """
     OctaveNoise!🎲(rng::JavaRandom, octaves::OctaveNoise{N}, octave_min) -> Nothing where {N}
-    OctaveNoise!🎲(rng::XoshiroMC, octaves::OctaveNoise{N}, amplitudes::NTuple{N,Float64}, octave_min::Int) -> Nothing where {N}
+    OctaveNoise!🎲(rng::JavaXoroshiro128PlusPlus, octaves::OctaveNoise{N}, amplitudes::NTuple{N,Float64}, octave_min::Int) -> Nothing where {N}
 
 Initialize the octaves using the `rng` generator. The condition `octave_min <= 1 - N`
 **must** be respected.
@@ -324,7 +354,7 @@ Initialize the octaves using the `rng` generator. The condition `octave_min <= 1
 # Parameters:
 - `rng`: the random number generator to use.
 - `octaves`: the N octaves to initialize
-- `amplitudes`: for a `XoshiroMC` generator, amplitudes values must also be specified.
+- `amplitudes`: for a `JavaXoroshiro128PlusPlus` generator, amplitudes values must also be specified.
 - `octave_min`: the number of the first octave to generate. Must be <= 1 - N (so negative).
 
 See also: [`PerlinNoise`](@ref), [`OctaveNoise`](@ref), [`sample`](@ref)
@@ -333,7 +363,7 @@ function OctaveNoise!🎲 end
 
 """
     OctaveNoise🎲(rng::JavaRandom, nb::Val{N}, octave_min) where {N}
-    OctaveNoise🎲(rng::XoshiroMC, amplitudes::NTuple{N,Float64}, octave_min) where {N}
+    OctaveNoise🎲(rng::JavaXoroshiro128PlusPlus, amplitudes::NTuple{N,Float64}, octave_min) where {N}
 
 Same as [`OctaveNoise!🎲`](@ref) but generate the octaves at the same time instead of modify
 uninitialized ones inplace.
@@ -383,7 +413,7 @@ const LACUNARITY_INI = Tuple(@. 1 / 2^(0:12)) # -omin = 3:12
 const PERSISTENCE_INI = (0, [2^n / (2^(n + 1) - 1) for n in 0:8]...) # len = 4:9
 
 function OctaveNoise!🎲(
-    rng::XoshiroMC,
+    rng::JavaXoroshiro128PlusPlus,
     octaves::OctaveNoise{N},
     amplitudes::NTuple{N},
     octave_min,
@@ -405,7 +435,7 @@ function OctaveNoise!🎲(
         iszero(amplitudes[i]) && continue
         lo = xlo ⊻ MD5_OCTAVE_NOISE[12 + octave_min + i][1]
         hi = xhi ⊻ MD5_OCTAVE_NOISE[12 + octave_min + i][2]
-        xoshiro = XoshiroMCOld(lo, hi)
+        xoshiro = JavaXoroshiro128PlusPlus(lo, hi)
         perlin = PerlinNoise🎲(xoshiro)
         perlin.amplitude = amplitudes[i] * persistence
         perlin.lacunarity = lacunarity
@@ -422,7 +452,9 @@ function OctaveNoise🎲(rng::JavaRandom, nb::Val{N}, octave_min) where {N}
     return octaves
 end
 
-function OctaveNoise🎲(rng::XoshiroMC, amplitudes::NTuple{N,Float64}, octave_min) where {N}
+function OctaveNoise🎲(
+    rng::JavaXoroshiro128PlusPlus, amplitudes::NTuple{N,Float64}, octave_min
+) where {N}
     octaves = OctaveNoise{N}(undef)
     OctaveNoise!🎲(rng, octaves, amplitudes, octave_min)
     return octaves
@@ -539,7 +571,7 @@ end
 
 """
     DoublePerlinNoise!🎲(rng::JavaRandom, octavesA::OctaveNoise{N}, octavesB::OctaveNoise{N}, octave_min)::DoublePerlinNoise{N} where {N}
-    DoublePerlinNoise!🎲(rng::XoshiroMC, octavesA::OctaveNoise{N}, octavesB::OctaveNoise{N}, amplitudes::NTuple{N}, octave_min)::DoublePerlinNoise{N} where {N}
+    DoublePerlinNoise!🎲(rng::JavaXoroshiro128PlusPlus, octavesA::OctaveNoise{N}, octavesB::OctaveNoise{N}, amplitudes::NTuple{N}, octave_min)::DoublePerlinNoise{N} where {N}
 
 Construct a DoublePerlinNoise object using a random generator. See the documentation
 for [`OctaveNoise!🎲`] since the argument are the same, except that a DoublePerlinNoise contains
@@ -560,7 +592,7 @@ end
 
 """
     DoublePerlinNoise🎲(rng::JavaRandom, nb::Val{N}, octave_min) where {N}
-    DoublePerlinNoise🎲(rng::XoshiroMC, amplitudes::NTuple{N,Float64}, octave_min) where {N}
+    DoublePerlinNoise🎲(rng::JavaXoroshiro128PlusPlus, amplitudes::NTuple{N,Float64}, octave_min) where {N}
 
 Same as [`DoublePerlinNoise!🎲`](@ref) but generate the octaves at the same time instead of modify
 uninitialized ones inplace.
@@ -570,7 +602,7 @@ See also: [`DoublePerlinNoise!🎲`](@ref)
 function DoublePerlinNoise🎲 end
 
 function DoublePerlinNoise!🎲(
-    rng::XoshiroMC,
+    rng::JavaXoroshiro128PlusPlus,
     octavesA::OctaveNoise{N},
     octavesB::OctaveNoise{N},
     amplitudes::NTuple{N},
@@ -587,7 +619,9 @@ function DoublePerlinNoise🎲(rng::JavaRandom, nb::Val{N}, octave_min) where {N
     )
 end
 
-function DoublePerlinNoise🎲(rng::XoshiroMC, amplitudes::NTuple{N}, octave_min) where {N}
+function DoublePerlinNoise🎲(
+    rng::JavaXoroshiro128PlusPlus, amplitudes::NTuple{N}, octave_min
+) where {N}
     return DoublePerlinNoise!🎲(
         rng, OctaveNoise{N}(undef), OctaveNoise{N}(undef), amplitudes, octave_min
     )

@@ -121,7 +121,7 @@ end
 
 set_seed!(layer::Layer, world_seed::Integer) = set_seed!(layer, UInt64(world_seed))
 function set_seed!(layer::Layer, world_seed::Int64)
-    return set_seed!(layer, reinterpret(UInt64, world_seed))
+    return set_seed!(layer, unsigned(world_seed))
 end
 
 """

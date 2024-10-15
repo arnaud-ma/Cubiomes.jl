@@ -17,7 +17,7 @@ macro rng_gen(algorithm::String, rng_jl_type, seed_gen)
             )
             rng = jcall(rng_factory, "create", java_rng, (jlong,), seed)
             rng_jl = $rng_jl_type(seed)
-            return (java=rng, jl=rng_jl)
+            return (java=rng, jl=rng_jl, seed=seed)
         end
     end
 end
@@ -27,7 +27,7 @@ end
     rng_gen = @rng_gen("Random", Cubiomes.JavaRandom, Data.Integers{Int64}())
     stop_gen = filter(>=(0), Data.Integers{Int32}())
 
-    @check function next_Int_stop(rng=rng_gen, stop=stop_gen)
+    @check function next_int_stop(rng=rng_gen, stop=stop_gen)
         jcall(rng.java, "nextInt", jint, (jint,), stop + 1) ==
         Cubiomes.next🎲(rng.jl, Int32; stop=stop)
     end
@@ -55,5 +55,28 @@ end
     end
 end
 
-@testset "JavaXoshiro" begin
+@testset "JavaXoroshiro" begin
+    rng_gen = @rng_gen(
+        "Xoroshiro128PlusPlus", Cubiomes.JavaXoroshiro128PlusPlus, Data.Integers{Int64}()
+    )
+    stop_gen = filter(>=(0), Data.Integers{Int32}())
+
+    @check function next_int_stop(rng=rng_gen, stop=stop_gen)
+        jcall(rng.java, "nextInt", jint, (jint,), stop + 1) ==
+        Cubiomes.next🎲(rng.jl, Int32, stop)
+    end
+
+    @check function next_float(rng=rng_gen)
+        jcall(rng.java, "nextFloat", jfloat, ()) == Cubiomes.next🎲(rng.jl, Float32)
+    end
+
+    @check function next_double(rng=rng_gen)
+        jcall(rng.java, "nextDouble", jdouble, ()) == Cubiomes.next🎲(rng.jl, Float64)
+    end
+
+    @check function next_long(rng=rng_gen)
+        jcall(rng.java, "nextLong", jlong, ()) == Cubiomes.next🎲(rng.jl, Int64)
+    end
+
+    # TODO: randjump
 end
