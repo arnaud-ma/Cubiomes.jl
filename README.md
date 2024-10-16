@@ -46,3 +46,32 @@ Let's explain step by step:
 3. We create a `MCMap` object, that will store the biomes. It can be 2D or 3D (depending if the y coordinate is provided or not). Biomes are stored as enum values. You can access to it with the exact same coordinates as in Minecraft (e.g. `mc_map[0, 0, 0]` will give you the biome at the origin of the world). At the moment of the code, the map is full of `BIOME_NONE` values because we did not generate the biomes yet.
 4. We generate the biomes with the `gen_biomes!` function. It will fill the `MCMap` with the biomes. The last argument is the scale of the biomes, i.e. how many blocks in the world correspond to one biome value in the map. For example, with a scale of 1, one biome value in the map corresponds to one block in the world. The only supported values for `scale` are 1, 5, 16, 64. Note the use of `Val(1)` instead of `1` that is mandatory so that Julia knows what algorithm to use for this specific scale of 1.
 5. We can visualize a 2D slice of the map with `plot`. The colors are the same as in Minecraft, so you can easily recognize the biomes.
+
+## Contributing
+
+### Conventions
+
+- The code should be formatted with the [BlueStyle](https://github.com/JuliaDiff/BlueStyle) code style.
+- For random generator, each function that modifies the state inplace should be prefixed with a `🎲`.
+- For array manipulation, each function that modifies the array inplace should be prefixed with a `!`.
+- Each new feature should be tested with unit tests (with the `Test` module) and if possible with property-based tests (with [Suppositions.jl](https://github.com/Seelengrab/Supposition.jl))
+
+### Testing
+
+Java >= 17 is required to run the tests.
+You can run the tests with:
+```julia
+julia> ] test Cubiomes
+```
+
+To not include [Aqua.jl](https://github.com/JuliaTesting/Aqua.jl) tests:
+```julia
+julia> using Pkg; Pkg.test("Cubiomes"; test_args=["not_aqua"])
+```
+
+To run the tests with the coverage:
+```julia
+julia> using Cubiomes, LocalCoverage
+
+julia> LocalCoverage.generate_coverage("Cubiomes")
+```
