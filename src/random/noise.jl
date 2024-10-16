@@ -1,5 +1,5 @@
 using OffsetArrays: OffsetVector
-using StaticArrays: MVector
+using StaticArrays: MVector, SizedVector
 
 """
     sample(noise::PerlinNoise, x, y, z, yamp=0, ymin=0) -> Float64
@@ -23,7 +23,45 @@ julia> sample(noise, 0, 0, 0)
 function sample end
 
 #==========================================================================================#
-#                               Perlin Noise                                               #
+# Specific rng for Perlin                                                                  #
+#==========================================================================================#
+
+"""
+    next_perlin🎲(rng::JavaRandom, ::Type{Int32}; start=0, stop) -> Int32
+    next_perlin🎲(rng::JavaXoroshiro128PlusPlus, ::Type{Int32}; start=0, stop) -> Int3
+
+Same as [`next🎲`](@ref) but with a different implementation specific for the perlin noise.
+Don't ask why this is different, it's just how Minecraft does it.
+
+See also: [`next🎲`](@ref)
+"""
+function next_perlin🎲 end
+
+next_perlin🎲(rng::JavaRandom, ::Type{Int32}, stop::Real) = next🎲(rng, Int32, stop)
+
+function next_perlin🎲(rng::JavaXoroshiro128PlusPlus, ::Type{Int32}, stop::Real)::Int32
+    stop += 1
+    mask = typemax(UInt32)
+    r = (next🎲(rng, UInt64) & mask) * stop
+    if (r & mask) < stop
+        while (r & mask) < ((~stop + 1) % stop)
+            r = (next🎲(rng, UInt64) & mask) * stop
+        end
+    end
+    return r >> 32
+end
+
+function next_perlin🎲(rng::AbstractJavaRNG, ::Type{T}, start::Real, stop::Real) where {T}
+    return next_perlin🎲(rng, Int32, stop - start) + start
+end
+
+function next_perlin🎲(rng::AbstractJavaRNG, ::Type{T}, range::AbstractRange) where {T}
+    return next_perlin🎲(rng, T, first(range), last(range))
+end
+
+
+#==========================================================================================#
+#  Perlin Noise                                                                            #
 #==========================================================================================#
 
 # TODO: reduce garbage collection
@@ -58,9 +96,9 @@ Crate a PerlinNoise type, given a random generator `rng`. It takes
 random values from the rng so it modify its state.
 """
 function PerlinNoise🎲(rng::AbstractJavaRNG)::PerlinNoise
-    x = next🎲(rng, Float64; stop=256)
-    y = next🎲(rng, Float64; stop=256)
-    z = next🎲(rng, Float64; stop=256)
+    x = next🎲(rng, Float64, 0:256)
+    y = next🎲(rng, Float64, 0:256)
+    z = next🎲(rng, Float64, 0:256)
 
     perms = create_perlin_noise_perm()
     fill_permutations!🎲(rng, perms)
@@ -73,35 +111,6 @@ function PerlinNoise🎲(rng::AbstractJavaRNG)::PerlinNoise
     )
 end
 
-"""
-    next_perlin🎲(rng::JavaRandom, ::Type{Int32}; start=0, stop) -> Int32
-    next_perlin🎲(rng::JavaXoroshiro128PlusPlus, ::Type{Int32}; start=0, stop) -> Int3
-
-Same as [`next🎲`](@ref) but with a different implementation specific for the perlin noise.
-Don't ask why this is different, it's just how Minecraft does it.
-
-See also: [`next🎲`](@ref)
-"""
-function next_perlin🎲 end
-
-function next_perlin🎲(rng::JavaRandom, ::Type{Int32}; start=0, stop)
-    next🎲(rng, Int32; start=start, stop=stop)
-end
-
-function next_perlin🎲(
-    rng::JavaXoroshiro128PlusPlus, ::Type{Int32}; start=0, stop::Integer
-)::Int32
-    iszero(start) || return next_perlin🎲(rng, Int32; stop=stop - start) + start
-    stop += 1
-    mask = typemax(UInt32)
-    r = (next🎲(rng, UInt64) & mask) * stop
-    if (r & mask) < stop
-        while (r & mask) < ((~stop + 1) % stop)
-            r = (next🎲(rng, UInt64) & mask) * stop
-        end
-    end
-    return r >> 32
-end
 
 """
     fill_permutations!🎲(rng::AbstractRNG_MC, perms::PermsType)
@@ -114,8 +123,7 @@ function fill_permutations!🎲(rng::AbstractJavaRNG, perms::PermsType)
     end
     # shuffle the values
     @inbounds for i in 0:255
-        # j is random integer between i and 255
-        j = next_perlin🎲(rng, Int32; start=i, stop=255)
+        j = next_perlin🎲(rng, Int32, i:255)
         perms[i], perms[j] = perms[j], perms[i]
     end
     perms[256] = perms[0]
