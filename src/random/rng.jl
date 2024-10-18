@@ -143,8 +143,6 @@ function randjump🎲(rng::JavaRandom, ::Type{Int32}, n::Integer)
     return nothing
 end
 
-rng = JavaRandom(1)
-next🎲(rng, Int32, 1:56)
 #=============================================================================#
 #  Implementation of Xoshiro 128 MC                                           #
 #=============================================================================#
