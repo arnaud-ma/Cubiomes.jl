@@ -5,6 +5,9 @@
 [![Build Status](https://github.com/arnaud-ma/cubiomes.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/arnaud-ma/cubiomes.jl/actions/workflows/CI.yml?query=branch%3Amain)
 [![Code Style: Blue](https://img.shields.io/badge/code%20style-blue-4495d1.svg)](https://github.com/invenia/BlueStyle)
 
+## ⚠️⚠️⚠️ WARNING ⚠️⚠️⚠️
+The code is still in early development, and everything can change at any time. This repo should be seen as a proof of concept and nothing else.
+
 The faster and easy-to-use Minecraft biome finder, written in ~~rust~~ Julia, the best ~~llvm wrapper~~ programming language for this specific task!
 
 It is in fact a complete rewrite of the original [Cubiomes](https://github.com/Cubitect/cubiomes) C library, line by line, while using every advantage of the Julia language.
