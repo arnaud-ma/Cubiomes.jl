@@ -15,8 +15,8 @@ function EndNoise(seed::Integer; with_sha::Bool=true)
     return EndNoise{nothing}(perlin, nothing)
 end
 
-Noise(seed, ::Val{DIM_END}) = EndNoise(seed)
-Noise(seed, sha, ::Val{DIM_END}) = EndNoise(seed, sha)
+Noise(seed, ::Type{DIM_END}) = EndNoise(seed)
+Noise(seed, sha, ::Type{DIM_END}) = EndNoise(seed, sha)
 
 function _get_perlin_end(seed)
     rng = JavaRandom(seed)

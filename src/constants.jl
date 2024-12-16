@@ -1,6 +1,11 @@
 using CEnum
 
-@cenum(Dimension::Int16, DIM_NETHER = -1, DIM_OVERWORLD = 0, DIM_END = 1, DIM_UNDEF = 1000)
+abstract type Dimension end
+
+struct DIM_OVERWORLD <: Dimension end
+struct DIM_NETHER <: Dimension end
+struct DIM_END <: Dimension end
+struct DIM_UNDEF <: Dimension end
 
 #==========================================================================================#
 #                                   MCVersions                                             #

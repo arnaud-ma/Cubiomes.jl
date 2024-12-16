@@ -52,11 +52,11 @@ function _get_temp_humid(seed)
     return temperature, humidity
 end
 
-Noise(seed, ::Val{DIM_NETHER}) = NetherNoise(seed)
-Noise(seed, sha, ::Val{DIM_NETHER}) = NetherNoise(seed, sha)
+Noise(seed, ::Type{DIM_NETHER}) = NetherNoise(seed)
+Noise(seed, sha, ::Type{DIM_NETHER}) = NetherNoise(seed, sha)
 
-Noise(seed::String, ::Val{DIM_NETHER}) = NetherNoise(java_hashcode(seed))
-Noise(seed::String, sha::UInt64, ::Val{DIM_NETHER}) = NetherNoise(java_hashcode(seed), sha)
+Noise(seed::String, ::Type{DIM_NETHER}) = NetherNoise(java_hashcode(seed))
+Noise(seed::String, sha::UInt64, ::Type{DIM_NETHER}) = NetherNoise(java_hashcode(seed), sha)
 
 # TODO: Add detailed docstrings for these functions
 
