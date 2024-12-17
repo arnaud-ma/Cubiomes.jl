@@ -2,11 +2,8 @@ using OffsetArrays: OffsetArray, Origin, OffsetMatrix
 
 abstract type Noise end
 
-function Noise(seed, dim::Dimension)
-    @warn ("Consider using `Noise($seed, Val($dim))` instead of `Noise($seed, $dim)`
-            for performance reasons.")
-    return Noise(seed, Val(dim))
-end
+Noise(seed::String, ::Type{D}) where D<:Dimension  = Noise(java_hashcode(seed), D)
+
 
 MCMap{N} = OffsetArray{BiomeID,N,Array{BiomeID,N}}
 MCMap(A::AbstractArray, args...) = OffsetArray(A, args...)
@@ -17,13 +14,15 @@ end
 
 function MCMap{2}(array::MCMap{3})
     size_x, size_z, size_y = size(array)
+    if size_y != 1
+        throw(
+            ArgumentError(
+                "Cannot view a 3D cube as a 2D square if the y size is greater than 1"
+            ),
+        )
+    end
     ax = axes(array)
-    size_y == 1 && return MCMap(reshape(array, size_x, size_z), ax[1], ax[2])
-    throw(
-        ArgumentError(
-            "Cannot view a 3D cube as a 2D square if the y size is greater than 1"
-        ),
-    )
+    return MCMap(reshape(array, size_x, size_z), ax[1], ax[2])
 end
 function MCMap{3}(array::MCMap{2}, y_index=1)
     return MCMap(reshape(array, size(array)..., 1), axes(array)..., y_index:y_index)
@@ -90,9 +89,9 @@ end
 const var"@📏_str" = var"@scale_str"
 
 """
-    get_voronoi_src_cube(cube::Cube{1})
+    get_voronoi_src_map3D(map3D::MCMap{3})::MCMap{3}
 
-Get the cube of the 1:1 scale that corresponds to the 1:4 scale cube.
+Get the 3D map of the 1:1 scale that corresponds to the 1:4 scale map.
 """
 function get_voronoi_src_map3D(map3D::MCMap{3})::MCMap{3}
     cx, cy, cz = origin_coords(map3D)

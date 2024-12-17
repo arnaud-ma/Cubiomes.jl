@@ -1,66 +1,68 @@
-using MD5: md5
-
 #==========================================================================================#
 # Noise Parameters
 #==========================================================================================#
 # ? Types instead of enums?
-# abstract type NoiseParameter end
+abstract type NoiseParameter end
 
-@enum NoiseParameter begin
-    NP_SHIFT
-    NP_TEMPERATURE
-    NP_HUMIDITY
-    NP_CONTINENTALNESS
-    NP_EROSION
-    NP_WEIRDNESS
-end
+struct NP_SHIFT <: NoiseParameter end
+struct NP_TEMPERATURE <: NoiseParameter end
+struct NP_HUMIDITY <: NoiseParameter end
+struct NP_CONTINENTALNESS <: NoiseParameter end
+struct NP_EROSION <: NoiseParameter end
+struct NP_WEIRDNESS <: NoiseParameter end
 
-const NB_NOISE_PARAMETERS = length(instances(NoiseParameter))
+const NB_NOISE_PARAMETERS = length(subtypes(NoiseParameter))
 
-amplitudes(noise_param::Val{NP_SHIFT}) = (1, 1, 1, 0)
-octave_min(noise_param::Val{NP_SHIFT}; large::Bool) = -3
-id(noise_param::Val{NP_SHIFT}; large::Bool) = "minecraft:offset"
+amplitudes(noise_param::Type{NP_SHIFT}) = (1, 1, 1, 0)
+octave_min(noise_param::Type{NP_SHIFT}; large::Bool) = -3
+id(noise_param::Type{NP_SHIFT}; large::Bool) = "minecraft:offset"
 
-amplitudes(noise_param::Val{NP_TEMPERATURE}) = (1.5, 0.0, 1.0, 0.0, 0.0, 0.0)
-octave_min(noise_param::Val{NP_TEMPERATURE}; large::Bool) = large ? -12 : -10
-function id(noise_param::Val{NP_TEMPERATURE}; large::Bool)
+amplitudes(noise_param::Type{NP_TEMPERATURE}) = (1.5, 0.0, 1.0, 0.0, 0.0, 0.0)
+octave_min(noise_param::Type{NP_TEMPERATURE}; large::Bool) = large ? -12 : -10
+function id(noise_param::Type{NP_TEMPERATURE}; large::Bool)
     return large ? "minecraft:temperature_large" : "minecraft:temperature"
 end
 
-amplitudes(noise_param::Val{NP_HUMIDITY}) = (1, 1, 0, 0, 0, 0)
-octave_min(noise_param::Val{NP_HUMIDITY}; large::Bool) = large ? -10 : -8
-function id(noise_param::Val{NP_HUMIDITY}; large::Bool)
+amplitudes(noise_param::Type{NP_HUMIDITY}) = (1, 1, 0, 0, 0, 0)
+octave_min(noise_param::Type{NP_HUMIDITY}; large::Bool) = large ? -10 : -8
+function id(noise_param::Type{NP_HUMIDITY}; large::Bool)
     return large ? "minecraft:vegetation_large" : "minecraft:vegetation"
 end
 
-amplitudes(noise_param::Val{NP_CONTINENTALNESS}) = (1, 1, 2, 2, 2, 1, 1, 1, 1)
-octave_min(noise_param::Val{NP_CONTINENTALNESS}; large::Bool) = large ? -11 : -9
-function id(noise_param::Val{NP_CONTINENTALNESS}; large::Bool)
+amplitudes(noise_param::Type{NP_CONTINENTALNESS}) = (1, 1, 2, 2, 2, 1, 1, 1, 1)
+octave_min(noise_param::Type{NP_CONTINENTALNESS}; large::Bool) = large ? -11 : -9
+function id(noise_param::Type{NP_CONTINENTALNESS}; large::Bool)
     return large ? "minecraft:continentalness_large" : "minecraft:continentalness"
 end
 
-amplitudes(noise_param::Val{NP_EROSION}) = (1, 1, 0, 1, 1)
-octave_min(noise_param::Val{NP_EROSION}; large::Bool) = large ? -11 : -9
-function id(noise_param::Val{NP_EROSION}; large::Bool)
+amplitudes(noise_param::Type{NP_EROSION}) = (1, 1, 0, 1, 1)
+octave_min(noise_param::Type{NP_EROSION}; large::Bool) = large ? -11 : -9
+function id(noise_param::Type{NP_EROSION}; large::Bool)
     return large ? "minecraft:erosion_large" : "minecraft:erosion"
 end
 
-amplitudes(noise_param::Val{NP_WEIRDNESS}) = (1, 2, 1, 0, 0, 0)
-octave_min(noise_param::Val{NP_WEIRDNESS}; large::Bool) = -7
-id(noise_param::Val{NP_WEIRDNESS}; large::Bool) = "minecraft:ridge"
+amplitudes(noise_param::Type{NP_WEIRDNESS}) = (1, 2, 1, 0, 0, 0)
+octave_min(noise_param::Type{NP_WEIRDNESS}; large::Bool) = -7
+id(noise_param::Type{NP_WEIRDNESS}; large::Bool) = "minecraft:ridge"
 
-for noise_param in instances(NoiseParameter)
-    xlo, xhi = md5_to_uint64(id(Val(noise_param); large=false))
-    xlo_large, xh_large = md5_to_uint64(id(Val(noise_param); large=true))
+for noise_param in subtypes(NoiseParameter)
+    xlo, xhi = md5_to_uint64(id(noise_param; large=false))
+    xlo_large, xh_large = md5_to_uint64(id(noise_param; large=true))
 
-    @eval magic_xlo(noise_param::Val{$noise_param}; large::Bool) = large ? $xlo_large : $xlo
-    @eval magic_xhi(noise_param::Val{$noise_param}; large::Bool) = large ? $xh_large : $xhi
+    @eval begin
+        magic_xlo(noise_param::Type{$noise_param}; large::Bool) = large ? $xlo_large : $xlo
+        magic_xhi(noise_param::Type{$noise_param}; large::Bool) = large ? $xh_large : $xhi
+    end
 end
 
 #==========================================================================================#
 # Splines
 #==========================================================================================#
 
+#! We do not use abstract type SplineType instead of enums
+# because we store different types of splines in the same array (Spline.val)
+# and storing different types in the same array abuses the type system
+# and makes it harder for the compiler to optimize the code.
 @enum SplineType begin
     SP_CONTINENTALNESS
     SP_EROSION
@@ -68,26 +70,37 @@ end
     SP_WEIRDNESS
 end
 
-mutable struct Spline
+abstract type AbstractSpline end
+
+mutable struct Spline <: AbstractSpline
     len::Int
-    typ::SplineType
-    loc::Vector{Float32}
-    der::Vector{Float32}
-    val::Vector{Spline}
+    spline_type::SplineType
+    locations::Vector{Float32}
+    derivatives::Vector{Float32}
+    child_splines::Vector{Spline}
 end
 
-struct FixSpline
-    len::Int
-    val::Float32
+struct FixSpline <: AbstractSpline
+    value::Float32
 end
 
-function Spline(len::Int, typ::SplineType)
+# function Spline(len::Int, typ::SplineType)
+#     return Spline(
+#         len,
+#         typ,
+#         Vector{Float32}(undef, 12),
+#         Vector{Float32}(undef, 12),
+#         Vector{Spline}(undef, 12),
+#     )
+# end
+
+function Spline(spline_type::SplineType, locations::Vector{Float32} = Float32[], derivatives::Vector{Float32} = Float32[], child_splines::Vector{Spline} = Spline[])
     return Spline(
-        len,
-        typ,
-        Vector{Float32}(undef, 12),
-        Vector{Float32}(undef, 12),
-        Vector{Spline}(undef, 12),
+        length(locations),
+        spline_type,
+        locations,
+        derivatives,
+        child_splines,
     )
 end
 
@@ -98,52 +111,70 @@ mutable struct SplineStack
     fix_len::Int
 end
 
-function Spline(ss::SplineStack, val::Float32)
-    sp = ss.fix_stack[ss.fix_len]
-    ss.fix_len += 1
+function Spline(spline_stack::SplineStack, val::Float32)
+    sp = spline_stack.fix_stack[spline_stack.fix_len]
+    spline_stack.fix_len += 1
     sp.len = 1
     return sp.val = val
 end
 
-function get_spline(sp::Spline, values::Vector)
-    if !(0 < sp.len < 12)
-        throw(ArgumentError("Invalid spline length: $(sp.len)"))
-    end
-    if sp.len == 1
-        return sp.typ
-    end
+function Base.push!(spline::Spline, location, derivative, child_spline)
+    push!(spline.locations, location)
+    push!(spline.derivatives, derivative)
+    push!(spline.child_splines, child_spline)
+    spline.len += 1
+end
 
-    f::Float32 = values[Int(sp.typ) + 1]
+function get_spline(sp::FixSpline)
+    return sp.value
+end
 
-    i = zero(Int)
-    for outer i in 1:(sp.len)
-        if sp.loc[i] >= f
-            break
+function findfirst_default(predicate::Function, A::T, default::T) where {T}
+    for (i, a) in pairs(A)
+        if predicate(a)
+            return i
         end
     end
-    findfirst
+    return default
+end
+
+function get_spline(spline::Spline, values::Vector{Float32})
+    if !(0 < spline.len < 12)
+        throw(ArgumentError("Invalid spline length: $(spline.len)"))
+    end
+
+    #! we need f to be a Float32
+    # it must already be the case because values is a Vector{Float32}
+    f = values[Int(spline.spline_type) + 1]
+    i = findfirst_default(>=(f), spline.locations, spline.len)
+
     # TODO: replace recursion with iteration because Julia doesn't optimize tail recursion
-    if i == 1 || i == (sp.len - 1)
-        if i != 1
-            i -= 1
-        end
-        v = get_spline(sp.val[i], values)
-        return v + sp.der[i] * (f - sp.loc[i])
+    if i == 1 || i == spline.len
+        v = get_spline(spline.child_splines[i], values)
+        return v + spline.derivatives[i] * (f - spline.locations[i])
     end
 
-    sp1 = sp.val[i - 1]
-    sp2 = sp.val[i]
-    g = sp.loc[i - 1]
-    h = sp.loc[i]
-    k = (f - g) / (h - g)
-    l = sp.der[i - 1]
-    m = sp.der[i]
-    n = get_spline(sp1, values)
-    o = get_spline(sp2, values)
-    p = l * (h - g) - (o - n)
-    q = -m * (h - g) + (o - n)
-    r = lerp(k, n, o) + k * (1.0f0 - k) * lerp(k, p, q)
-    return r
+    child_spline_1 = spline.child_splines[i - 1]
+    child_spline_2 = spline.child_splines[i]
+
+    location_1 = spline.locations[i - 1]
+    location_2 = spline.locations[i]
+
+    derivative_1 = spline.derivatives[i - 1]
+    derivative_2 = spline.derivatives[i]
+
+    value_1 = get_spline(child_spline_1, values)
+    value_2 = get_spline(child_spline_2, values)
+
+    interpolation_factor = (f - location_1) / (location_2 - location_1)
+    p = muladd(derivative_1, location_2 - location_1, value_1 - value_2)
+    q = muladd(-derivative_2, location_2 - location_1, value_2 - value_1)
+    # p = derivative_1 * (location_2 - location_1) - (value_2 - value_1)
+    # q = -derivative_2 * (location_2 - location_1) + (value_2 - value_1)
+
+    linear_interpolation = lerp(interpolation_factor, value_1, value_2)
+    quadratic_interpolation = interpolation_factor * (1.0f0 - interpolation_factor) * lerp(interpolation_factor, p, q)
+    return linear_interpolation + quadratic_interpolation
 end
 
 function get_offset_value(weirdness, continentalness)
@@ -154,7 +185,7 @@ function get_offset_value(weirdness, continentalness)
     if weirdness < -0.7f0
         return max(off, -0.2222f0)
     else
-        return max(off, 0.0f0)
+        return max(off, zero(off))
     end
 end
 
@@ -165,8 +196,8 @@ end
 @eval TupleClimate = Tuple{
     $(
         [
-            :(DoublePerlinNoise{length(amplitudes(Val($i)))}) for
-            i in instances(NoiseParameter)
+            :(DoublePerlinNoise{length(amplitudes($i))}) for
+            i in subtypes(NoiseParameter)
         ]...
     ),
 }
@@ -223,18 +254,15 @@ end
     end
 end
 
-function add_spline_val!(rsp::Spline, loc, val::Spline, der)
-    rsp.loc[rsp.len] = loc
-    rsp.val[rsp.len] = val
-    rsp.der[rsp.len] = der
-    rsp.len += 1
-    return nothing
-end
+function _create_spline_38219(f, bl)
+    # spline = spline_stack.stack[sp
+    # spline_stack.len += 1
+    # spline.spline_type = SP_RIDGES
+    spline_type = SP_RIDGES
 
-function create_spline_38219(ss::SplineStack, f, bl)
-    sp = ss.stack[ss.len]
-    ss.len += 1
-    sp.typ = SP_RIDGES
+    locations = Float32[]
+    derivatives = Float32[]
+    child_splines = Spline[]
 
     i = get_offset_value(-1.0f0, f)
     k = get_offset_value(1.0f0, f)
@@ -248,23 +276,26 @@ function create_spline_38219(ss::SplineStack, f, bl)
         r = get_offset_value(l, f)
         s = (k - r) / (1.0f0 - l)
 
-        add_spline_val!(sp, -1.0f0, Spline(ss, i), q)
-        add_spline_val!(sp, -0.75f0, Spline(ss, p), 0)
-        add_spline_val!(sp, -0.65f0, Spline(ss, u), 0)
-        add_spline_val!(sp, l - 0.01f0, Spline(ss, r), 0)
-        add_spline_val!(sp, l, Spline(ss, r), s)
-        add_spline_val!(sp, 1.0f0, Spline(ss, k), s)
+        push!(locations, -1.0f0, -0.75f0, -0.65f0, l - 0.01f0, l, 1.0f0)
+        push!(derivatives, q, 0, 0, 0, s)
+        
+        # add_spline_val!(spline, -1.0f0, Spline(spline_stack, i), q)
+        # add_spline_val!(spline, -0.75f0, Spline(spline_stack, p), 0)
+        # add_spline_val!(spline, -0.65f0, Spline(spline_stack, u), 0)
+        # add_spline_val!(spline, l - 0.01f0, Spline(spline_stack, r), 0)
+        # add_spline_val!(spline, l, Spline(spline_stack, r), s)
+        # add_spline_val!(spline, 1.0f0, Spline(spline_stack, k), s)
     else
         u = (k - i) * 0.5f0
         if bl
-            add_spline_val!(sp, -1.0f0, Spline(ss, max(i, 0.2)), 0)
-            add_spline_val!(sp, 0.0f0, Spline(ss, lerp(0.5f0, i, k)), u)
+            add_spline_val!(spline, -1.0f0, Spline(spline_stack, max(i, 0.2)), 0)
+            add_spline_val!(spline, 0.0f0, Spline(spline_stack, lerp(0.5f0, i, k)), u)
         else
-            add_spline_val!(sp, -1.0f0, Spline(ss, i), u)
+            add_spline_val!(spline, -1.0f0, Spline(spline_stack, i), u)
         end
-        add_spline_val!(sp, 1.0f0, Spline(ss, k), u)
+        add_spline_val!(spline, 1.0f0, Spline(spline_stack, k), u)
     end
-    return sp
+    return spline
 end
 
 function create_offset_spline(ss::SplineStack, f, g, h, i, j, k)
