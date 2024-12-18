@@ -150,3 +150,31 @@ end
 clamped_lerp(part, from, to) = lerp(clamp(part, 0, 1), from, to)
 
 mulinv(x, m) = throw(ErrorException(lazy"Use `Base.invmod` instead."))
+
+#=============================================================================#
+#                    Functools                                                #
+#=============================================================================#
+
+
+"""
+    @only_float32 expr
+
+Transforms all real literals in the expr to Float32.
+
+# Example
+```julia
+@only_float32 function f()
+    x = 1 + 2im # expand to `1.0f0 + 2.0f0im`
+    x += 1 # expand to `x += 1.0f0`
+    return x
+end
+```
+"""
+macro only_float32(expr)
+    transform(x) = x
+    transform(x::T) where T<:Real = Meta.parse(string(x, "f0"))
+    transform(x::Float32) = x
+    transform(x::Expr) = Expr(x.head, map(transform, x.args)...)
+
+    return transform(expr)
+end

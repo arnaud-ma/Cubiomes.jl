@@ -68,12 +68,15 @@ end
 # and create it with the getter function instead of a Spline object that store
 # every splines
 
-function get_offset_value(weirdness, continentalness)
-    f1 = (continentalness - 1f0) * 0.5f0
-    f0 = 1f0 + f1
-    f2 = (weirdness + 1.17f0) * 0.46082947f0
+# TODO: remove this include
+include("../utils.jl")
+
+@only_float32 function get_offset_value(weirdness, continentalness)
+    f1 = (continentalness - 1) * 0.5
+    f0 = 1 + f1
+    f2 = (weirdness + 1.17) * 0.46082947
     off = muladd(f0, f2, f1)
-    weirdness < -0.7f0 && return max(off, -0.2222f0)
+    weirdness < -0.7 && return max(off, -0.2222)
     return max(off, zero(off))
 end
 
@@ -106,25 +109,25 @@ function fix_spline(spline_type::SplineType)
 end
 fix_spline(spline_value) = fix_spline(trunc(SplineType, spline_value))
 
-function spline_38219(coeff, bl::Bool)
+@macroexpand @only_float32 function spline_38219(coeff, bl::Bool)
     # TODO: maybe use sizehint! to preallocate memory
     spline_type = SP_RIDGES
 
-    offset_neg1 = get_offset_value(-1.0f0, coeff)
-    offset_pos1 = get_offset_value(1.0f0, coeff)
-    half_factor = 0.5f0 * (1.0f0 - coeff)
-    adjusted_factor = half_factor / (0.46082947f0 * (1.0f0 - half_factor)) - 1.17f0
+    offset_neg1 = get_offset_value(-1, coeff)
+    offset_pos1 = get_offset_value(1, coeff)
+    half_factor = 0.5 * (1 - coeff)
+    adjusted_factor = half_factor / (0.46082947f0 * (1 - half_factor)) - 1.17
 
-    if -0.65f0 <= adjusted_factor <= 1.0f0
-        offset_neg065 = get_offset_value(-0.65f0, coeff)
-        offset_neg075 = get_offset_value(-0.75f0, coeff)
-        scaled_diff = (offset_neg075 - offset_neg1) * 4.0f0
+    if -0.65 <= adjusted_factor <= 1
+        offset_neg065 = get_offset_value(-0.65, coeff)
+        offset_neg075 = get_offset_value(-0.75, coeff)
+        scaled_diff = (offset_neg075 - offset_neg1) * 4
         offset_adjusted = get_offset_value(adjusted_factor, coeff)
-        slope = (offset_pos1 - offset_adjusted) / (1.0f0 - adjusted_factor)
+        slope = (offset_pos1 - offset_adjusted) / (1 - adjusted_factor)
 
         return Spline(
             spline_type,
-            [-1.0f0, -0.75f0, -0.65f0, adjusted_factor - 0.01f0, adjusted_factor, 1.0f0],
+            [-1, -0.75, -0.65, adjusted_factor - 0.01, adjusted_factor, 1],
             [scaled_diff, 0, 0, 0, slope, slope],
             [
                 fix_spline(offset_neg1),
@@ -136,15 +139,15 @@ function spline_38219(coeff, bl::Bool)
             ],
         )
     end
-    slope = (offset_pos1 - offset_neg1) / 0.46082947f0
+    slope = (offset_pos1 - offset_neg1) / 0.46082947
 
     if bl
         return Spline(
             spline_type,
-            [-1.0f0, 0, 1.0f0],
+            [-1, 0, 1],
             [0, slope, slope],
             [
-                fix_spline(max(offset_neg1, 0.2f0)),
+                fix_spline(max(offset_neg1, 0.2)),
                 fix_spline(lerp(0.5f0, offset_neg1, offset_pos1)),
                 fix_spline(offset_pos1),
             ],
@@ -152,21 +155,21 @@ function spline_38219(coeff, bl::Bool)
     else
         return Spline(
             spline_type,
-            [-1.0f0, 1.0f0],
+            [-1, 1],
             [slope, slope],
             [fix_spline(offset_neg1), fix_spline(offset_pos1)],
         )
     end
 end
 
-function flat_offset_spline(start, mid1, mid2, mid3, mid4, end_)
+@only_float32 function flat_offset_spline(start, mid1, mid2, mid3, mid4, end_)
     spline_type = SP_RIDGES
-    left = max(0.5f0 * (mid1 - start), end_)
-    middle = 5.0f0 * (mid2 - mid1)
+    left = max(0.5 * (mid1 - start), end_)
+    middle = 5 * (mid2 - mid1)
     return Spline(
         spline_type,
-        [-1.0f0, -0.4f0, 0.0f0, 0.4f0, 1.0f0],
-        [left, max(left, middle), middle, 2.0f0 * (mid3 - mid2), 0.7f0 * (mid4 - mid3)],
+        [-1, -0.4, 0, 0.4, 1],
+        [left, max(left, middle), middle, 2 * (mid3 - mid2), 0.7 * (mid4 - mid3)],
         [fix_spline(start), fix_spline(mid1), fix_spline(mid2), fix_spline(mid3), fix_spline(end_)],
     )
 end
