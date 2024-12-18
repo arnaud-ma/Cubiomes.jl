@@ -174,7 +174,9 @@ macro only_float32(expr)
     transform(x) = x
     transform(x::T) where T<:Real = Meta.parse(string(x, "f0"))
     transform(x::Float32) = x
-    transform(x::Expr) = Expr(x.head, map(transform, x.args)...)
-
+    function transform(x::Expr)
+        x.head == :curly && return x
+        return Expr(x.head, map(transform, x.args)...)
+    end
     return transform(expr)
 end

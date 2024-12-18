@@ -1,3 +1,12 @@
+# include("../utils.jl")
+# include("../constants.jl")
+
+# include("../random/rng.jl")
+# include("../random/noise.jl")
+
+# include("../mc_bugs.jl")
+# include("../biome_generation/infra.jl")
+
 #==========================================================================================#
 # Noise Parameters
 #==========================================================================================#
@@ -80,7 +89,6 @@ include("../utils.jl")
     return max(off, zero(off))
 end
 
-
 #! We do not use abstract type SplineType instead of enums
 # because we store different types of splines in the same array (Spline.val)
 # and storing different types in the same array abuses the type system
@@ -91,75 +99,89 @@ end
     SP_RIDGES
     SP_WEIRDNESS
 end
-
 Base.trunc(::Type{SplineType}, x) = SplineType(trunc(Int, x))
 
-struct Spline
+struct Spline{N}
     spline_type::SplineType
-    locations::Vector{Float32}
-    derivatives::Vector{Float32}
-    child_splines::Vector{Spline}
+    locations::NTuple{N,Float32}
+    derivatives::NTuple{N,Float32}
+    child_splines::NTuple{N,Spline}
 end
 
-const EMPTY_FLOAT32 = Float32[]
-const EMPTY_SPLINE = Spline[]
-
-function fix_spline(spline_type::SplineType)
-    return Spline(spline_type, EMPTY_FLOAT32, EMPTY_FLOAT32, EMPTY_SPLINE)
+function Spline{N}(spline_type, locations, derivatives, child_splines) where {N}
+    Spline{N}(
+        spline_type, NTuple{N}(locations), NTuple{N}(derivatives), NTuple{N}(child_splines)
+    )
 end
-fix_spline(spline_value) = fix_spline(trunc(SplineType, spline_value))
 
-@macroexpand @only_float32 function spline_38219(coeff, bl::Bool)
-    # TODO: maybe use sizehint! to preallocate memory
+function Spline{0}(spline_type::SplineType)
+    return Spline(spline_type, (), (), ())
+end
+
+# if the parameter is not a SplineType, it can be a real number. Is is truncated to an Int
+# and converted to its related spline_type. trunc instead of floor in order
+# to mimic the Java behavior
+Spline{0}(spline_value) = Spline{0}(trunc(SplineType, spline_value))
+
+# we really need to constraint coeff to Float2 here otherwise we need to have a
+# tuple full of Float32 and not of Float64
+@only_float32 function spline_38219(coeff::Float32, bl::Val{BL}) where {BL}
     spline_type = SP_RIDGES
-
     offset_neg1 = get_offset_value(-1, coeff)
     offset_pos1 = get_offset_value(1, coeff)
     half_factor = 0.5 * (1 - coeff)
-    adjusted_factor = half_factor / (0.46082947f0 * (1 - half_factor)) - 1.17
-
-    if -0.65 <= adjusted_factor <= 1
-        offset_neg065 = get_offset_value(-0.65, coeff)
-        offset_neg075 = get_offset_value(-0.75, coeff)
-        scaled_diff = (offset_neg075 - offset_neg1) * 4
-        offset_adjusted = get_offset_value(adjusted_factor, coeff)
-        slope = (offset_pos1 - offset_adjusted) / (1 - adjusted_factor)
-
-        return Spline(
-            spline_type,
-            [-1, -0.75, -0.65, adjusted_factor - 0.01, adjusted_factor, 1],
-            [scaled_diff, 0, 0, 0, slope, slope],
-            [
-                fix_spline(offset_neg1),
-                fix_spline(offset_neg075),
-                fix_spline(offset_neg065),
-                fix_spline(offset_adjusted),
-                fix_spline(offset_adjusted),
-                fix_spline(offset_pos1),
-            ],
-        )
+    λ = half_factor / (0.46082947 * (1 - half_factor)) - 1.17
+    if -0.65 <= λ <= 1
+        return spline_38219_case1(spline_type, coeff, offset_pos1, offset_neg1, λ)
     end
     slope = (offset_pos1 - offset_neg1) / 0.46082947
+    return spline_38219_case2(spline_type, slope, offset_pos1, offset_neg1, bl)
+end
 
-    if bl
-        return Spline(
-            spline_type,
-            [-1, 0, 1],
-            [0, slope, slope],
-            [
-                fix_spline(max(offset_neg1, 0.2)),
-                fix_spline(lerp(0.5f0, offset_neg1, offset_pos1)),
-                fix_spline(offset_pos1),
-            ],
-        )
-    else
-        return Spline(
-            spline_type,
-            [-1, 1],
-            [slope, slope],
-            [fix_spline(offset_neg1), fix_spline(offset_pos1)],
-        )
-    end
+@only_float32 function spline_38219_case1(spline_type, coeff, offset_pos1, offset_neg1, λ)
+    offset_neg065 = get_offset_value(-0.65, coeff)
+    offset_neg075 = get_offset_value(-0.75, coeff)
+    scaled_diff = (offset_neg075 - offset_neg1) * 4
+    offset_adjusted = get_offset_value(λ, coeff)
+    slope = (offset_pos1 - offset_adjusted) / (1.0f0 - λ)
+
+    return Spline(
+        spline_type,
+        (-1, -0.75, -0.65, λ - 0.01, λ, 1),
+        (scaled_diff, 0, 0, 0, slope, slope),
+        map(
+            Spline{0},
+            (
+                offset_neg1,
+                offset_neg075,
+                offset_neg065,
+                offset_adjusted,
+                offset_adjusted,
+                offset_pos1,
+            ),
+        ),
+    )
+end
+
+@only_float32 function spline_38219_case2(spline_type, slope, offset_pos1, offset_neg1, ::Val{true})
+    return Spline(
+        spline_type,
+        (-1, 0, 1),
+        (0, slope, slope),
+        map(
+            Spline{0},
+            (max(offset_neg1, 0.2), lerp(0.5, offset_neg1, offset_pos1), offset_pos1),
+        ),
+    )
+end
+
+@only_float32 function _spline_38219_case2(spline_type, slope, offset_pos1, offset_neg1, ::Val{false})
+    return Spline(
+        spline_type,
+        (-1, 1),
+        (slope, slope),
+        map(Spline{0}, (max(offset_neg1, 0.2), lerp(0.5, offset_neg1, offset_pos1))),
+    )
 end
 
 @only_float32 function flat_offset_spline(start, mid1, mid2, mid3, mid4, end_)
@@ -170,7 +192,13 @@ end
         spline_type,
         [-1, -0.4, 0, 0.4, 1],
         [left, max(left, middle), middle, 2 * (mid3 - mid2), 0.7 * (mid4 - mid3)],
-        [fix_spline(start), fix_spline(mid1), fix_spline(mid2), fix_spline(mid3), fix_spline(end_)],
+        [
+            fix_spline(start),
+            fix_spline(mid1),
+            fix_spline(mid2),
+            fix_spline(mid3),
+            fix_spline(end_),
+        ],
     )
 end
 
@@ -223,13 +251,14 @@ function count_elements(spline::Spline)
     if isempty(spline.child_splines)
         return 0
     end
-    return length(spline.locations) + sum(count_elements(child) for child in spline.child_splines)
+    return length(spline.locations) +
+           sum(count_elements(child) for child in spline.child_splines)
 end
 
 using BenchmarkTools
 
 @code_typed land_spline(1.4f0, 0.5f0, 5.6f0, 3.4f0, 5.8f0, 3.5f0, true)
-x = land_spline(1.4f0, 0.5f0, .6f0, .4f0, .8f0, 3.5f0, true)
+x = land_spline(1.4f0, 0.5f0, 0.6f0, 0.4f0, 0.8f0, 3.5f0, true)
 @btime land_spline(1.4f0, 0.5f0, 0.6f0, 0.4f0, 0.8f0, 3.5f0, true);
 
 @profview for _ in 1:100_000
