@@ -89,14 +89,14 @@ function get_biome_unsafe(nn::NetherNoise{UInt64}, x, z, y, scale::Scale{1})
 end
 
 function get_biome_unsafe(nn::NetherNoise, x, z, scale::Scale{4})
-    temperature = sample(nn.temperature, x, 0, z)
-    humidity = sample(nn.humidity, x, 0, z)
+    temperature = sample_noise(nn.temperature, x, 0, z)
+    humidity = sample_noise(nn.humidity, x, 0, z)
     return find_closest_biomes(temperature, humidity)[1]
 end
 
 function get_biome_and_delta(nn::NetherNoise, x, z)
-    temperature = sample(nn.temperature, x, 0, z)
-    humidity = sample(nn.humidity, x, 0, z)
+    temperature = sample_noise(nn.temperature, x, 0, z)
+    humidity = sample_noise(nn.humidity, x, 0, z)
     biome, dist1, dist2 = find_closest_biomes(temperature, humidity)
     return biome, √dist1 - √dist2
 end

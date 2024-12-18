@@ -11,7 +11,6 @@ struct DIM_UNDEF <: Dimension end
 #                                   MCVersions                                             #
 #==========================================================================================#
 #! format: off
-
 @cenum(
     MCVersion::UInt8,
     MC_UNDEF = 0,
@@ -43,6 +42,9 @@ struct DIM_UNDEF <: Dimension end
     MC_1_21 = 26,
     MC_NEWEST = 26,
 )
+
+MCVersion = MCVersion
+
 #==========================================================================================#
 #                                      BIOMES                                              #
 #==========================================================================================#
@@ -168,6 +170,7 @@ struct DIM_UNDEF <: Dimension end
     BIOME_NONE = typemax(UInt8)
 )
 #! format: on
+BiomeID = BiomeID
 isnone(biome::BiomeID) = biome == BIOME_NONE
 
 #==========================================================================================#
@@ -350,7 +353,7 @@ function mutated(biome::BiomeID, version::MCVersion)::BiomeID
         tall_birch_forest
     end
     biome == birch_forest_hills &&
-        return version >= MC_1_9 && version <= MC_1_10 ? none : tall_birch_hills
+        return version >= MC_1_9 && version <= MC_1_10 ? BIOME_NONE : tall_birch_hills
     biome == dark_forest && return dark_forest_hills
     biome == snowy_taiga && return snowy_taiga_mountains
     biome == giant_tree_taiga && return giant_spruce_taiga

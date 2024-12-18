@@ -35,9 +35,9 @@ using Cubiomes
 using Plots
 
 seed = "hello world" # (1)
-nether_noise = Noise(seed, Val(DIM_NETHER)) # (2)
+nether_noise = Noise(seed, DIM_NETHER) # (2)
 mc_map = MCMap(-1000:1000, -1000:1000) # (3)
-gen_biomes!(nether_noise, mc_map, Val(16)) # (4)
+gen_biomes!(nether_noise, mc_map, 📏"1:4") # (4)
 
 plot(mc_map) # (5)
 ```
@@ -47,7 +47,7 @@ Let's explain step by step:
 1. The seed is exactly the same as in Minecraft. It can be any string or integer.
 2. We create a `Noise` object, that is mandatory to generate the biomes.
 3. We create a `MCMap` object, that will store the biomes. It can be 2D or 3D (depending if the y coordinate is provided or not). Biomes are stored as enum values. You can access to it with the exact same coordinates as in Minecraft (e.g. `mc_map[0, 0, 0]` will give you the biome at the origin of the world). At the moment of the code, the map is full of `BIOME_NONE` values because we did not generate the biomes yet.
-4. We generate the biomes with the `gen_biomes!` function. It will fill the `MCMap` with the biomes. The last argument is the scale of the biomes, i.e. how many blocks in the world correspond to one biome value in the map. For example, with a scale of 1, one biome value in the map corresponds to one block in the world. The only supported values for `scale` are 1, 5, 16, 64. Note the use of `Val(1)` instead of `1` that is mandatory so that Julia knows what algorithm to use for this specific scale of 1.
+4. We generate the biomes with the `gen_biomes!` function. It will fill the `MCMap` with the biomes. The last argument is the scale of the biomes, i.e. how many blocks in the world correspond to one biome value in the map. For example, with a scale of 1, one biome value in the map corresponds to one block in the world. The only supported values are `📏"1:1"`, `📏"1:4"`, `📏"1:16"` and `📏"1:64"`. The symbol name is ":straight_ruler:".
 5. We can visualize a 2D slice of the map with `plot`. The colors are the same as in Minecraft, so you can easily recognize the biomes.
 
 ## Contributing

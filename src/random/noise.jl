@@ -1,12 +1,13 @@
 using OffsetArrays: OffsetVector
 using StaticArrays: MVector, SizedVector
 
+#TODO: replace the "sample" name to "sample_noise"
 """
-    sample(noise::PerlinNoise, x, y, z, yamp=0, ymin=0) -> Float64
-    sample(octaves::OctaveNoise, x, y, z) -> Float64
-    sample(octaves::OctaveNoise, x, y::Nothing, z, yamp, ymin) -> Float64
-    sample(octaves::OctaveNoise, x, y, z, yamp, ymin) -> Float64
-    sample(noise::DoublePerlinNoise, x, y, z) -> Float64
+    sample_noise(noise::PerlinNoise, x, y, z, yamp=0, ymin=0) -> Float64
+    sample_noise(octaves::OctaveNoise, x, y, z) -> Float64
+    sample_noise(octaves::OctaveNoise, x, y::Nothing, z, yamp, ymin) -> Float64
+    sample_noise(octaves::OctaveNoise, x, y, z, yamp, ymin) -> Float64
+    sample_noise(noise::DoublePerlinNoise, x, y, z) -> Float64
 
 Sample the given noise / octaves at the given coordinates.
 
@@ -16,11 +17,11 @@ See also: [`sample_simplex`](@ref), [`PerlinNoise`](@ref), [`OctaveNoise`](@ref)
 ```julia-repl
 julia> rng = JavaRandom(1);
 julia> noise = PerlinNoise🎲(rng);
-julia> sample(noise, 0, 0, 0)
+julia> sample_noise(noise, 0, 0, 0)
 0.10709059654197663
 ```
 """
-function sample end
+function sample_noise end
 
 #==========================================================================================#
 # Specific rng for Perlin                                                                  #
@@ -59,7 +60,6 @@ function next_perlin🎲(rng::AbstractJavaRNG, ::Type{T}, range::AbstractRange) 
     return next_perlin🎲(rng, T, first(range), last(range))
 end
 
-
 #==========================================================================================#
 #  Perlin Noise                                                                            #
 #==========================================================================================#
@@ -75,7 +75,7 @@ The type for the perlin noise. Use [`PerlinNoise🎲`](@ref) to create one given
  See https://en.wikipedia.org/Perlin_Noise
 to know how it works.
 
-See also: [`sample`](@ref), [`sample_simplex`](@ref), [`OctaveNoise`](@ref)
+See also: [`sample_noise`](@ref), [`sample_simplex`](@ref), [`OctaveNoise`](@ref)
 """
 mutable struct PerlinNoise
     permutations::PermsType
@@ -110,7 +110,6 @@ function PerlinNoise🎲(rng::AbstractJavaRNG)::PerlinNoise
         perms, x, y, z, const_y, const_index_y, const_smooth_y, amplitude, lacunarity
     )
 end
-
 
 """
     fill_permutations!🎲(rng::AbstractRNG_MC, perms::PermsType)
@@ -245,7 +244,7 @@ function interpolate_perlin(idx::PermsType, d1, d2, d3, h1, h2, h3, t1, t2, t3)
     return lerp(t3, l1, l5)
 end
 
-function sample(noise::PerlinNoise, x, y, z, yamp=0, ymin=0)
+function sample_noise(noise::PerlinNoise, x, y, z, yamp=0, ymin=0)
     if iszero(y)
         y, index_y, smooth_y = noise.const_y, noise.const_index_y, noise.const_smooth_y
     else
@@ -300,7 +299,7 @@ const UNSKEW::Float64 = (3 - √3) / 6
 Sample the given noise at the given 2D coordinate using the simplex noise
 algorithm instead of perlin noise. See https://en.wikipedia.org/wiki/Simplex_noise
 
-See also: [`sample`](@ref), [`PerlinNoise`](@ref)
+See also: [`sample_noise`](@ref), [`PerlinNoise`](@ref)
 """
 function sample_simplex(noise::PerlinNoise, x, y)
     hf = (x + y) * SKEW
@@ -348,7 +347,7 @@ end
 A vector of `N` PerlinNoise objects representing the octaves of a noise. Use
 [`OctaveNoise🎲`](@ref) or [`OctaveNoise!🎲`](@ref) to construct one.
 
-See also: [`sample`], [`PerlinNoise`](@ref), [`DoublePerlinNoise`](@ref)
+See also: [`sample_noise`], [`PerlinNoise`](@ref), [`DoublePerlinNoise`](@ref)
 """
 OctaveNoise{N} = SizedVector{N,PerlinNoise}
 
@@ -365,7 +364,7 @@ Initialize the octaves using the `rng` generator. The condition `octave_min <= 1
 - `amplitudes`: for a `JavaXoroshiro128PlusPlus` generator, amplitudes values must also be specified.
 - `octave_min`: the number of the first octave to generate. Must be <= 1 - N (so negative).
 
-See also: [`PerlinNoise`](@ref), [`OctaveNoise`](@ref), [`sample`](@ref)
+See also: [`PerlinNoise`](@ref), [`OctaveNoise`](@ref), [`sample_noise`](@ref)
 """
 function OctaveNoise!🎲 end
 
@@ -504,33 +503,35 @@ function OctaveNoiseBeta🎲(
 end
 
 # TODO: some meta programming here to avoid repeated code
-function sample(octaves::OctaveNoise{N}, x, y::Nothing, z, yamp, ymin)::Float64 where {N}
+function sample_noise(
+    octaves::OctaveNoise{N}, x, y::Nothing, z, yamp, ymin
+)::Float64 where {N}
     v = zero(Float64)
     for perlin in octaves
         lf = perlin.lacunarity
         ax = x * lf
         ay = -perlin.y
         az = z * lf
-        pv = sample(perlin, ax, ay, az, yamp * lf, ymin * lf)
+        pv = sample_noise(perlin, ax, ay, az, yamp * lf, ymin * lf)
         v += pv * perlin.amplitude
     end
     return v
 end
 
-function sample(octaves::OctaveNoise{N}, x, y, z, yamp, ymin)::Float64 where {N}
+function sample_noise(octaves::OctaveNoise{N}, x, y, z, yamp, ymin)::Float64 where {N}
     v = zero(Float64)
     for perlin in octaves
         lf = perlin.lacunarity
         ax = x * lf
         ay = y * lf
         az = z * lf
-        pv = sample(perlin, ax, ay, az, yamp * lf, ymin * lf)
+        pv = sample_noise(perlin, ax, ay, az, yamp * lf, ymin * lf)
         v += pv * perlin.amplitude
     end
     return v
 end
 
-function sample(octaves::OctaveNoise{N}, x, y, z)::Float64 where {N}
+function sample_noise(octaves::OctaveNoise{N}, x, y, z)::Float64 where {N}
     v = zero(Float64)
     iszero(N) && return v
     for i in 1:N
@@ -539,17 +540,19 @@ function sample(octaves::OctaveNoise{N}, x, y, z)::Float64 where {N}
         ax = x * lf
         ay = y * lf
         az = z * lf
-        pv = sample(perlin, ax, ay, az)
+        pv = sample_noise(perlin, ax, ay, az)
         v += pv * perlin.amplitude
     end
     return v
 end
 
 function sample_octave_beta17_biome()
+    throw("not implemented")
     # TODO: implement
 end
 
 function sample_octave_beta17_terrain()
+    throw("not implemented")
     # TODO: implement
 end
 
@@ -635,8 +638,10 @@ function DoublePerlinNoise🎲(
     )
 end
 
-function sample(noise::DoublePerlinNoise, x, y, z, move_factor=337 / 331)
+function sample_noise(noise::DoublePerlinNoise, x, y, z, move_factor=337 / 331)
     f = move_factor
-    v = sample(noise.octave_A, x, y, z) + sample(noise.octave_B, x * f, y * f, z * f)
+    v =
+        sample_noise(noise.octave_A, x, y, z) +
+        sample_noise(noise.octave_B, x * f, y * f, z * f)
     return v * noise.amplitude
 end
