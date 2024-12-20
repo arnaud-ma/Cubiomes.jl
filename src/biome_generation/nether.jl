@@ -1,6 +1,14 @@
 #==========================================================================================#
 # Noise Struct Definition and Noise Generation
 #==========================================================================================#
+include("../utils.jl")
+include("../constants.jl")
+
+include("../random/rng.jl")
+include("../random/noise.jl")
+
+include("../mc_bugs.jl")
+include("../biome_generation/infra.jl")
 
 """
     NetherNoise{S<:Union{Nothing,UInt64}}
@@ -35,28 +43,43 @@ struct NetherNoise{S<:Union{Nothing,UInt64}} <: Noise
     sha::S
 end
 
-function NetherNoise(seed::Integer; with_sha::Bool=true)
-    temperature, humidity = _get_temp_humid(seed)
-    if with_sha
-        sha = sha256_from_seed(UInt64(unsigned(seed)))
-        return NetherNoise{UInt64}(temperature, humidity, sha)
-    end
-    return NetherNoise{Nothing}(temperature, humidity, nothing)
-end
-
-function _get_temp_humid(seed)
+function _set_temp_humid!(seed, temperature, humidity)
     rng_temp = JavaRandom(seed)
-    temperature = DoublePerlinNoise🎲(rng_temp, Val(2), -7)
+    set_rng!🎲(temperature, rng_temp, -7)
     rng_humidity = JavaRandom(seed + 1)
-    humidity = DoublePerlinNoise🎲(rng_humidity, Val(2), -7)
-    return temperature, humidity
+    set_rng!🎲(humidity, rng_humidity, -7)
+    return nothing
 end
 
-Noise(seed, ::Type{DIM_NETHER}) = NetherNoise(seed)
-Noise(seed, sha, ::Type{DIM_NETHER}) = NetherNoise(seed, sha)
+function NetherNoise(::UndefInitializer)
+    return NetherNoise{Nothing}(
+        DoublePerlinNoise{2}(undef), DoublePerlinNoise{2}(undef), nothing
+    )
+end
 
-Noise(seed::String, ::Type{DIM_NETHER}) = NetherNoise(java_hashcode(seed))
-Noise(seed::String, sha::UInt64, ::Type{DIM_NETHER}) = NetherNoise(java_hashcode(seed), sha)
+function NetherNoise!(nn::NetherNoise, seed::Integer, sha::Val{true})
+    temp, hum = nn.temperature, nn.humidity
+    _set_temp_humid!(seed, temp, hum)
+    sha = sha256_from_seed(UInt64(unsigned(seed)))
+    return NetherNoise{UInt64}(temp, hum, sha)
+end
+
+function NetherNoise!(nn::NetherNoise{Nothing}, seed::Integer, sha::Val{false})
+    temp, hum = nn.temperature, nn.humidity
+    _set_temp_humid!(seed, temp, hum)
+    return nn
+end
+
+function NetherNoise!(nn::NetherNoise{UInt64}, seed::Integer, sha::Val{false})
+    temp, hum = nn.temperature, nn.humidity
+    _set_temp_humid!(seed, temp, hum)
+    return NetherNoise{UInt64}(temp, hum, nothing)
+end
+
+NetherNoise!(nn, seed) = NetherNoise!(nn, seed, Val(true))
+
+noise_of(::Type{DIM_NETHER}) = NetherNoise
+inplace_constructor_of(::NetherNoise) = NetherNoise!
 
 # TODO: Add detailed docstrings for these functions
 

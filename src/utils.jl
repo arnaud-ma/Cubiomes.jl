@@ -151,6 +151,36 @@ clamped_lerp(part, from, to) = lerp(clamp(part, 0, 1), from, to)
 
 mulinv(x, m) = throw(ErrorException(lazy"Use `Base.invmod` instead."))
 
+
+#=============================================================================#
+#                    Arrays                                                   #
+#=============================================================================#
+
+
+# i do not have the motivation to write a generic version of this function, instead
+# of limiting to NTuple{N}
+"""
+    length_of_trimmed(x::NTuple{N}, predicate) where N
+
+Returns the length of the tuple `x` after removing the elements from the beginning and the end
+that satisfy the `predicate`.
+"""
+function length_of_trimmed(x::NTuple{N}, predicate) where N
+    len = N
+    i = len
+    while predicate(@inbounds x[i])
+        i -= 1
+        len-=1
+    end
+    i = 1
+    while predicate(@inbounds x[i])
+        i += 1
+        len -= 1
+    end
+    return len
+end
+
+
 #=============================================================================#
 #                    Functools                                                #
 #=============================================================================#
@@ -174,6 +204,7 @@ macro only_float32(expr)
     transform(x) = x
     transform(x::T) where T<:Real = Meta.parse(string(x, "f0"))
     transform(x::Float32) = x
+    transform(x::Bool) = x
     function transform(x::Expr)
         x.head == :curly && return x
         return Expr(x.head, map(transform, x.args)...)

@@ -2,8 +2,23 @@ using OffsetArrays: OffsetArray, Origin, OffsetMatrix
 
 abstract type Noise end
 
-Noise(seed::String, ::Type{D}) where D<:Dimension  = Noise(java_hashcode(seed), D)
+function Noise!(noise, seed::UInt64, args...)
+    return inplace_constructor_of(noise)(noise, seed, args...)
+end
+function Noise!(noise, seed::Integer, args...)
+    return Noise!(noise, UInt64(unsigned(seed)), args...)
+end
+function Noise!(noise, seed, args...)
+    return Noise!(noise, Integer(seed), args...)
+end
+function Noise!(noise, seed::String, args...)
+    return Noise!(noise, java_hashcode(seed), args...)
+end
+Noise(::Type{D}, ::UndefInitializer) where {D<:Dimension} = noise_of(D)(undef)
 
+function Noise(seed, ::Type{D}, args...) where {D<:Dimension}
+    return Noise!(Noise(D, undef), seed, args...)
+end
 
 MCMap{N} = OffsetArray{BiomeID,N,Array{BiomeID,N}}
 MCMap(A::AbstractArray, args...) = OffsetArray(A, args...)

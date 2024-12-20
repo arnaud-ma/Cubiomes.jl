@@ -1,11 +1,11 @@
-# include("../utils.jl")
-# include("../constants.jl")
+include("../utils.jl")
+include("../constants.jl")
 
-# include("../random/rng.jl")
-# include("../random/noise.jl")
+include("../random/rng.jl")
+include("../random/noise.jl")
 
-# include("../mc_bugs.jl")
-# include("../biome_generation/infra.jl")
+include("../mc_bugs.jl")
+include("../biome_generation/infra.jl")
 
 #==========================================================================================#
 # Noise Parameters
@@ -70,16 +70,6 @@ end
 # Splines
 #==========================================================================================#
 
-# TODO: like the end generation, make a function with (getter::Function) and it can be
-# either x -> stack[x] or x -> getter(x, y , z) or something like that
-# to allow to stack the splines or not, since the splines are only computed
-# for the getSpline function (in the C implementation) so see the getSpline function
-# and create it with the getter function instead of a Spline object that store
-# every splines
-
-# TODO: remove this include
-include("../utils.jl")
-
 @only_float32 function get_offset_value(weirdness, continentalness)
     f1 = (continentalness - 1) * 0.5
     f0 = 1 + f1
@@ -108,20 +98,17 @@ struct Spline{N}
     child_splines::NTuple{N,Spline}
 end
 
-function Spline{N}(spline_type, locations, derivatives, child_splines) where {N}
-    Spline{N}(
-        spline_type, NTuple{N}(locations), NTuple{N}(derivatives), NTuple{N}(child_splines)
-    )
-end
-
 function Spline{0}(spline_type::SplineType)
     return Spline(spline_type, (), (), ())
 end
-
+Spline{0}(spline_type::SplineType, ::Tuple{}, ::Tuple{}, ::Tuple{}) = Spline{0}(spline_type)
+Spline{0}(spline_value::Tuple) = Spline{0}(trunc(SplineType, spline_value))
+# ^
+# |
 # if the parameter is not a SplineType, it can be a real number. Is is truncated to an Int
 # and converted to its related spline_type. trunc instead of floor in order
 # to mimic the Java behavior
-Spline{0}(spline_value) = Spline{0}(trunc(SplineType, spline_value))
+Spline{0}(values...) = map(Spline{0}, values)
 
 # we really need to constraint coeff to Float2 here otherwise we need to have a
 # tuple full of Float32 and not of Float64
@@ -132,13 +119,13 @@ Spline{0}(spline_value) = Spline{0}(trunc(SplineType, spline_value))
     half_factor = 0.5 * (1 - coeff)
     λ = half_factor / (0.46082947 * (1 - half_factor)) - 1.17
     if -0.65 <= λ <= 1
-        return spline_38219_case1(spline_type, coeff, offset_pos1, offset_neg1, λ)
+        return spline_38219(spline_type, coeff, offset_pos1, offset_neg1, λ)
     end
     slope = (offset_pos1 - offset_neg1) / 0.46082947
-    return spline_38219_case2(spline_type, slope, offset_pos1, offset_neg1, bl)
+    return spline_38219(spline_type, slope, offset_pos1, offset_neg1, bl)
 end
 
-@only_float32 function spline_38219_case1(spline_type, coeff, offset_pos1, offset_neg1, λ)
+@only_float32 function spline_38219(spline_type, coeff, offset_pos1, offset_neg1, λ::Real)
     offset_neg065 = get_offset_value(-0.65, coeff)
     offset_neg075 = get_offset_value(-0.75, coeff)
     scaled_diff = (offset_neg075 - offset_neg1) * 4
@@ -149,155 +136,149 @@ end
         spline_type,
         (-1, -0.75, -0.65, λ - 0.01, λ, 1),
         (scaled_diff, 0, 0, 0, slope, slope),
-        map(
-            Spline{0},
-            (
-                offset_neg1,
-                offset_neg075,
-                offset_neg065,
-                offset_adjusted,
-                offset_adjusted,
-                offset_pos1,
-            ),
+        Spline{0}(
+            offset_neg1,
+            offset_neg075,
+            offset_neg065,
+            offset_adjusted,
+            offset_adjusted,
+            offset_pos1,
         ),
     )
 end
 
-@only_float32 function spline_38219_case2(spline_type, slope, offset_pos1, offset_neg1, ::Val{true})
+@only_float32 function spline_38219(
+    spline_type, slope, offset_pos1, offset_neg1, ::Val{true}
+)
     return Spline(
         spline_type,
         (-1, 0, 1),
         (0, slope, slope),
-        map(
-            Spline{0},
-            (max(offset_neg1, 0.2), lerp(0.5, offset_neg1, offset_pos1), offset_pos1),
-        ),
+        Spline{0}(max(offset_neg1, 0.2), lerp(0.5, offset_neg1, offset_pos1), offset_pos1),
     )
 end
 
-@only_float32 function _spline_38219_case2(spline_type, slope, offset_pos1, offset_neg1, ::Val{false})
+@only_float32 function spline_38219(
+    spline_type, slope, offset_pos1, offset_neg1, ::Val{false}
+)
     return Spline(
         spline_type,
         (-1, 1),
         (slope, slope),
-        map(Spline{0}, (max(offset_neg1, 0.2), lerp(0.5, offset_neg1, offset_pos1))),
+        Spline{0}(max(offset_neg1, 0.2), lerp(0.5, offset_neg1, offset_pos1)),
     )
 end
 
-@only_float32 function flat_offset_spline(start, mid1, mid2, mid3, mid4, end_)
+@only_float32 function flat_offset_spline(x₁, x₂, x₃, x₄, x₅, x₆)
     spline_type = SP_RIDGES
-    left = max(0.5 * (mid1 - start), end_)
-    middle = 5 * (mid2 - mid1)
+    x₇ = max(0.5 * (x₂ - x₁), x₆)
+    x₈ = 5 * (x₃ - x₂)
     return Spline(
         spline_type,
-        [-1, -0.4, 0, 0.4, 1],
-        [left, max(left, middle), middle, 2 * (mid3 - mid2), 0.7 * (mid4 - mid3)],
-        [
-            fix_spline(start),
-            fix_spline(mid1),
-            fix_spline(mid2),
-            fix_spline(mid3),
-            fix_spline(end_),
-        ],
+        (-1, -0.4, 0, 0.4, 1),
+        (x₇, min(x₇, x₈), x₈, 2 * (x₄ - x₃), 0.7 * (x₅ - x₄)),
+        Spline{0}(x₁, x₂, x₃, x₄, x₅),
     )
 end
 
-function land_spline(f, g, h, i, j, k, bl::Bool)
+@only_float32 function additional_values_land_spline(x₁, x₂, x₃, x₅, spline_6, ::Val{true})
+    # add additional splines if bl is true
+    spline_7 = flat_offset_spline(x₁, x₅, x₅, x₂, x₃, 0.5)
+    spline_8 = Spline(
+        SP_RIDGES,
+        (-1.0, -0.4, 0),
+        (0, 0, 0),
+        (Spline{0}(x₁), spline_6, Spline{0}(x₃ + 0.07)),
+    )
+
+    locations = (0.4, 0.45, 0.55, 0.58)
+    child_splines = (spline_7, spline_8, spline_8, spline_7)
+    # 11 child splines if bl is true
+    return locations, child_splines
+end
+
+function additional_values_land_spline(x₁, x₂, x₃, x₅, spline_6, ::Val{false})
+    return (), ()
+end
+
+zeros_like(::NTuple{N,T}) where {N,T} = ntuple(i -> zero(T), Val{N}())
+
+@only_float32 function land_spline(x₁, x₂, x₃, x₄, x₅, x₆, bl::Val{BL}) where {BL}
     # create initial splines with different linear interpolation values
-    lerp_i_1 = lerp(i, 0.6f0, 1.5f0)
-    lerp_i_2 = lerp(i, 0.6f0, 1.0f0)
-    spline_1 = spline_38219(lerp_i_1, bl)
-    spline_2 = spline_38219(lerp_i_2, bl)
-    spline_3 = spline_38219(i, bl)
+    lerp_4_15 = lerp(x₄, 0.6, 1.5)
+    lerp_4_1 = lerp(x₄, 0.6, 1.0)
+    spline_1 = spline_38219(lerp_4_15, bl)
+    spline_2 = spline_38219(lerp_4_1, bl)
+    spline_3 = spline_38219(x₄, bl)
 
     # create flat offset splines
-    half_i = 0.5f0 * i
-    spline_4 = flat_offset_spline(f - 0.15f0, half_i, half_i, half_i, i * 0.6f0, 0.5f0)
-    spline_5 = flat_offset_spline(f, j * i, g * i, half_i, i * 0.6f0, 0.5f0)
-    spline_6 = flat_offset_spline(f, j, j, g, h, 0.5f0)
+    half_i = 0.5 * x₄
+    spline_4 = flat_offset_spline(x₁ - 0.15, half_i, half_i, half_i, x₄ * 0.6, 0.5)
+    spline_5 = flat_offset_spline(x₁, x₅ * x₄, x₂ * x₄, half_i, x₄ * 0.6, 0.5)
+    spline_6 = flat_offset_spline(x₁, x₅, x₅, x₂, x₃, 0.5)
 
     # Initialize locations and associated splines
-    locations = [-0.85f0, -0.7f0, -0.4f0, -0.35f0, -0.1f0, 0.2f0]
-    child_splines = [spline_1, spline_2, spline_3, spline_4, spline_5, spline_6]
-    if bl
-        # add additional splines if bl is true
-        spline_7 = flat_offset_spline(f, j, j, g, h, 0.5f0)
-        spline_8 = Spline(
-            SP_RIDGES,
-            [-1.0f0, -0.4f0, 0.0f0],
-            zeros(Float32, 3),
-            [fix_spline(f), spline_6, fix_spline(h + 0.07f0)],
-        )
+    locations = (-0.85f0, -0.7f0, -0.4f0, -0.35f0, -0.1f0, 0.2f0)
+    child_splines = (spline_1, spline_2, spline_3, spline_4, spline_5, spline_6)
 
-        push!(locations, 0.4f0, 0.45f0, 0.55f0, 0.58f0)
-        push!(child_splines, spline_7, spline_8, spline_8, spline_7)
+    mid_loc, mid_splines = additional_values_land_spline(x₁, x₂, x₃, x₅, spline_6, bl)
+    end_loc = 0.7
+    end_spline = flat_offset_spline(-0.02, x₆, x₆, x₂, x₃, 0)
 
-        # 11 child splines if bl is true
-        derivatives = zeros(Float32, 11)
-    else
-        # 7 child splines if bl is false
-        derivatives = zeros(Float32, 7)
-    end
-
-    # child spline common to both cases
-    push!(locations, 0.7f0)
-    push!(child_splines, flat_offset_spline(-0.02f0, k, k, g, h, 0.0f0))
+    locations = (locations..., mid_loc..., end_loc)
+    child_splines = (child_splines..., mid_splines..., end_spline)
+    derivatives = zeros_like(locations)
 
     # Create and return the final spline
     return Spline(SP_EROSION, locations, derivatives, child_splines)
 end
 
-function count_elements(spline::Spline)
-    if isempty(spline.child_splines)
-        return 0
+function findfirst_default(predicate::Function, A, default)
+    for (i, a) in pairs(A)
+        if predicate(a)
+            return i
+        end
     end
-    return length(spline.locations) +
-           sum(count_elements(child) for child in spline.child_splines)
+    return default
 end
 
-using BenchmarkTools
+# TODO: this is very type unstable and it is using recursion
+# so not very julian. We should refactor everything to use
+get_spline(spline::Spline{0}, vals) = Float32(Int(spline.spline_type))
+function get_spline(spline::Spline{N}, vals::NTuple{N2,T}) where {N,N2,T}
+    if !((1 <= Int(spline.spline_type) <= 4) && (1 <= N <= 11))
+        throw(
+            ArgumentError(
+                lazy"getSpline(): bad parameters (spline_type: $(spline.spline_type), N: $N)",
+            ),
+        )
+    end
 
-@code_typed land_spline(1.4f0, 0.5f0, 5.6f0, 3.4f0, 5.8f0, 3.5f0, true)
-x = land_spline(1.4f0, 0.5f0, 0.6f0, 0.4f0, 0.8f0, 3.5f0, true)
-@btime land_spline(1.4f0, 0.5f0, 0.6f0, 0.4f0, 0.8f0, 3.5f0, true);
+    f = vals[Int(spline.spline_type)]
+    i = findfirst_default(>=(f), spline.locations, N)
+    if i == 1.0f0 || i == N
+        loc, der, sp = spline.locations[i], spline.derivatives[i], spline.child_splines[i]
+        v = get_spline(sp, vals)
+        return muladd(der, f - loc, v)
+    end
 
-@profview for _ in 1:100_000
-    land_spline(1.4f0, 0.5f0, 0.6f0, 0.4f0, 0.8f0, 3.5f0, true)
+    spline_1 = spline.child_splines[i - 1]
+    spline_2 = spline.child_splines[i]
+
+    g = spline.locations[i - 1]
+    h = spline.locations[i]
+
+    k = (f - g) / (h - g)
+
+    l = spline.derivatives[i - 1]
+    m = spline.derivatives[i]
+
+    n = get_spline(spline_1, vals)
+    o = get_spline(spline_2, vals)
+
+    p = l * (h - g) - (o - n)
+    q = -m * (h - g) + (o - n)
+
+    r = lerp(k, n, o) + k * (1.0 - k) * lerp(k, p, q)
+    return r
 end
-
-# static Spline *createLandSpline(
-#     SplineStack *ss, float f, float g, float h, float i, float j, float k, int bl)
-# {
-#     Spline *sp1 = createSpline_38219(ss, lerp(i, 0.6F, 1.5F), bl);
-#     Spline *sp2 = createSpline_38219(ss, lerp(i, 0.6F, 1.0F), bl);
-#     Spline *sp3 = createSpline_38219(ss, i, bl);
-#     const float ih = 0.5F * i;
-#     Spline *sp4 = createFlatOffsetSpline(ss, f-0.15F, ih, ih, ih, i*0.6F, 0.5F);
-#     Spline *sp5 = createFlatOffsetSpline(ss, f, j*i, g*i, ih, i*0.6F, 0.5F);
-#     Spline *sp6 = createFlatOffsetSpline(ss, f, j, j, g, h, 0.5F);
-#     Spline *sp7 = createFlatOffsetSpline(ss, f, j, j, g, h, 0.5F);
-
-#     Spline *sp8 = &ss->stack[ss->len++];
-#     sp8->typ = SP_RIDGES;
-#     addSplineVal(sp8, -1.0F, createFixSpline(ss, f), 0.0F);
-#     addSplineVal(sp8, -0.4F, sp6, 0.0F);
-#     addSplineVal(sp8,  0.0F, createFixSpline(ss, h + 0.07F), 0.0F);
-
-#     Spline *sp9 = createFlatOffsetSpline(ss, -0.02F, k, k, g, h, 0.0F);
-#     Spline *sp = &ss->stack[ss->len++];
-#     sp->typ = SP_EROSION;
-#     addSplineVal(sp, -0.85F, sp1, 0.0F);
-#     addSplineVal(sp, -0.7F,  sp2, 0.0F);
-#     addSplineVal(sp, -0.4F,  sp3, 0.0F);
-#     addSplineVal(sp, -0.35F, sp4, 0.0F);
-#     addSplineVal(sp, -0.1F,  sp5, 0.0F);
-#     addSplineVal(sp,  0.2F,  sp6, 0.0F);
-#     if (bl) {
-#         addSplineVal(sp, 0.4F,  sp7, 0.0F);
-#         addSplineVal(sp, 0.45F, sp8, 0.0F);
-#         addSplineVal(sp, 0.55F, sp8, 0.0F);
-#         addSplineVal(sp, 0.58F, sp7, 0.0F);
-#     }
-#     addSplineVal(sp, 0.7F, sp9, 0.0F);
-#     return sp;
-# }
