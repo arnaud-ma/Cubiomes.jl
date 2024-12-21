@@ -26,6 +26,7 @@ end
 function Octaves{N}(::UndefInitializer) where {N}
     Octaves{N}([Perlin(undef) for _ in 1:N])
 end
+is_undef(x::Octaves{N}) where {N} = any(is_undef, x.octaves)
 
 
 function set_rng!🎲(noise::Octaves{N}, rng::JavaRandom, octave_min) where {N}
@@ -106,7 +107,7 @@ end
 
 # TODO: OctaveNoiseBeta
 
-# TODO: something to avoid repeated code
+# TODO: maybe something to avoid repeated code
 function sample_noise(octaves::Octaves{N}, x, y::Nothing, z, yamp, ymin)::Float64 where {N}
     v = zero(Float64)
     for perlin in octaves.octaves

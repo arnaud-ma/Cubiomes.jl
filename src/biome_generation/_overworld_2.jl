@@ -61,67 +61,60 @@ for (noise_param, (amp, oct, id_str, oct_large)) in _DATA_NOISE_PARAM
         @eval id(noise_param::Type{$noise_param}, large::Val{true}) = $(id_str * "_large")
     end
 
-    nb_octaves_ = length(filter(!iszero, amplitudes(noise_param)))
+    filtered_amp = filter(!iszero, amp)
+    nb_octaves_ = length(filtered_amp)
+    @eval filtered_amplitudes(noise_param::Type{$noise_param}) = $filtered_amp
     @eval nb_octaves(noise_param::Type{$noise_param}) = $nb_octaves_
     @eval function create_octaves(noise_param::Type{$noise_param}, nb::Val{N}) where {N}
         return ntuple(i -> Octaves{$nb_octaves_}(undef), Val(N))
     end
     xlo, xhi = md5_to_uint64(id(noise_param, Val(false)))
     xlo_large, xh_large = md5_to_uint64(id(noise_param, Val(true)))
-    @eval magic_xlo(noise_param::Type{$noise_param}; large::Val{true}) = $xlo_large
-    @eval magic_xhi(noise_param::Type{$noise_param}; large::Val{true}) = $xh_large
-    @eval magic_xlo(noise_param::Type{$noise_param}; large::Val{false}) = $xlo
-    @eval magic_xhi(noise_param::Type{$noise_param}; large::Val{false}) = $xhi
+    @eval magic_xlo(noise_param::Type{$noise_param}, large::Val{true}) = $xlo_large
+    @eval magic_xhi(noise_param::Type{$noise_param}, large::Val{true}) = $xh_large
+    @eval magic_xlo(noise_param::Type{$noise_param}, large::Val{false}) = $xlo
+    @eval magic_xhi(noise_param::Type{$noise_param}, large::Val{false}) = $xhi
 end
 
 @eval TupleClimate = Tuple{
     $((:(DoublePerlin{nb_octaves($i)}) for i in NOISE_PARAMETERS)...)
 }
 
-struct BiomeNoise
+struct BiomeNoise <: Dimension
     climate::TupleClimate
 end
 
-@generated function BiomeNoise(mc_version::MCVersion, ::UndefInitializer)
-    generated_codes = (
-        :(DoublePerlinNoise{nb_octaves($i)}($(length(trim(amplitudes(i), iszero))))) for
-        i in NOISE_PARAMETERS
-    )
-    return :(BiomeNoise(($(generated_codes...),), mc_version))
+function BiomeNoise(::UndefInitializer)
+    return BiomeNoise(
+        Tuple(
+            Noise(
+                DoublePerlin{nb_octaves(np)},
+                    undef, length_of_trimmed(amplitudes(np), iszero)
+                ) for np in NOISE_PARAMETERS
+            ),
+        )
 end
 
-function init_climate_seed!🎲(
-    dp::DoublePerlin, xlo::UInt64, xhi::UInt64, noise_param, large=Val(true)
+function set_seed!(
+    dp::DoublePerlin, xlo, xhi, noise_param, large=Val(true)
 )
     xlo ⊻= magic_xlo(noise_param, large)
     xhi ⊻= magic_xhi(noise_param, large)
     rng = JavaXoroshiro128PlusPlus(xlo, xhi)
-    set_rng!🎲(dp, rng, amplitudes(noise_param), octave_min(noise_param, large))
+    set_rng!🎲(dp, rng, filtered_amplitudes(noise_param), octave_min(noise_param, large))
     return nothing
 end
 
-@generated function _biome_noise_climate🎲(seed::Integer, large=Val(true))
-    # little trick to avoid runtime dispatch: generate the tuple of expressions at compile time
-    # and then execute them at runtime, with the correct noise_param
-    climate_exprs = Expr[
-        :(init_climate_seed($octaves, xlo, xhi, large, $t)) for t in NOISE_PARAMETERS
-    ]
+function set_seed!(noise::BiomeNoise, seed::UInt64, large=Val(true))
+    climate = noise.climate
+    rng = JavaXoroshiro128PlusPlus(seed)
+    xlo = next🎲(rng, UInt64)
+    xhi = next🎲(rng, UInt64)
 
-    return quote
-        rng = JavaXoroshiro128PlusPlus(seed)
-        xlo = next🎲(rng, UInt64)
-        xhi = next🎲(rng, UInt64)
-
-        return ($(climate_exprs...),)
-    end
-end
-
-function set_seed!🎲(bn::BiomeNoise, seed::Integer, large=Val(true))
-    climate = _biome_noise_climate🎲(seed, large)
     for i in 1:NB_NOISE_PARAMETERS
-        bn.climate[i] = climate[i]
+        set_seed!(climate[i], xlo, xhi, NOISE_PARAMETERS[i], large)
     end
-    return nothing
+    return noise
 end
 #endregion
 #region Splines

@@ -23,24 +23,16 @@ struct DoublePerlin{N} <: Noise
     octave_B::Octaves{N}
 end
 
-function set_rng!🎲(dp::DoublePerlin, rng::AbstractJavaRNG, octave_min)
-    set_rng!🎲(dp.octave_A, rng, octave_min)
-    set_rng!🎲(dp.octave_B, rng, octave_min)
-end
-function set_rng!🎲(dp::DoublePerlin, rng, amplitudes, octave_min)
-    set_rng!🎲(dp.octave_A, amplitudes, octave_min)
-    set_rng!🎲(dp.octave_B, amplitudes, octave_min)
-end
-
-function DoublePerlin{N}(::UndefInitializer, amplitude::Real) where {N}
-    return DoublePerlin{N}(amplitude, Octaves{N}(undef), Octaves{N}(undef))
+function DoublePerlin{N}(x::UndefInitializer, len::Integer) where {N}
+    # Xoroshiro128PlusPlus implementation
+    # Optimization: len must always be equal to length_of_trimmed(amplitudes, iszero)
+    # but we can pass it directly
+    amplitude = AMPLITUDE_INI[len]
+    return DoublePerlin{N}(x, amplitude)
 end
 
 function DoublePerlin{N}(x::UndefInitializer, amplitudes) where {N}
-    # Xoroshiro128PlusPlus implementation
-    len = length_of_trimmed(amplitudes, iszero)
-    amplitude = AMPLITUDE_INI[len]
-    return DoublePerlin{N}(amplitude, x)
+    return DoublePerlin{N}(x, length_of_trimmed(amplitudes, iszero))
 end
 
 function DoublePerlin{N}(x::UndefInitializer) where {N}
@@ -49,15 +41,31 @@ function DoublePerlin{N}(x::UndefInitializer) where {N}
     return DoublePerlin{N}(amplitude, x)
 end
 
+is_undef(x::DoublePerlin{N}) where {N} = is_undef(x.octave_A) || is_undef(x.octave_B)
+
+function set_rng!🎲(dp::DoublePerlin, rng::AbstractJavaRNG, octave_min)
+    set_rng!🎲(dp.octave_A, rng, octave_min)
+    set_rng!🎲(dp.octave_B, rng, octave_min)
+end
+function set_rng!🎲(dp::DoublePerlin, rng, amplitudes, octave_min)
+    set_rng!🎲(dp.octave_A, rng, amplitudes, octave_min)
+    set_rng!🎲(dp.octave_B, rng, amplitudes, octave_min)
+end
+
+function DoublePerlin{N}(::UndefInitializer, amplitude::Real) where {N}
+    return DoublePerlin{N}(amplitude, Octaves{N}(undef), Octaves{N}(undef))
+end
+
+
 # we need to overload the default constructor here because we need to pass the amplitudes
 # to the undefined initializer
 function Noise🎲(
     ::Type{DoublePerlin{N}},
     rng::JavaXoroshiro128PlusPlus,
-    amplitudes::NTuple{N},
+    amplitudes_or_len,
     octave_min,
 ) where {N}
-    dp = DoublePerlin{N}(undef, amplitudes) # here it's why we need to overload
+    dp = DoublePerlin{N}(undef, amplitudes_or_len) # here it's why we need to overload
     set_rng!🎲(dp, rng, amplitudes, octave_min)
     return dp
 end

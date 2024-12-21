@@ -89,6 +89,10 @@ function Perlin(::UndefInitializer)
     )
 end
 
+function is_undef(p::Perlin)
+    return any(isnan, (p.x, p.y, p.z, p.const_y, p.const_smooth_y, p.amplitude, p.lacunarity))
+end
+
 function set_rng!🎲(perlin::Perlin, rng::AbstractJavaRNG)
     x = next🎲(rng, Float64, 0:256)
     y = next🎲(rng, Float64, 0:256)
