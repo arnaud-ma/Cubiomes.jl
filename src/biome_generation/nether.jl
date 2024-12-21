@@ -1,18 +1,11 @@
 #==========================================================================================#
 # Noise Struct Definition and Noise Generation
 #==========================================================================================#
-include("../utils.jl")
-include("../constants.jl")
-
-include("../random/rng.jl")
-include("../random/noise.jl")
-
-include("../mc_bugs.jl")
-include("../biome_generation/infra.jl")
+include("infra.jl")
 
 """
-    NetherNoise{S<:Union{Nothing,UInt64}}
-    NetherNoise{seed::Integer; with_sha::Bool=true}
+    Nether{S<:Union{Nothing,UInt64}}
+    Nether{seed::Integer; with_sha::Bool=true}
 
 The noise type for the nether.
 
@@ -25,23 +18,24 @@ The noise type for the nether.
     if not needed.
 
 # Fields
-- `temperature::DoublePerlinNoise{2}`: store the noise for the temperature
-- `humidity::DoublePerlinNoise{2}`: store the noise for the humidity
+- `temperature::DoublePerlin{2}`: store the noise for the temperature
+- `humidity::DoublePerlin{2}`: store the noise for the humidity
 - `sha::Union{UInt64, Nothing}`: Optional sha computed from the seed with [`sha256_from_seed`].
 
 # Example
 ```julia
-julia> NetherNoise(1234)
-NetherNoise{UInt64}(DoublePerlinNoise{2}(1.1111111111111112, PerlinNoise[..., 0x618d5b164c44f21a)
-julia> NetherNoise(1234, with_sha=false)
-NetherNoise{Nothing}(DoublePerlinNoise{2}(1.1111111111111112, PerlinNoise[..., nothing)
+julia> Nether(1234)
+Nether{UInt64}(DoublePerlin{2}(1.1111111111111112, PerlinNoise[..., 0x618d5b164c44f21a)
+julia> Nether(1234, with_sha=false)
+Nether{Nothing}(DoublePerlin{2}(1.1111111111111112, PerlinNoise[..., nothing)
 ```
 """
-struct NetherNoise{S<:Union{Nothing,UInt64}} <: Noise
-    temperature::DoublePerlinNoise{2}
-    humidity::DoublePerlinNoise{2}
+struct Nether{S<:Union{Nothing,UInt64}} <: Dimension
+    temperature::DoublePerlin{2}
+    humidity::DoublePerlin{2}
     sha::S
 end
+Nether(seed, sha=Val(true)) = Dimension(Nether, seed, sha)
 
 function _set_temp_humid!(seed, temperature, humidity)
     rng_temp = JavaRandom(seed)
@@ -51,35 +45,28 @@ function _set_temp_humid!(seed, temperature, humidity)
     return nothing
 end
 
-function NetherNoise(::UndefInitializer)
-    return NetherNoise{Nothing}(
-        DoublePerlinNoise{2}(undef), DoublePerlinNoise{2}(undef), nothing
-    )
+function Nether(::UndefInitializer)
+    return Nether{Nothing}(DoublePerlin{2}(undef, -7), DoublePerlin{2}(undef, -7), nothing)
 end
 
-function NetherNoise!(nn::NetherNoise, seed::Integer, sha::Val{true})
+function set_seed!(nn::Nether{UInt64}, seed::UInt64, sha::Val{false})
     temp, hum = nn.temperature, nn.humidity
     _set_temp_humid!(seed, temp, hum)
-    sha = sha256_from_seed(UInt64(unsigned(seed)))
-    return NetherNoise{UInt64}(temp, hum, sha)
+    return Nether{UInt64}(temp, hum, nothing)
 end
 
-function NetherNoise!(nn::NetherNoise{Nothing}, seed::Integer, sha::Val{false})
-    temp, hum = nn.temperature, nn.humidity
-    _set_temp_humid!(seed, temp, hum)
+function set_seed!(nn::Nether{Nothing}, seed::UInt64, sha::Val{false})
+    _set_temp_humid!(seed, nn.temperature, nn.humidity)
     return nn
 end
 
-function NetherNoise!(nn::NetherNoise{UInt64}, seed::Integer, sha::Val{false})
+function set_seed!(nn::Nether, seed::UInt64, sha::Val{true})
     temp, hum = nn.temperature, nn.humidity
     _set_temp_humid!(seed, temp, hum)
-    return NetherNoise{UInt64}(temp, hum, nothing)
+    sha = sha256_from_seed(seed)
+    return Nether{UInt64}(temp, hum, sha)
 end
-
-NetherNoise!(nn, seed) = NetherNoise!(nn, seed, Val(true))
-
-noise_of(::Type{DIM_NETHER}) = NetherNoise
-inplace_constructor_of(::NetherNoise) = NetherNoise!
+set_seed!(gen::Nether, seed::UInt64) = set_seed!(gen, seed, Val(true))
 
 # TODO: Add detailed docstrings for these functions
 
@@ -91,11 +78,14 @@ function gen_biomes_unsafe! end
 # Nether Biome Point Access (Scale 4 and 1)
 #==========================================================================================#
 
-function get_biome(
-    nn::NetherNoise, x, z, y=0, scale::Scale{S}=Scale(1), version::MCVersion=MC_UNDEF
-) where {S}
+function get_biome(nn::Nether, x, z, y, scale::Scale{S}, version, sha=nothing) where {S}
     (version <= MC_1_15 && version != MC_UNDEF) && return nether_wastes
-    S == 1 && return get_biome_unsafe(nn, x, z, y, scale)
+    if S == 1
+        if isnothing(sha)
+            sha = sha256_from_seed(nn.seed)
+        end
+    end
+    S == 1 && return get_biome_unsafe(nn, x, z, y, scale, sha)
     return get_biome_unsafe(nn, x, z, scale)
 end
 
@@ -106,18 +96,18 @@ end
 # and then take the biome with this new coordinates.
 # The source_x and source_z DEPENDS on x, z AND on y.
 # i.e., if y is modified, source_x and source_z could be modified too.
-function get_biome_unsafe(nn::NetherNoise{UInt64}, x, z, y, scale::Scale{1})
-    source_x, source_z, _ = voronoi_access_3d(nn.sha, x, z, y)
+function get_biome_unsafe(nn::Nether, x, z, y, scale::Scale{1}, sha)
+    source_x, source_z, _ = voronoi_access_3d(sha, x, z, y)
     return get_biome_unsafe(nn, source_x, source_z, Scale(4))
 end
 
-function get_biome_unsafe(nn::NetherNoise, x, z, scale::Scale{4})
+function get_biome_unsafe(nn::Nether, x, z, scale::Scale{4})
     temperature = sample_noise(nn.temperature, x, 0, z)
     humidity = sample_noise(nn.humidity, x, 0, z)
     return find_closest_biomes(temperature, humidity)[1]
 end
 
-function get_biome_and_delta(nn::NetherNoise, x, z)
+function get_biome_and_delta(nn::Nether, x, z)
     temperature = sample_noise(nn.temperature, x, 0, z)
     humidity = sample_noise(nn.humidity, x, 0, z)
     biome, dist1, dist2 = find_closest_biomes(temperature, humidity)
@@ -204,9 +194,7 @@ function fill_radius!(out::AbstractMatrix{BiomeID}, x, z, id::BiomeID, radius)
 end
 
 # Assume out is filled with BIOME_NONE
-function gen_biomes_unsafe!(
-    nn::NetherNoise, map2D::MCMap{2}, ::Scale{S}, confidence=1
-) where {S}
+function gen_biomes_unsafe!(nn::Nether, map2D::MCMap{2}, ::Scale{S}, confidence=1) where {S}
     S <= 3 && throw(ArgumentError(lazy"Scale must be >= 4"))
     scale = S ÷ 4
 
@@ -234,7 +222,7 @@ function gen_biomes_unsafe!(
 end
 
 function gen_biomes_unsafe!(
-    nn::NetherNoise, map3d::MCMap{3}, scale::Scale{S}, confidence=1
+    nn::Nether, map3d::MCMap{3}, scale::Scale{S}, confidence=1
 ) where {S}
     # At scale != 1, the biome does not change with the y coordinate
     # So we simply take the first y coordinate and fill the other ones with the same biome
@@ -249,11 +237,7 @@ function gen_biomes_unsafe!(
 end
 
 function gen_biomes!(
-    nn::NetherNoise,
-    mc_map::MCMap,
-    scale::Scale{S},
-    confidence=1,
-    version::MCVersion=MC_UNDEF,
+    nn::Nether, mc_map::MCMap, scale::Scale{S}, confidence=1, version::MCVersion=MC_UNDEF
 ) where {S}
     fill!(mc_map, BIOME_NONE)
     _manage_less_1_15!(mc_map, version) && return nothing
@@ -268,7 +252,7 @@ end
 # See the comment on get_biome_unsafe for the explanation of the main idea
 
 function gen_biomes_unsafe!(
-    nn::NetherNoise{UInt64},
+    nn::Nether{UInt64},
     map3D::MCMap{3},
     ::Scale{scale},
     confidence=1,
@@ -299,7 +283,7 @@ function gen_biomes_unsafe!(
 end
 
 function gen_biomes!(
-    nn::NetherNoise, map3D::MCMap{3}, ::Scale{1}, confidence=1, version::MCVersion=MC_UNDEF
+    nn::Nether, map3D::MCMap{3}, ::Scale{1}, confidence=1, version::MCVersion=MC_UNDEF
 )
     _manage_less_1_15!(map3D, version) && return nothing
     # we do not need to fill with BIOME_NONE in this case
@@ -308,7 +292,7 @@ function gen_biomes!(
 end
 
 function gen_biomes!(
-    nn::NetherNoise{UInt64},
+    nn::Nether{UInt64},
     map2D::MCMap{2},
     ::Scale{1},
     confidence=1,

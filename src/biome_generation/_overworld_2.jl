@@ -1,15 +1,9 @@
-include("../utils.jl")
-include("../constants.jl")
-
-include("../random/rng.jl")
-include("../random/noise.jl")
-
-include("../mc_bugs.jl")
 include("../biome_generation/infra.jl")
 
-#==========================================================================================#
-# Noise Parameters
-#==========================================================================================#
+#region Noise Parameters
+# ---------------------------------------------------------------------------- #
+#                               Noise Parameters                               #
+# ---------------------------------------------------------------------------- #
 using StaticArrays: SVector
 using InteractiveUtils: subtypes
 
@@ -70,7 +64,7 @@ for (noise_param, (amp, oct, id_str, oct_large)) in _DATA_NOISE_PARAM
     nb_octaves_ = length(filter(!iszero, amplitudes(noise_param)))
     @eval nb_octaves(noise_param::Type{$noise_param}) = $nb_octaves_
     @eval function create_octaves(noise_param::Type{$noise_param}, nb::Val{N}) where {N}
-        return ntuple(i -> OctaveNoise{$nb_octaves_}(undef), Val(N))
+        return ntuple(i -> Octaves{$nb_octaves_}(undef), Val(N))
     end
     xlo, xhi = md5_to_uint64(id(noise_param, Val(false)))
     xlo_large, xh_large = md5_to_uint64(id(noise_param, Val(true)))
@@ -81,40 +75,29 @@ for (noise_param, (amp, oct, id_str, oct_large)) in _DATA_NOISE_PARAM
 end
 
 @eval TupleClimate = Tuple{
-    $((:(DoublePerlinNoise{nb_octaves($i)}) for i in NOISE_PARAMETERS)...)
+    $((:(DoublePerlin{nb_octaves($i)}) for i in NOISE_PARAMETERS)...)
 }
 
 struct BiomeNoise
     climate::TupleClimate
-    version::MCVersion
 end
 
-@generated function BiomeNoise(mc_version::MCVersion, ::UndefInitializer) where {N}
-
+@generated function BiomeNoise(mc_version::MCVersion, ::UndefInitializer)
     generated_codes = (
-        :(DoublePerlinNoise{nb_octaves($i)}($(length(trim(amplitudes(i), iszero))))) for i in NOISE_PARAMETERS
+        :(DoublePerlinNoise{nb_octaves($i)}($(length(trim(amplitudes(i), iszero))))) for
+        i in NOISE_PARAMETERS
     )
     return :(BiomeNoise(($(generated_codes...),), mc_version))
 end
 
-BiomeNoise(MC_1_0, undef)
-
-function BiomeNoise(mc_version::MCVersion, seed)
-
-end
-
 function init_climate_seed!🎲(
-    octaves, xlo::UInt64, xhi::UInt64, noise_param, large=Val(true)
+    dp::DoublePerlin, xlo::UInt64, xhi::UInt64, noise_param, large=Val(true)
 )
     xlo ⊻= magic_xlo(noise_param, large)
     xhi ⊻= magic_xhi(noise_param, large)
-    return DoublePerlinNoise!🎲(
-        JavaXoroshiro128PlusPlus(xlo, xhi),
-        octaves[1],
-        octaves[2],
-        amplitudes(noise_param),
-        octave_min(noise_param, large),
-    )
+    rng = JavaXoroshiro128PlusPlus(xlo, xhi)
+    set_rng!🎲(dp, rng, amplitudes(noise_param), octave_min(noise_param, large))
+    return nothing
 end
 
 @generated function _biome_noise_climate🎲(seed::Integer, large=Val(true))
@@ -133,17 +116,19 @@ end
     end
 end
 
-function setseed!🎲(bn::BiomeNoise, seed::Integer, large=Val(true))
+function set_seed!🎲(bn::BiomeNoise, seed::Integer, large=Val(true))
     climate = _biome_noise_climate🎲(seed, large)
     for i in 1:NB_NOISE_PARAMETERS
         bn.climate[i] = climate[i]
     end
     return nothing
 end
+#endregion
+#region Splines
 
-#==========================================================================================#
-# Splines
-#==========================================================================================#
+# ---------------------------------------------------------------------------- #
+#                                    Splines                                   #
+# ---------------------------------------------------------------------------- #
 
 @only_float32 function get_offset_value(weirdness, continentalness)
     f1 = (continentalness - 1) * 0.5
@@ -166,18 +151,18 @@ end
 end
 Base.trunc(::Type{SplineType}, x) = SplineType(trunc(Int, x))
 
-struct Spline{N}
+struct Spline{N,T}
     spline_type::SplineType
     locations::NTuple{N,Float32}
     derivatives::NTuple{N,Float32}
-    child_splines::NTuple{N,Spline}
+    child_splines::T
 end
 
 function Spline{0}(spline_type::SplineType)
     return Spline(spline_type, (), (), ())
 end
 Spline{0}(spline_type::SplineType, ::Tuple{}, ::Tuple{}, ::Tuple{}) = Spline{0}(spline_type)
-Spline{0}(spline_value::Tuple) = Spline{0}(trunc(SplineType, spline_value))
+Spline{0}(spline_value::Real) = Spline{0}(trunc(SplineType, spline_value))
 # ^
 # |
 # if the parameter is not a SplineType, it can be a real number. Is is truncated to an Int
@@ -317,8 +302,11 @@ function findfirst_default(predicate::Function, A, default)
     return default
 end
 
-get_spline(spline::Spline{0}, vals) = Float32(Int(spline.spline_type))
+function get_spline(spline::Spline{0}, vals::NTuple{N2,T}) where {N2,T}
+    Float32(Int(spline.spline_type))
+end
 
+# TODO: transform the recursive to an iterate one, since Julia is very bad with recursion :(
 function get_spline(spline::Spline{N}, vals::NTuple{N2,T}) where {N,N2,T}
     if !((1 <= Int(spline.spline_type) <= 4) && (1 <= N <= 11))
         throw(

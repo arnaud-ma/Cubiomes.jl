@@ -1,53 +1,11 @@
 using CEnum
+include("../mc_versions.jl")
 
-abstract type Dimension end
+#region Biome def
+# ---------------------------------------------------------------------------- #
+#                                    BIOMES                                    #
+# ---------------------------------------------------------------------------- #
 
-struct DIM_OVERWORLD <: Dimension end
-struct DIM_NETHER <: Dimension end
-struct DIM_END <: Dimension end
-struct DIM_UNDEF <: Dimension end
-
-#==========================================================================================#
-#                                   MCVersions                                             #
-#==========================================================================================#
-#! format: off
-@cenum(
-    MCVersion::UInt8,
-    MC_UNDEF = 0,
-    MC_B1_7 = 1,
-    MC_B1_8 = 2,
-    MC_1_0_0 = 3,  MC_1_0  = 3,
-    MC_1_1_0 = 4,  MC_1_1  = 4,
-    MC_1_2_5 = 5,  MC_1_2  = 5,
-    MC_1_3_2 = 6,  MC_1_3  = 6,
-    MC_1_4_2 = 7,  MC_1_4  = 7,
-    MC_1_5_2 = 8,  MC_1_5  = 8,
-    MC_1_6_4 = 9,  MC_1_6  = 9,
-    MC_1_7_10 = 10, MC_1_7 = 10,
-    MC_1_8_9 = 11,  MC_1_8 = 11,
-    MC_1_9_4 = 12,  MC_1_9 = 12,
-    MC_1_10_2 = 13, MC_1_10 = 13,
-    MC_1_11_2 = 14, MC_1_11 = 14,
-    MC_1_12_2 = 15, MC_1_12 = 15,
-    MC_1_13_2 = 16, MC_1_13 = 16,
-    MC_1_14_4 = 17, MC_1_14 = 17,
-    MC_1_15_2 = 18, MC_1_15 = 18,
-    MC_1_16_1 = 19,
-    MC_1_16_5 = 20, MC_1_16 = 20,
-    MC_1_17_1 = 21, MC_1_17 = 21,
-    MC_1_18_2 = 22, MC_1_18 = 22,
-    MC_1_19_2 = 23,
-    MC_1_19 = 24,
-    MC_1_20 = 25,
-    MC_1_21 = 26,
-    MC_NEWEST = 26,
-)
-
-MCVersion = MCVersion
-
-#==========================================================================================#
-#                                      BIOMES                                              #
-#==========================================================================================#
 #! format: off
 @cenum(
     BiomeID::UInt8,
@@ -172,10 +130,13 @@ MCVersion = MCVersion
 #! format: on
 BiomeID = BiomeID
 isnone(biome::BiomeID) = biome == BIOME_NONE
+#endregion
 
-#==========================================================================================#
-#                       Utility Functions for Biomes and Versions                          #
-#==========================================================================================#
+#region Utility functions
+# ---------------------------------------------------------------------------- #
+#                   Utility Functions for Biomes and Versions                  #
+# ---------------------------------------------------------------------------- #
+
 
 function biome_exists(version::MCVersion, biome::BiomeID)
     if version >= MC_1_18
@@ -327,14 +288,6 @@ function is_overworld(version::MCVersion, biome::BiomeID)::Bool
     biome == tall_birch_forest && return version <= MC_1_8 || version >= MC_1_11
     biome == dripstone_caves || biome == lush_caves && return version >= MC_1_18
     return true
-end
-
-function dimension(biome::BiomeID)
-    end_barrens <= biome <= small_end_islands && return DIM_END
-    basalt_deltas <= biome <= soul_sand_valley && return DIM_NETHER
-    biome == nether_wastes && return DIM_NETHER
-    biome == the_end && return DIM_END
-    return DIM_OVERWORLD
 end
 
 function mutated(biome::BiomeID, version::MCVersion)::BiomeID
@@ -528,3 +481,4 @@ function is_snowy(biome::BiomeID)
         biome == snowy_taiga_mountains
     )
 end
+#endregion

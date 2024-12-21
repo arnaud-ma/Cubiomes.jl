@@ -1,24 +1,76 @@
-using OffsetArrays: OffsetArray, Origin, OffsetMatrix
+include("../random/noise/noise.jl")
+include("biomes.jl")
+using OffsetArrays
 
-abstract type Noise end
+#region Noise
+# ---------------------------------------------------------------------------- #
+#                             Noise infrastructure                             #
+# ---------------------------------------------------------------------------- #
 
-function Noise!(noise, seed::UInt64, args...)
-    return inplace_constructor_of(noise)(noise, seed, args...)
-end
-function Noise!(noise, seed::Integer, args...)
-    return Noise!(noise, UInt64(unsigned(seed)), args...)
-end
-function Noise!(noise, seed, args...)
-    return Noise!(noise, Integer(seed), args...)
-end
-function Noise!(noise, seed::String, args...)
-    return Noise!(noise, java_hashcode(seed), args...)
-end
-Noise(::Type{D}, ::UndefInitializer) where {D<:Dimension} = noise_of(D)(undef)
+"""
+    Dimension
 
-function Noise(seed, ::Type{D}, args...) where {D<:Dimension}
-    return Noise!(Noise(D, undef), seed, args...)
+An abstract type that represents a dimension in Minecraft. It is used to generate
+the noise for the biomes in that dimension.
+
+The concrete type must implement:
+- An uninitialized constructor `Dimension(::Type{TheDim}, u::UndefInitializer, args...)` or
+  `TheDim(::UndefInitializer, args...)` where `TheDim` is the concrete type.
+- An inplace constructor `set_seed!(dim::TheDim, seed::UInt64, args...)` where `TheDim`
+  is the concrete type. Be aware that the seed must be constrained to `UInt64` dispatch to work.
+"""
+abstract type Dimension <: Noise end
+
+"""
+    set_seed!(dim::Dimension, seed, args...)
+
+Set the seed of the dimension generator. It can be any valid seed you can pass like in Minecraft,
+but use UInt64 if performance is a concern.
+
+The args are specific to the dimension. See the documentation of the dimension for more information.
+
+See also: [`Nether`](@ref), [`End`](@ref), [`Overworld`](@ref)
+"""
+function set_seed! end
+
+function set_rng!🎲(noise::Dimension, rng::AbstractJavaRNG, args...)
+    msg = lazy"Dimension type does not support set_rng!🎲. Use set_seed!🎲 to initialize one"
+    throw(ArgumentError(msg))
 end
+
+function set_seed!(noise::Dimension, seed::Unsigned, args...)
+    set_seed!(noise, UInt64(seed), args...)
+end
+function set_seed!(noise::Dimension, seed::Integer, args...)
+    set_seed!(noise, unsigned(seed), args...)
+end
+set_seed!(noise::Dimension, seed, args...) = set_seed!(noise, Integer(seed), args...)
+
+function set_seed!(noise::Dimension, seed::Union{String,Char}, args...)
+    return set_seed!(noise, java_hashcode(seed), args...)
+end
+
+# Dimension is simply an alias to Noise here
+function Dimension(d::Type{D}, u::UndefInitializer, args...) where {D<:Dimension}
+    Noise(d, u, args...)
+end
+function Dimension(::Type{D}, seed, args...) where {D<:Dimension}
+    nn = D(undef)
+    return set_seed!(nn, seed, args...)
+end
+
+function Dimension(::Type{T}, seed, args...) where {T<:Dimension}
+    dim = Dimension(T, undef)
+    set_seed!(dim, seed, args...)
+    return dim
+end
+
+#endregion
+
+#region MCMap
+# ---------------------------------------------------------------------------- #
+#                             MCMap infrastructure                             #
+# ---------------------------------------------------------------------------- #
 
 MCMap{N} = OffsetArray{BiomeID,N,Array{BiomeID,N}}
 MCMap(A::AbstractArray, args...) = OffsetArray(A, args...)
@@ -30,11 +82,8 @@ end
 function MCMap{2}(array::MCMap{3})
     size_x, size_z, size_y = size(array)
     if size_y != 1
-        throw(
-            ArgumentError(
-                "Cannot view a 3D cube as a 2D square if the y size is greater than 1"
-            ),
-        )
+        msg = "Cannot view a 3D cube as a 2D square if the y size is greater than 1"
+        throw(ArgumentError(msg))
     end
     ax = axes(array)
     return MCMap(reshape(array, size_x, size_z), ax[1], ax[2])
@@ -102,6 +151,9 @@ macro scale_str(str)
     return Scale(parse(Int, x[2]))
 end
 const var"@📏_str" = var"@scale_str"
+
+#region voronoi
+# ---------------------------------- Voronoi --------------------------------- #
 
 """
     get_voronoi_src_map3D(map3D::MCMap{3})::MCMap{3}
@@ -236,3 +288,5 @@ function voronoi_access_3d(sha::UInt64, x::Integer, z::Integer, y::Integer)
 
     return closest_x, closest_z, closest_y
 end
+#endregion
+#endregion

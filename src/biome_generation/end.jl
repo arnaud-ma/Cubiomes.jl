@@ -2,7 +2,7 @@ using StaticArrays: SizedVector
 using OffsetArrays: Origin
 
 struct EndNoise{S<:Union{Nothing,UInt64}} <: Noise
-    perlin::PerlinNoise
+    perlin::Perlin
     sha::S
 end
 

@@ -22,6 +22,12 @@ any random numbers.
 """
 randjump🎲
 
+"""
+    set_seed!(rng::AbstractNG_MC, seed)
+
+Initialize the rng with the given seed
+"""
+
 function next🎲(rng::AbstractJavaRNG, ::Type{T}, stop::Real)::T where {T}
     return next🎲(rng, T) * stop
 end
@@ -159,11 +165,11 @@ mutable struct JavaXoroshiro128PlusPlus <: AbstractJavaRNG
     hi::UInt64
 end
 
-function JavaXoroshiro128PlusPlus(seed::UInt64)
-    XL::UInt64 = 0x9e3779b97f4a7c15
-    XH::UInt64 = 0x6a09e667f3bcc909
-    A::UInt64 = 0xbf58476d1ce4e5b9
-    B::UInt64 = 0x94d049bb133111eb
+function _get_lo_hi(seed::UInt64)
+    XL = 0x9e3779b97f4a7c15
+    XH = 0x6a09e667f3bcc909
+    A = 0xbf58476d1ce4e5b9
+    B = 0x94d049bb133111eb
     l = seed ⊻ XH
     h = l + XL
     l = (l ⊻ (l >> 30)) * A
@@ -172,10 +178,16 @@ function JavaXoroshiro128PlusPlus(seed::UInt64)
     h = (h ⊻ (h >> 27)) * B
     l = l ⊻ (l >> 31)
     h = h ⊻ (h >> 31)
-    return JavaXoroshiro128PlusPlus(l, h)
+    return l, h
 end
-function JavaXoroshiro128PlusPlus(seed::Integer)
-    return JavaXoroshiro128PlusPlus(UInt64(unsigned(seed)))
+
+function set_seed!(rng::JavaXoroshiro128PlusPlus, seed)
+    rng.lo, rng.hi = _get_lo_hi(seed)
+end
+
+function JavaXoroshiro128PlusPlus(seed::UInt64)
+    lo, hi = _get_lo_hi(seed)
+    return JavaXoroshiro128PlusPlus(lo, hi)
 end
 
 Base.copy(rng::JavaXoroshiro128PlusPlus) = JavaXoroshiro128PlusPlus(rng.lo, rng.hi)
