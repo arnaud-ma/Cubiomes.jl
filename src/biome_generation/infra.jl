@@ -31,36 +31,20 @@ The args are specific to the dimension. See the documentation of the dimension f
 
 See also: [`Nether`](@ref), [`End`](@ref), [`Overworld`](@ref)
 """
-function set_seed! end
+function set_seed!(dim::Dimension, seed, arg...) end
 
 function set_rng!🎲(noise::Dimension, rng::AbstractJavaRNG, args...)
     msg = lazy"Dimension type does not support set_rng!🎲. Use set_seed!🎲 to initialize one"
     throw(ArgumentError(msg))
 end
 
-function set_seed!(noise::Dimension, seed::Unsigned, args...)
-    set_seed!(noise, UInt64(seed), args...)
-end
-function set_seed!(noise::Dimension, seed::Integer, args...)
-    set_seed!(noise, unsigned(seed), args...)
-end
-set_seed!(noise::Dimension, seed, args...) = set_seed!(noise, Integer(seed), args...)
-
-function set_seed!(noise::Dimension, seed::Union{String,Char}, args...)
-    return set_seed!(noise, java_hashcode(seed), args...)
-end
-
 # Dimension is simply an alias to Noise here
 function Dimension(d::Type{D}, u::UndefInitializer, args...) where {D<:Dimension}
     Noise(d, u, args...)
 end
-function Dimension(::Type{D}, seed, args...) where {D<:Dimension}
-    nn = D(undef)
-    return set_seed!(nn, seed, args...)
-end
 
-function Dimension(::Type{T}, seed, args...) where {T<:Dimension}
-    dim = Dimension(T, undef)
+function Dimension(::Type{D}, seed, args...) where {D<:Dimension}
+    dim = Dimension(D, undef)
     set_seed!(dim, seed, args...)
     return dim
 end

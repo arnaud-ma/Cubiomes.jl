@@ -1,5 +1,4 @@
 include("perlin.jl")
-include("../../utils.jl")
 
 using StaticArrays: SizedArray
 #region Octaves

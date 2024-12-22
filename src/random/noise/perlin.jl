@@ -90,7 +90,9 @@ function Perlin(::UndefInitializer)
 end
 
 function is_undef(p::Perlin)
-    return any(isnan, (p.x, p.y, p.z, p.const_y, p.const_smooth_y, p.amplitude, p.lacunarity))
+    return any(
+        isnan, (p.x, p.y, p.z, p.const_y, p.const_smooth_y, p.amplitude, p.lacunarity)
+    )
 end
 
 function set_rng!🎲(perlin::Perlin, rng::AbstractJavaRNG)
@@ -107,6 +109,19 @@ function set_rng!🎲(perlin::Perlin, rng::AbstractJavaRNG)
     perlin.x, perlin.y, perlin.z = x, y, z
     return nothing
 end
+
+function Base.:(==)(p1::Perlin, p2::Perlin)
+    return p1.permutations == p2.permutations &&
+           p1.x == p2.x &&
+           p1.y == p2.y &&
+           p1.z == p2.z &&
+           p1.const_y == p2.const_y &&
+           p1.const_index_y == p2.const_index_y &&
+           p1.const_smooth_y == p2.const_smooth_y &&
+           p1.amplitude == p2.amplitude &&
+           p1.lacunarity == p2.lacunarity
+end
+
 
 """
     fill_permutations!🎲(rng::AbstractRNG_MC, perms::PermsType)

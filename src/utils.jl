@@ -29,6 +29,12 @@ end
 
 java_hashcode(x::Char) = Int32(x)
 
+u64_seed(x::UInt64) = x
+u64_seed(x::Unsigned) = u64_seed(UInt64(x))
+u64_seed(x::Integer) = u64_seed(unsigned(x))
+u64_seed(x::Real) = u64_seed(Integer(x))
+u64_seed(x::Union{String, Char}) = java_hashcode(x)
+
 #=============================================================================#
 #                    SHA                                                      #
 #=============================================================================#

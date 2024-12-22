@@ -1,3 +1,5 @@
+include("../utils.jl")
+
 #=============================================================================#
 # Interface for Java RNGs                                                     #
 #=============================================================================#
@@ -5,28 +7,32 @@
 abstract type AbstractJavaRNG end
 
 """
-    next🎲(rng::AbstractRNG_MC, ::Type{T}) where T
-    next🎲(rng::AbstractRNG_MC, ::Type{T}, stop) where T
-    next🎲(rng::AbstractRNG_MC, ::Type{T}, start, stop) where T
+    next🎲(rng::AbstractJavaRNG, ::Type{T}) where T
+    next🎲(rng::AbstractJavaRNG, ::Type{T}, stop) where T
+    next🎲(rng::AbstractJavaRNG, ::Type{T}, start, stop) where T
 
 Generate a random number of type `T` from the given random number generator. If `start` and `stop`
 are provided, the random number will be in the range `[start, stop]`. `start` is default to `0`.
 """
-next🎲
+function next🎲(rng::AbstractJavaRNG, type) end
 
 """
-    randjump🎲(rng::AbstractRNG_MC, ::Type{T}, n::Integer) where T
+    randjump🎲(rng::AbstractJavaRNG, ::Type{T}, n::Integer) where T
 
 Jump the state of the random number generator `n` steps forward, without generating
 any random numbers.
 """
-randjump🎲
+function randjump🎲(rng::AbstractJavaRNG, type, n::Integer) end
 
 """
-    set_seed!(rng::AbstractNG_MC, seed)
+    set_seed!(rng::AbstractJavaRNG, seed) -> AbstractJavaRNG
 
-Initialize the rng with the given seed
+Initialize the rng with the given seed. Return the rng itself for convenience.
 """
+function set_seed!(rng::AbstractJavaRNG, seed, args...)
+    return set_seed!(rng, u64_seed(seed), args...)
+end
+
 
 function next🎲(rng::AbstractJavaRNG, ::Type{T}, stop::Real)::T where {T}
     return next🎲(rng, T) * stop
@@ -48,7 +54,8 @@ const MAGIC_JAVA_INT32::UInt64 = 0x5DEECE66D
 const MAGIC_JAVA_ADDEND::UInt64 = 0xB
 
 _new_seed(seed::UInt64) = (seed ⊻ MAGIC_JAVA_INT32) & ((1 << 48) - 1)
-_new_seed(seed::Integer) = _new_seed(UInt64(unsigned(seed)))
+_new_seed(seed) = _new_seed(u64_seed(seed))
+
 """
     JavaRandom(seed::Integer)
 
@@ -67,20 +74,19 @@ mutable struct JavaRandom <: AbstractJavaRNG
     seed::UInt64
     # https://docs.oracle.com/javase/7/docs/api/java/util/Random.html#setSeed(long)
     JavaRandom(seed) = new(_new_seed(seed))
-    JavaRandom(seed::UInt64) = new(seed)
 end
 
-Base.copy(rng::JavaRandom) = JavaRandom(rng.seed)
 function Base.copy!(dst::JavaRandom, src::JavaRandom)
     dst.seed = src.seed
     return dst
 end
+Base.copy(rng::JavaRandom) = copy!(JavaRandom(0), rng)
 Base.hash(a::JavaRandom, h::UInt) = hash(a.seed, h)
 Base.:(==)(a::JavaRandom, b::JavaRandom) = a.seed == b.seed
 
-function set_seed!(rng::JavaRandom, seed::Integer)
+function set_seed!(rng::JavaRandom, seed::UInt64)
     rng.seed = _new_seed(seed)
-    return nothing
+    return rng
 end
 
 # Java's next method
@@ -183,12 +189,15 @@ end
 
 function set_seed!(rng::JavaXoroshiro128PlusPlus, seed)
     rng.lo, rng.hi = _get_lo_hi(seed)
+    return rng
 end
 
 function JavaXoroshiro128PlusPlus(seed::UInt64)
     lo, hi = _get_lo_hi(seed)
     return JavaXoroshiro128PlusPlus(lo, hi)
 end
+
+JavaXoroshiro128PlusPlus(seed) = JavaXoroshiro128PlusPlus(u64_seed(seed))
 
 Base.copy(rng::JavaXoroshiro128PlusPlus) = JavaXoroshiro128PlusPlus(rng.lo, rng.hi)
 function Base.copy!(dst::JavaXoroshiro128PlusPlus, src::JavaXoroshiro128PlusPlus)
@@ -237,7 +246,7 @@ function next🎲(rng::JavaXoroshiro128PlusPlus, ::Type{Int32}, stop::Integer)::
     return val
 end
 
-function randjump🎲(rng::JavaXoroshiro128PlusPlus, ::Type{<:Union{UInt64,Int64}}, n)
+function randjump🎲(rng::JavaXoroshiro128PlusPlus, ::Type{<:Union{UInt64,Int64}}, n::Integer)
     i = zero(n)
     while i < n
         next🎲(rng, UInt64)
