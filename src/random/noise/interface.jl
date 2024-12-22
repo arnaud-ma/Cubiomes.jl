@@ -26,7 +26,6 @@ julia> sample_noise(noise, 0, 0, 0)
 ```
 """
 function sample_noise end
-
 """
     set_rng!🎲(noise::Perlin, rng)
     set_rng!🎲(noise::Octaves, rng::JavaRandom, octave_min)

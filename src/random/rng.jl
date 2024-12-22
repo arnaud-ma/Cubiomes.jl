@@ -187,17 +187,15 @@ function _get_lo_hi(seed::UInt64)
     return l, h
 end
 
-function set_seed!(rng::JavaXoroshiro128PlusPlus, seed)
+function set_seed!(rng::JavaXoroshiro128PlusPlus, seed::UInt64)
     rng.lo, rng.hi = _get_lo_hi(seed)
     return rng
 end
 
-function JavaXoroshiro128PlusPlus(seed::UInt64)
-    lo, hi = _get_lo_hi(seed)
+function JavaXoroshiro128PlusPlus(seed)
+    lo, hi = _get_lo_hi(u64_seed(seed))
     return JavaXoroshiro128PlusPlus(lo, hi)
 end
-
-JavaXoroshiro128PlusPlus(seed) = JavaXoroshiro128PlusPlus(u64_seed(seed))
 
 Base.copy(rng::JavaXoroshiro128PlusPlus) = JavaXoroshiro128PlusPlus(rng.lo, rng.hi)
 function Base.copy!(dst::JavaXoroshiro128PlusPlus, src::JavaXoroshiro128PlusPlus)

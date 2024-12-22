@@ -106,5 +106,12 @@ end
             end
             rng == rng2
         end
+
+        @check function set_seed(seed=Data.Integers{Int64}())
+            rng = Cubiomes.JavaXoroshiro128PlusPlus(1)
+            rng2 = Cubiomes.JavaXoroshiro128PlusPlus(seed)
+            Cubiomes.set_seed!(rng, seed)
+            rng == rng2
+        end
     end
 end;

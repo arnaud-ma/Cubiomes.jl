@@ -75,6 +75,8 @@ mutable struct Perlin <: Noise
     lacunarity::Float64
 end
 
+Perlin(perms::Array, args...) = Perlin(OffsetVector(MVector{257,UInt8}(perms), 0:256), args...)
+
 function Perlin(::UndefInitializer)
     return Perlin(
         Perms(undef),
