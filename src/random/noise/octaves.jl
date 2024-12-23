@@ -106,43 +106,17 @@ end
 
 # TODO: OctaveNoiseBeta
 
-# TODO: maybe something to avoid repeated code
-function sample_noise(octaves::Octaves{N}, x, y::Nothing, z, yamp, ymin)::Float64 where {N}
+get_ay(y::Nothing, perlin, lf) = -perlin.y
+get_ay(y, perlin, lf) = y * lf
+
+function sample_noise(octaves::Octaves{N}, x, y, z, yamp=missing, ymin=missing) where {N}
     v = zero(Float64)
     for perlin in octaves.octaves
         lf = perlin.lacunarity
         ax = x * lf
-        ay = -perlin.y
+        ay = get_ay(y, perlin, lf)
         az = z * lf
         pv = sample_noise(perlin, ax, ay, az, yamp * lf, ymin * lf)
-        v += pv * perlin.amplitude
-    end
-    return v
-end
-
-function sample_noise(noise::Octaves{N}, x, y, z, yamp, ymin)::Float64 where {N}
-    v = zero(Float64)
-    for perlin in noise.octaves
-        lf = perlin.lacunarity
-        ax = x * lf
-        ay = y * lf
-        az = z * lf
-        pv = sample_noise(perlin, ax, ay, az, yamp * lf, ymin * lf)
-        v += pv * perlin.amplitude
-    end
-    return v
-end
-
-function sample_noise(noise::Octaves{N}, x, y, z)::Float64 where {N}
-    v = zero(Float64)
-    iszero(N) && return v
-    for i in 1:N
-        perlin = noise.octaves[i]
-        lf = perlin.lacunarity
-        ax = x * lf
-        ay = y * lf
-        az = z * lf
-        pv = sample_noise(perlin, ax, ay, az)
         v += pv * perlin.amplitude
     end
     return v

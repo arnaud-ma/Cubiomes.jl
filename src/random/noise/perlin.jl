@@ -75,7 +75,9 @@ mutable struct Perlin <: Noise
     lacunarity::Float64
 end
 
-Perlin(perms::Array, args...) = Perlin(OffsetVector(MVector{257,UInt8}(perms), 0:256), args...)
+function Perlin(perms::Array, args...)
+    Perlin(OffsetVector(MVector{257,UInt8}(perms), 0:256), args...)
+end
 
 function Perlin(::UndefInitializer)
     return Perlin(
@@ -123,7 +125,6 @@ function Base.:(==)(p1::Perlin, p2::Perlin)
            p1.amplitude == p2.amplitude &&
            p1.lacunarity == p2.lacunarity
 end
-
 
 """
     fill_permutations!🎲(rng::AbstractRNG_MC, perms::PermsType)
@@ -258,18 +259,35 @@ function interpolate_perlin(idx::PermsType, d1, d2, d3, h1, h2, h3, t1, t2, t3)
     return lerp(t3, l1, l5)
 end
 
-function sample_noise(noise::Perlin, x, y, z, yamp=0, ymin=0)
+function get_y_coord_values(noise, y)
     if iszero(y)
-        y, index_y, smooth_y = noise.const_y, noise.const_index_y, noise.const_smooth_y
-    else
-        y, index_y, smooth_y = init_coord_values(y + noise.y)
+        return noise.const_y, noise.const_index_y, noise.const_smooth_y
     end
-    x, index_x, smooth_x = init_coord_values(x + noise.x)
-    z, index_z, smooth_z = init_coord_values(z + noise.z)
+    return init_coord_values(y + noise.y)
+end
+
+function adjust_y(y, yamp, ymin)
+    # assuming that everything is positive
+    # for y it's ok because it's a fractional part
+    # for yamp and ymin, this is a TODO to check if it is always the case
     if !iszero(yamp)
-        yclamp = ymin < y ? ymin : y
-        y -= floor(yclamp / yamp) * yamp
+        yclamp = min(ymin, y)
+        if yclamp > yamp
+            # fld(x, y) = floor(x/y), but with floating point numbers, so maybe less accurate
+            # see the doc of fld for more details
+            y -= fld(yclamp, yamp) * yamp
+        end
+        # if yclamp < yamp, then yclamp/yamp < 1 so fld(yclamp, yamp) = 0
+        # therefore y -= 0 * yamp = 0, i.e. no change
     end
+    return y
+end
+
+function sample_noise(noise::Perlin, x, y, z, yamp=0, ymin=0)
+    x, index_x, smooth_x = init_coord_values(x + noise.x)
+    y, index_y, smooth_y = get_y_coord_values(noise, y)
+    z, index_z, smooth_z = init_coord_values(z + noise.z)
+    y = adjust_y(y, yamp, ymin)
 
     #! format: off
     return interpolate_perlin(
@@ -280,6 +298,8 @@ function sample_noise(noise::Perlin, x, y, z, yamp=0, ymin=0)
     )
     #! format: on
 end
+
+sample_noise(noise::Perlin, x, y, z, ::Missing, ::Missing) = sample_noise(noise, x, y, z)
 
 function sample_perlin_beta17_terrain(noise::Perlin, v, d1, d2, d3, yLacAmp)
     # TODO

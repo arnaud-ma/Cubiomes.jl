@@ -66,7 +66,7 @@ function Noise🎲(
     octave_min,
 ) where {N}
     dp = DoublePerlin{N}(undef, amplitudes_or_len) # here it's why we need to overload
-    set_rng!🎲(dp, rng, amplitudes, octave_min)
+    set_rng!🎲(dp, rng, amplitudes_or_len, octave_min)
     return dp
 end
 
