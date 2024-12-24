@@ -208,7 +208,7 @@ function indexed_lerp(idx::Integer, x, y, z)
     lower_4bits == 0xE && return -x + y
     lower_4bits == 0xF && return -y - z
 
-    return error(lazy"lower 4 bits are in fact more than 4 bits ???")
+    error(lazy"lower 4 bits are in fact more than 4 bits ???") # COLV_EXCL_LINE
 end
 
 """

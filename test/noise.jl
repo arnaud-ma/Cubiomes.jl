@@ -1,6 +1,7 @@
 import Cubiomes:
     Noise, Noise🎲, Perlin, JavaRandom, JavaXoroshiro128PlusPlus, set_rng!🎲, sample_noise
 using Test
+include("data.jl")
 
 function test_perlin_creation(perlin_test, rng)
     rng2 = copy(rng)
@@ -12,89 +13,29 @@ function test_perlin_creation(perlin_test, rng)
     @test perlin2 == perlin_test
 end
 
-function test_perlin_sample(args...; result, rng)
-    perlin = Noise🎲(Perlin, rng)
-    @test sample_noise(perlin, args...) ≈ result atol = 1e-15
+function test_sample(noise_type, args...; result, rng)
+    noise = Noise🎲(noise_type, rng)
+    @test sample_noise(noise, args...) ≈ result atol = 1e-15
 end
 
 @testset "Noise" begin
     @testset "Perlin" begin
-        %
-        @testset "creation JavaRandom" begin
-            perlin_test = Perlin(
-            #!format: off
-            UInt8[
-                38 , 216, 68 , 4  , 2  , 76 , 243, 191, 9  , 207, 163, 175, 10 , 15 , 141, 156,
-                165, 140, 66 , 26 , 23 , 148, 72 , 121, 96 , 218, 20 , 199, 152, 32 , 236, 144,
-                18 , 232, 25 , 123, 253, 119, 225, 100, 205, 128, 212, 12 , 77 , 131, 137, 135,
-                107, 63 , 34 , 33 , 53 , 90 , 223, 126, 67 , 228, 94 , 106, 70 , 75 , 7  , 219,
-                84 , 166, 210, 37 , 189, 239, 145, 222, 198, 245, 80 , 92 , 1  , 200, 27 , 91 ,
-                3  , 81 , 143, 39 , 108, 235, 56 , 17 , 103, 46 , 50 , 112, 102, 110, 186, 54 ,
-                234, 159, 101, 105, 51 , 28 , 168, 248, 113, 69 , 88 , 155, 62 , 118, 192, 8  ,
-                190, 44 , 13 , 71 , 41 , 157, 204, 237, 79 , 73 , 48 , 233, 173, 254, 85 , 95 ,
-                124, 6  , 64 , 242, 99 , 89 , 195, 52 , 162, 174, 227, 82 , 151, 35 , 249, 122,
-                241, 61 , 78 , 21 , 125, 132, 154, 208, 206, 231, 98 , 117, 149, 36 , 150, 240,
-                215, 86 , 115, 180, 209, 171, 202, 139, 197, 246, 193, 187, 160, 14 , 153, 172,
-                220, 97 , 178, 57 , 164, 0  , 201, 111, 181, 244, 230, 170, 22 , 60 , 138, 183,
-                87 , 194, 83 , 217, 169, 59 , 104, 142, 158, 116, 176, 136, 120, 40 , 179, 109,
-                43 , 31 , 211, 24 , 58 , 114, 255, 29 , 229, 127, 196, 47 , 185, 16 , 49 , 161,
-                55 , 129, 19 , 5  , 184, 252, 42 , 146, 74 , 250, 182, 45 , 30 , 65 , 177, 247,
-                167, 188, 93 , 238, 130, 147, 134, 226, 214, 213, 251, 221, 11 , 224, 133, 203,
-                38 ],
+        test_perlin_sample(args...; result, rng) = test_sample(Perlin, args...; result, rng)
 
-            #!format: on
-                181.77483268344145,
-                85.50187508630322,
-                37.47942380946154,
-                0.5018750863032153,
-                0x55,
-                0.5035157538551321,
-                1.0,
-                1.0,
-            )
-            seed = 0x74230be5f97466db
-            rng = JavaRandom(seed)
-            test_perlin_creation(perlin_test, rng)
+        @testset "creation JavaRandom" begin
+            for (seed, perlin_test) in PERLIN_JAVA_RANDOM
+                rng = JavaRandom(seed)
+                test_perlin_creation(perlin_test, rng)
+            end
         end
         @testset "creation JavaXoroshiro" begin
-            perlin_test = Perlin(
-                #!format: off
-                UInt8[
-                255, 171, 246, 78, 219, 209, 169, 237, 119, 97, 170, 241, 195, 27, 155, 158,
-                80 , 5  , 156, 221, 245, 141, 153, 65 , 72 , 91 , 214, 25 , 218, 35 , 111, 39 ,
-                187, 87 , 117, 205, 70 , 90 , 196, 216, 96 , 210, 95 , 16 , 168, 150, 94 , 167,
-                142, 180, 109, 212, 6  , 186, 76 , 60 , 228, 103, 165, 197, 108, 38 , 127, 177,
-                138, 17 , 105, 149, 184, 54 , 67 , 64 , 23 , 185, 84 , 140, 146, 99 , 62 , 85 ,
-                243, 61 , 120, 242, 106, 143, 230, 191, 36 , 59 , 231, 77 , 1  , 4  , 135, 204,
-                202, 43 , 154, 130, 112, 172, 222, 254, 9  , 124, 101, 235, 52 , 247, 125, 50 ,
-                201, 194, 71 , 32 , 152, 57 , 104, 88 , 93 , 159, 249, 139, 157, 63 , 188, 24 ,
-                233, 26 , 48 , 215, 136, 68 , 14 , 92 , 178, 79 , 118, 151, 31 , 131, 244, 182,
-                192, 234, 200, 206, 193, 89 , 34 , 239, 133, 173, 179, 251, 69 , 198, 19 , 238,
-                208, 164, 126, 227, 21 , 147, 162, 174, 252, 33 , 55 , 190, 176, 213, 45 , 226,
-                253, 123, 232, 47 , 100, 41 , 37 , 181, 49 , 42 , 30 , 137, 83 , 211, 98 , 148,
-                217, 86 , 183, 121, 115, 46 , 18 , 160, 175, 102, 44 , 207, 129, 0  , 107, 51 ,
-                11 , 166, 53 , 113, 12 , 82 , 73 , 240, 10 , 199, 29 , 7  , 220, 22 , 122, 3  ,
-                56 , 236, 189, 81 , 8  , 161, 75 , 250, 163, 2  , 225, 20 , 128, 224, 66 , 134,
-                15 , 248, 40 , 144, 116, 58 , 132, 203, 28 , 229, 110, 114, 74 , 13 , 145, 223,
-                255],
-                #!format: on
-                202.80995504115685,
-                186.16164107431476,
-                162.5104848008196,
-                0.16164107431475827,
-                0xba,
-                0.032655437468643043,
-                1.0,
-                1.0,
-            )
-            seed = 0xe982bc017cad6254
-            rng = JavaXoroshiro128PlusPlus(seed)
-            test_perlin_creation(perlin_test, rng)
+            for (seed, perlin_test) in PERLIN_XOROSHIRO
+                rng = JavaXoroshiro128PlusPlus(seed)
+                test_perlin_creation(perlin_test, rng)
+            end
         end
 
-        # TODO: test that is it the same with the cubiomes c library
         @testset "sample noise JavaRandom" begin
-            perlin = Noise🎲(Perlin, JavaRandom(0x9645a8671e48721a))
 
             # test x, y, z
             test_perlin_sample(
@@ -125,7 +66,7 @@ end
                 rng=JavaRandom(0x3cf41563fda63f77),
             )
 
-        # test with yamp and ymin that are really effective, i.e. min(some_noise(y), ymin) > yamp
+            # test with yamp and ymin that are really effective, i.e. min(some_noise(y), ymin) > yamp
             test_perlin_sample(
                 3387.428651297631,
                 -11854.03847018979,
@@ -134,6 +75,37 @@ end
                 0.934979378815115;
                 result=-0.21469240338734455,
                 rng=JavaRandom(0x4a9a8e281b4d812f),
+            )
+        end
+
+        @testset "sample noise JavaXoroshiro" begin
+
+            # test x, y, z
+            test_perlin_sample(
+                39274.8390143525,
+                -37913.420796023274,
+                -479.7416496750789;
+                result=-0.4502182120751059,
+                rng=JavaXoroshiro128PlusPlus(0x3f7d8a0a0b398783),
+            )
+
+            # test y=0
+            test_perlin_sample(
+                -29836.64915619664,
+                0,
+                24006.59163330684;
+                result=-0.0603214999414799,
+                rng=JavaXoroshiro128PlusPlus(0x9ec5f928bdaec33f),
+            )
+            # test with yamp and ymin
+            test_perlin_sample(
+                -8887.462580367594,
+                22.96449274583,
+                -17542.71611184543,
+                684.6701337781379337, # yamp
+                1368.5385109903469082; # ymin
+                result=-0.1584240761398616,
+                rng=JavaXoroshiro128PlusPlus(0x6ffebc333019e103),
             )
         end
     end

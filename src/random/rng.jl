@@ -14,7 +14,9 @@ abstract type AbstractJavaRNG end
 Generate a random number of type `T` from the given random number generator. If `start` and `stop`
 are provided, the random number will be in the range `[start, stop]`. `start` is default to `0`.
 """
-function next🎲(rng::AbstractJavaRNG, type) end
+function next🎲(rng::T, type) where T <: AbstractJavaRNG
+    throw(MethodError(next🎲, (T, type)))
+end
 
 """
     randjump🎲(rng::AbstractJavaRNG, ::Type{T}, n::Integer) where T
@@ -22,7 +24,9 @@ function next🎲(rng::AbstractJavaRNG, type) end
 Jump the state of the random number generator `n` steps forward, without generating
 any random numbers.
 """
-function randjump🎲(rng::AbstractJavaRNG, type, n::Integer) end
+function randjump🎲(rng::T, type, n::Integer) where T<:AbstractJavaRNG
+    throw(MethodError(randjump🎲, (T, type, n)))
+end
 
 """
     set_seed!(rng::AbstractJavaRNG, seed) -> AbstractJavaRNG
@@ -81,7 +85,6 @@ function Base.copy!(dst::JavaRandom, src::JavaRandom)
     return dst
 end
 Base.copy(rng::JavaRandom) = copy!(JavaRandom(0), rng)
-Base.hash(a::JavaRandom, h::UInt) = hash(a.seed, h)
 Base.:(==)(a::JavaRandom, b::JavaRandom) = a.seed == b.seed
 
 function set_seed!(rng::JavaRandom, seed::UInt64)
@@ -206,7 +209,6 @@ end
 function Base.:(==)(a::JavaXoroshiro128PlusPlus, b::JavaXoroshiro128PlusPlus)
     (a.lo == b.lo) && (a.hi == b.hi)
 end
-Base.hash(a::JavaXoroshiro128PlusPlus, h::UInt) = hash((a.lo, a.hi), h)
 
 # nextLong method
 function next🎲(rng::JavaXoroshiro128PlusPlus, ::Type{UInt64})

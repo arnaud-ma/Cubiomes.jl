@@ -1,6 +1,6 @@
 using Cubiomes
 using Supposition: @check, @composed, Data
-using Test: @testset
+using Test: @testset, @test_throws
 using JavaCall: @jimport, JavaCall, jcall, jlong, jint, jfloat, jdouble, JString
 JavaCall.init()
 
@@ -22,6 +22,14 @@ macro rng_gen(algorithm::String, rng_jl_type, seed_gen)
     end
 end
 
+macro rng_gen_jl(algorithm::String, rng_jl_type, seed_gen)
+    quote
+        @composed function rng_gen(seed=$seed_gen)
+            return $rng_jl_type(seed)
+        end
+    end
+end
+
 start_stop_int32_gen = @composed function ordered_int32(
     x=Data.Pairs(Data.Integers{Int32}(), Data.Integers{Int32}())
 )
@@ -29,6 +37,13 @@ start_stop_int32_gen = @composed function ordered_int32(
 end
 
 @testset "JavaRNG" begin
+
+    @testset "Interface" begin
+        struct TestRNG <: Cubiomes.AbstractJavaRNG end
+        @test_throws MethodError Cubiomes.next🎲(TestRNG(), Int32)
+        @test_throws MethodError Cubiomes.randjump🎲(TestRNG(), Int32, 1)
+    end
+
     @testset "Random" begin
         rng_gen = @rng_gen("Random", Cubiomes.JavaRandom, Data.Integers{Int64}())
 
