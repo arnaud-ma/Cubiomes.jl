@@ -2,7 +2,16 @@ using Cubiomes
 using Supposition: @check, @composed, Data
 using Test: @testset, @test_throws
 using JavaCall: @jimport, JavaCall, jcall, jlong, jint, jfloat, jdouble, JString
-JavaCall.init()
+
+# check if Java is available. We do not want to stop everything if it is not
+# so we throw an exception that will be caught later (surely with a include("rng.jl"))
+struct JavaNotFoundException <: Exception end
+try
+    JavaCall.init()
+catch e
+    throw(JavaNotFoundException())
+end
+
 
 const java_random_factory = @jimport "java.util.random.RandomGeneratorFactory"
 const java_rng = @jimport "java.util.random.RandomGenerator"

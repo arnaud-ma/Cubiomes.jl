@@ -1,5 +1,12 @@
 import Cubiomes:
-    Noise, Noise🎲, Perlin, JavaRandom, JavaXoroshiro128PlusPlus, set_rng!🎲, sample_noise
+    Noise,
+    Noise🎲,
+    Perlin,
+    JavaRandom,
+    JavaXoroshiro128PlusPlus,
+    set_rng!🎲,
+    sample_noise,
+    sample_simplex
 using Test
 include("data.jl")
 
@@ -112,7 +119,12 @@ end
         @testset "sample simplex" begin
             seed = 0xad47b40a1754efa5
             noise = Noise🎲(Perlin, JavaRandom(seed))
-            @test sample_simplex(noise, -17177.694758836762, 59022.880344655736) ≈ 0.2483472791500884 atol = 1e-15
+            @test sample_simplex(noise, -17177.694758836762, 59022.880344655736) ≈
+                0.2483472791500884 atol = 1e-15
         end
+    end
+
+    @testset Octaves begin
+        
     end
 end
