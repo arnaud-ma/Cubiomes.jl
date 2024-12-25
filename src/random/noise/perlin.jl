@@ -328,12 +328,17 @@ end
 
 const SKEW::Float64 = (√3 - 1) / 2
 const UNSKEW::Float64 = (3 - √3) / 6
+# unskew = (1 - 1/√3)/2 on the wiki page. Its the same thing if we simplify it. But
+# not the same for computer because of floating point precision.
 
+
+
+# only used with a perlin created with JavaRandom
 """
     sample_simplex(noise::Perlin, x, y)
 
 Sample the given noise at the given 2D coordinate using the simplex noise
-algorithm instead of perlin noise. See https://en.wikipedia.org/wiki/Simplex_noise
+algorithm instead of the perlin one. See https://en.wikipedia.org/wiki/Simplex_noise
 
 See also: [`sample_noise`](@ref), [`Perlin`](@ref)
 """

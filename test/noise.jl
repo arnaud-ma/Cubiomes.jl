@@ -108,5 +108,11 @@ end
                 rng=JavaXoroshiro128PlusPlus(0x6ffebc333019e103),
             )
         end
+
+        @testset "sample simplex" begin
+            seed = 0xad47b40a1754efa5
+            noise = Noise🎲(Perlin, JavaRandom(seed))
+            @test sample_simplex(noise, -17177.694758836762, 59022.880344655736) ≈ 0.2483472791500884 atol = 1e-15
+        end
     end
 end
