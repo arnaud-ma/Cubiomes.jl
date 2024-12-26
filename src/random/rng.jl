@@ -33,7 +33,7 @@ Initialize the rng with the given seed. Return the rng itself for convenience.
 """
 set_seed!(rng::AbstractJavaRNG, seed, args...) = set_seed!(rng, u64_seed(seed), args...)
 
-next🎲(rng::AbstractJavaRNG, ::Type{T}, stop::Real)::T where {T} = next🎲(rng, T) * stop
+next🎲(rng::AbstractJavaRNG, ::Type{T}, stop::Real) where {T} = next🎲(rng, T) * stop
 
 function next🎲(rng::AbstractJavaRNG, ::Type{T}, start::Real, stop::Real)::T where {T}
     return next🎲(rng, T, stop - start) + start

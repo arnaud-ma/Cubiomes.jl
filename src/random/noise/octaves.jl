@@ -19,7 +19,16 @@ struct Octaves{N} <: Noise
     octaves::TypeInnerOctaves{N}
 
     # default constructor
-    Octaves{N}(x) where {N} = new(TypeInnerOctaves{N}(x))
+    function Octaves{N}(x) where {N}
+        N < 1 && throw(ArgumentError(lazy"We need at least one octave. Got $N"))
+        new(TypeInnerOctaves{N}(x))
+    end
+end
+Base.length(::Octaves{N}) where {N} = N
+
+function Base.:(==)(o1::Octaves, o2::Octaves)
+    length(o1) != length(o2) && return false
+    return all(p1 == p2 for (p1, p2) in zip(o1.octaves, o2.octaves))
 end
 
 Octaves{N}(::UndefInitializer) where {N} = Octaves{N}([Perlin(undef) for _ in 1:N])
@@ -27,12 +36,8 @@ is_undef(x::Octaves{N}) where {N} = any(is_undef, x.octaves)
 
 function set_rng!🎲(noise::Octaves{N}, rng::JavaRandom, octave_min) where {N}
     end_ = octave_min + N - 1
-    if N < 1 || end_ > 0
-        throw(
-            ArgumentError(
-            lazy"we must have at least one octave and octave_min must be <= 1 - N"
-        ),
-        )
+    if end_ > 0
+        throw(ArgumentError(lazy"we must have octave_min ≤ 1 - N. Got $octave_min > $(1- N)"))
     end
     persistence = 1 / (2.0^N - 1)
     lacunarity = 2.0^end_
@@ -57,7 +62,7 @@ function set_rng!🎲(noise::Octaves{N}, rng::JavaRandom, octave_min) where {N}
         octave.amplitude = persistence
         octave.lacunarity = lacunarity
         persistence *= 2
-        lacunarity *= 0.5
+        lacunarity /= 2
     end
     return nothing
 end
@@ -130,3 +135,7 @@ function sample_octave_beta17_terrain()
 end
 
 #endregion
+
+seed = 0x7918d3d767fce5d3
+rng = JavaRandom(seed)
+oct = Noise🎲(Octaves{7}, rng, -6)

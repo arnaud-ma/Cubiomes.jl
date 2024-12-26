@@ -6,8 +6,10 @@ import Cubiomes:
     JavaXoroshiro128PlusPlus,
     set_rng!🎲,
     sample_noise,
-    sample_simplex
-using Test
+    sample_simplex,
+    Octaves
+
+using Test: @test, @testset, @test_throws
 include("data.jl")
 
 function test_perlin_creation(perlin_test, rng)
@@ -28,20 +30,20 @@ end
 @testset "Perlin" begin
     test_perlin_sample(args...; result, rng) = test_sample(Perlin, args...; result, rng)
 
-    @testset "creation JavaRandom" begin
+    @testset "creation with JavaRandom rng" begin
         for (seed, perlin_test) in PERLIN_JAVA_RANDOM
             rng = JavaRandom(seed)
             test_perlin_creation(perlin_test, rng)
         end
     end
-    @testset "creation JavaXoroshiro" begin
+    @testset "creation with JavaXoroshiro rng" begin
         for (seed, perlin_test) in PERLIN_XOROSHIRO
             rng = JavaXoroshiro128PlusPlus(seed)
             test_perlin_creation(perlin_test, rng)
         end
     end
 
-    @testset "sample noise JavaRandom" begin
+    @testset "sample noise with JavaRandom rng" begin
 
         # test x, y, z
         test_perlin_sample(
@@ -84,7 +86,7 @@ end
         )
     end
 
-    @testset "sample noise JavaXoroshiro" begin
+    @testset "sample noise with JavaXoroshiro rng" begin
 
         # test x, y, z
         test_perlin_sample(
@@ -123,4 +125,25 @@ end
     end
 end
 
-@testset Octaves begin end
+
+function test_octaves_creations(octaves_test, nb, rng, octave_min)
+    rng2 = copy(rng)
+    noise = Noise🎲(Octaves{nb}, rng, octave_min)
+    noise2 = Noise(Octaves{nb}, undef)
+    set_rng!🎲(noise2, rng2, octave_min)
+    @test noise == octaves_test
+    @test noise == noise2
+end
+
+@testset "Octaves" begin
+
+    @test_throws ArgumentError Noise(Octaves{-6}, undef)
+    @test_throws ArgumentError Noise(Octaves{0}, undef)
+
+    @testset "creation with JavaRandom rng" begin
+        for ((seed, nb, octave_min), octaves_test) in OCTAVES_JAVA_RANDOM
+            rng = JavaRandom(seed)
+            test_octaves_creations(octaves_test, nb, rng, octave_min)
+        end
+    end
+end

@@ -59,7 +59,6 @@ end
 
 """
     Perlin
-
 The type for the perlin noise. See https://en.wikipedia.org/Perlin_Noise to know how it works.
 
 See also: [`Noise`](@ref), [`sample_noise`](@ref), [`sample_simplex`](@ref), [`OctaveNoise`](@ref)
@@ -161,10 +160,9 @@ smoothstep_perlin_unsafe(x) = x^3 * muladd(x, muladd(6, x, -15), 10)
 Initialize one coordinate for the Perlin noise sampling.
 
 # Returns:
-
-  - the fractional part of `coord`
-  - the integer part of `coord`, modulo UInt8
-  - the smoothstep value of the fractional part of `coord`
+- the fractional part of `coord`
+- the integer part of `coord`, modulo UInt8
+- the smoothstep value of the fractional part of `coord`
 
 See also: [`smoothstep_perlin_unsafe`](@ref)
 """
@@ -219,15 +217,14 @@ end
 Interpolate the Perlin noise at the given coordinates.
 
 # Arguments
-
-  - The `idx` parameter is the permutations
-    array.
-  - The `d1`, `d2`, and `d3` parameters are the fractional parts of the `x`, `y`, and `z`
-    coordinates.
-  - The `h1`, `h2`, and `h3` parameters are the integer parts of the `x`, `y`, and `z`
-    coordinates.
-  - The `t1`, `t2`, and `t3` parameters are the smoothstep values of the fractional parts
-    of the `x`, `y`, and `z` coordinates.
+- The `idx` parameter is the permutations
+array.
+- The `d1`, `d2`, and `d3` parameters are the fractional parts of the `x`, `y`, and `z`
+coordinates.
+- The `h1`, `h2`, and `h3` parameters are the integer parts of the `x`, `y`, and `z`
+coordinates.
+- The `t1`, `t2`, and `t3` parameters are the smoothstep values of the fractional parts
+of the `x`, `y`, and `z` coordinates.
 
 See also: [`init_coord_values`](@ref)
 """
@@ -298,7 +295,6 @@ function sample_noise(noise::Perlin, x, y, z, yamp=0, ymin=0)
         index_x, index_y, index_z,
         smooth_x, smooth_y, smooth_z,
     )
-    #! format: on
 end
 
 sample_noise(noise::Perlin, x, y, z, ::Missing, ::Missing) = sample_noise(noise, x, y, z)
