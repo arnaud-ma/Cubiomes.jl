@@ -14,10 +14,11 @@ An abstract type that represents a dimension in Minecraft. It is used to generat
 the noise for the biomes in that dimension.
 
 The concrete type must implement:
-- An uninitialized constructor `Dimension(::Type{TheDim}, u::UndefInitializer, args...)` or
-  `TheDim(::UndefInitializer, args...)` where `TheDim` is the concrete type.
-- An inplace constructor `set_seed!(dim::TheDim, seed::UInt64, args...)` where `TheDim`
-  is the concrete type. Be aware that the seed must be constrained to `UInt64` dispatch to work.
+
+  - An uninitialized constructor `Dimension(::Type{TheDim}, u::UndefInitializer, args...)` or
+    `TheDim(::UndefInitializer, args...)` where `TheDim` is the concrete type.
+  - An inplace constructor `set_seed!(dim::TheDim, seed::UInt64, args...)` where `TheDim`
+    is the concrete type. Be aware that the seed must be constrained to `UInt64` dispatch to work.
 """
 abstract type Dimension <: Noise end
 
@@ -39,11 +40,11 @@ function set_rng!🎲(noise::Dimension, rng::AbstractJavaRNG, args...)
 end
 
 # Dimension is simply an alias to Noise here
-function Dimension(d::Type{D}, u::UndefInitializer, args...) where {D<:Dimension}
+function Dimension(d::Type{D}, u::UndefInitializer, args...) where {D <: Dimension}
     Noise(d, u, args...)
 end
 
-function Dimension(::Type{D}, seed, args...) where {D<:Dimension}
+function Dimension(::Type{D}, seed, args...) where {D <: Dimension}
     dim = Dimension(D, undef)
     set_seed!(dim, seed, args...)
     return dim
@@ -56,9 +57,9 @@ end
 #                             MCMap infrastructure                             #
 # ---------------------------------------------------------------------------- #
 
-MCMap{N} = OffsetArray{BiomeID,N,Array{BiomeID,N}}
+MCMap{N} = OffsetArray{BiomeID, N, Array{BiomeID, N}}
 MCMap(A::AbstractArray, args...) = OffsetArray(A, args...)
-function MCMap(range::Vararg{UnitRange,N}) where {N}
+function MCMap(range::Vararg{UnitRange, N}) where {N}
     N != 2 && N != 3 && throw(ArgumentError("Only 2D and 3D maps are supported"))
     return fill(BIOME_NONE, range...)
 end
@@ -85,6 +86,7 @@ Create an uninitialized OffsetMatrix of type `T` but with additional rows and co
 on each side of the original matrix.
 
 # Examples
+
 ```julia
 julia> arr = OffsetMatrix(zeros(3, 3))
 3×3 OffsetArray(::Matrix{Float64}, 1:3, 1:3) with eltype Float64 with indices 1:3×1:3:
@@ -99,9 +101,10 @@ julia> similar_expand(Float64, arr, 1, 1)
  6.90054e-310  6.90054e-310  6.90054e-310  6.90054e-310  1.56224e-319
  6.90054e-310  6.90054e-310  6.90054e-310  6.90054e-310  6.90054e-310
  6.90055e-310  6.90054e-310  1.56224e-319  6.90054e-310  6.90054e-310
+```
 """
 function similar_expand(
-    ::Type{T}, mc_map::OffsetMatrix, expand_x::Int, expand_z::Int
+    ::Type{T}, mc_map::OffsetMatrix, expand_x::Int, expand_z::Int,
 ) where {T}
     x, z = origin_coords(mc_map)
     size_x, size_z = size(mc_map)
@@ -180,8 +183,8 @@ function get_voronoi_src_map2D(mc_map::MCMap)::MCMap{2}
 end
 
 function get_voronoi_cell(
-    sha::UInt64, x::UInt64, z::UInt64, y::UInt64
-)::Tuple{Int32,Int32,Int32}
+    sha::UInt64, x::UInt64, z::UInt64, y::UInt64,
+)::Tuple{Int32, Int32, Int32}
     s = sha
 
     s = mc_step_seed(s, x)
@@ -248,7 +251,7 @@ function voronoi_access_3d(sha::UInt64, x::Integer, z::Integer, y::Integer)
         neighbor_cell_z = parent_cell_z + neighbor_offset_z
 
         voronoi_x, voronoi_z, voronoi_y = get_voronoi_cell(
-            sha, neighbor_cell_x, neighbor_cell_z, neighbor_cell_y
+            sha, neighbor_cell_x, neighbor_cell_z, neighbor_cell_y,
         )
 
         # Adjust the Voronoi cell coordinates by the offsets

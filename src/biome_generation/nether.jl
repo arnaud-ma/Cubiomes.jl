@@ -10,27 +10,32 @@ include("infra.jl")
 The noise type for the nether.
 
 # Arguments
-- seed::Integer: the Minecraft seed (view as UInt64)
+
+  - seed::Integer: the Minecraft seed (view as UInt64)
 
 # Keywords
-- with_sha::Bool: If true, compute the `sha` field from the seed. The `sha` is only used
+
+  - with_sha::Bool: If true, compute the `sha` field from the seed. The `sha` is only used
     for the generation with scale 1. It can save some computation time (less than 1ms)
     if not needed.
 
 # Fields
-- `temperature::DoublePerlin{2}`: store the noise for the temperature
-- `humidity::DoublePerlin{2}`: store the noise for the humidity
-- `sha::Union{UInt64, Nothing}`: Optional sha computed from the seed with [`sha256_from_seed`].
+
+  - `temperature::DoublePerlin{2}`: store the noise for the temperature
+  - `humidity::DoublePerlin{2}`: store the noise for the humidity
+  - `sha::Union{UInt64, Nothing}`: Optional sha computed from the seed with [`sha256_from_seed`].
 
 # Example
+
 ```julia
 julia> Nether(1234)
 Nether{UInt64}(DoublePerlin{2}(1.1111111111111112, PerlinNoise[..., 0x618d5b164c44f21a)
-julia> Nether(1234, with_sha=false)
+
+julia> Nether(1234; with_sha=false)
 Nether{Nothing}(DoublePerlin{2}(1.1111111111111112, PerlinNoise[..., nothing)
 ```
 """
-struct Nether{S<:Union{Nothing,UInt64}} <: Dimension
+struct Nether{S <: Union{Nothing, UInt64}} <: Dimension
     temperature::DoublePerlin{2}
     humidity::DoublePerlin{2}
     sha::S
@@ -222,7 +227,7 @@ function gen_biomes_unsafe!(nn::Nether, map2D::MCMap{2}, ::Scale{S}, confidence=
 end
 
 function gen_biomes_unsafe!(
-    nn::Nether, map3d::MCMap{3}, scale::Scale{S}, confidence=1
+    nn::Nether, map3d::MCMap{3}, scale::Scale{S}, confidence=1,
 ) where {S}
     # At scale != 1, the biome does not change with the y coordinate
     # So we simply take the first y coordinate and fill the other ones with the same biome
@@ -237,7 +242,7 @@ function gen_biomes_unsafe!(
 end
 
 function gen_biomes!(
-    nn::Nether, mc_map::MCMap, scale::Scale{S}, confidence=1, version::MCVersion=MC_UNDEF
+    nn::Nether, mc_map::MCMap, scale::Scale{S}, confidence=1, version::MCVersion=MC_UNDEF,
 ) where {S}
     fill!(mc_map, BIOME_NONE)
     _manage_less_1_15!(mc_map, version) && return nothing
@@ -283,7 +288,7 @@ function gen_biomes_unsafe!(
 end
 
 function gen_biomes!(
-    nn::Nether, map3D::MCMap{3}, ::Scale{1}, confidence=1, version::MCVersion=MC_UNDEF
+    nn::Nether, map3D::MCMap{3}, ::Scale{1}, confidence=1, version::MCVersion=MC_UNDEF,
 )
     _manage_less_1_15!(map3D, version) && return nothing
     # we do not need to fill with BIOME_NONE in this case

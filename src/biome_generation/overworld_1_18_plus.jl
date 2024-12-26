@@ -94,7 +94,12 @@ end
 #     )
 # end
 
-function Spline(spline_type::SplineType, locations::Vector{Float32} = Float32[], derivatives::Vector{Float32} = Float32[], child_splines::Vector{Spline} = Spline[])
+function Spline(
+    spline_type::SplineType,
+    locations::Vector{Float32}=Float32[],
+    derivatives::Vector{Float32}=Float32[],
+    child_splines::Vector{Spline}=Spline[],
+)
     return Spline(
         length(locations),
         spline_type,
@@ -105,8 +110,8 @@ function Spline(spline_type::SplineType, locations::Vector{Float32} = Float32[],
 end
 
 mutable struct SplineStack
-    stack::NTuple{42,Spline}
-    fix_stack::NTuple{151,FixSpline}
+    stack::NTuple{42, Spline}
+    fix_stack::NTuple{151, FixSpline}
     len::Int
     fix_len::Int
 end
@@ -125,9 +130,7 @@ function Base.push!(spline::Spline, location, derivative, child_spline)
     spline.len += 1
 end
 
-function get_spline(sp::FixSpline)
-    return sp.value
-end
+get_spline(sp::FixSpline) = sp.value
 
 function findfirst_default(predicate::Function, A::T, default::T) where {T}
     for (i, a) in pairs(A)
@@ -173,7 +176,9 @@ function get_spline(spline::Spline, values::Vector{Float32})
     # q = -derivative_2 * (location_2 - location_1) + (value_2 - value_1)
 
     linear_interpolation = lerp(interpolation_factor, value_1, value_2)
-    quadratic_interpolation = interpolation_factor * (1.0f0 - interpolation_factor) * lerp(interpolation_factor, p, q)
+    quadratic_interpolation =
+        interpolation_factor * (1.0f0 - interpolation_factor) *
+        lerp(interpolation_factor, p, q)
     return linear_interpolation + quadratic_interpolation
 end
 
@@ -195,17 +200,17 @@ end
 
 @eval TupleClimate = Tuple{
     $(
-        [
-            :(DoublePerlinNoise{length(amplitudes($i))}) for
-            i in subtypes(NoiseParameter)
-        ]...
-    ),
+    [
+    :(DoublePerlinNoise{length(amplitudes($i))}) for
+    i in subtypes(NoiseParameter)
+]...
+),
 }
 
 # TODO: named tuple for climate ?
 struct BiomeNoise{N} <: Noise
     climate::TupleClimate
-    octaves::NTuple{2,OctaveNoise{N}}
+    octaves::NTuple{2, OctaveNoise{N}}
     spline::Spline
     spline_stack::SplineStack
     noise_param_type::NoiseParameter
@@ -213,7 +218,7 @@ struct BiomeNoise{N} <: Noise
 end
 
 function init_climate_seed!(
-    octaves::NTuple{2,OctaveNoise{N}}, xlo::UInt64, xhi::UInt64, large::Bool, noise_param
+    octaves::NTuple{2, OctaveNoise{N}}, xlo::UInt64, xhi::UInt64, large::Bool, noise_param,
 ) where {N}
     xlo ⊻= magic_xlo(noise_param; large=large)
     xhi ⊻= magic_xhi(noise_param; large=large)
@@ -278,7 +283,7 @@ function _create_spline_38219(f, bl)
 
         push!(locations, -1.0f0, -0.75f0, -0.65f0, l - 0.01f0, l, 1.0f0)
         push!(derivatives, q, 0, 0, 0, s)
-        
+
         # add_spline_val!(spline, -1.0f0, Spline(spline_stack, i), q)
         # add_spline_val!(spline, -0.75f0, Spline(spline_stack, p), 0)
         # add_spline_val!(spline, -0.65f0, Spline(spline_stack, u), 0)

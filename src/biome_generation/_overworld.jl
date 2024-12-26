@@ -93,14 +93,12 @@ Base.trunc(::Type{SplineType}, x) = SplineType(trunc(Int, x))
 
 struct Spline{N}
     spline_type::SplineType
-    locations::NTuple{N,Float32}
-    derivatives::NTuple{N,Float32}
-    child_splines::NTuple{N,Spline}
+    locations::NTuple{N, Float32}
+    derivatives::NTuple{N, Float32}
+    child_splines::NTuple{N, Spline}
 end
 
-function Spline{0}(spline_type::SplineType)
-    return Spline(spline_type, (), (), ())
-end
+Spline{0}(spline_type::SplineType) = Spline(spline_type, (), (), ())
 Spline{0}(spline_type::SplineType, ::Tuple{}, ::Tuple{}, ::Tuple{}) = Spline{0}(spline_type)
 Spline{0}(spline_value::Tuple) = Spline{0}(trunc(SplineType, spline_value))
 # ^
@@ -148,7 +146,7 @@ end
 end
 
 @only_float32 function spline_38219(
-    spline_type, slope, offset_pos1, offset_neg1, ::Val{true}
+    spline_type, slope, offset_pos1, offset_neg1, ::Val{true},
 )
     return Spline(
         spline_type,
@@ -159,7 +157,7 @@ end
 end
 
 @only_float32 function spline_38219(
-    spline_type, slope, offset_pos1, offset_neg1, ::Val{false}
+    spline_type, slope, offset_pos1, offset_neg1, ::Val{false},
 )
     return Spline(
         spline_type,
@@ -197,11 +195,9 @@ end
     return locations, child_splines
 end
 
-function additional_values_land_spline(x₁, x₂, x₃, x₅, spline_6, ::Val{false})
-    return (), ()
-end
+additional_values_land_spline(x₁, x₂, x₃, x₅, spline_6, ::Val{false}) = (), ()
 
-zeros_like(::NTuple{N,T}) where {N,T} = ntuple(i -> zero(T), Val{N}())
+zeros_like(::NTuple{N, T}) where {N, T} = ntuple(i -> zero(T), Val{N}())
 
 @only_float32 function land_spline(x₁, x₂, x₃, x₄, x₅, x₆, bl::Val{BL}) where {BL}
     # create initial splines with different linear interpolation values
@@ -245,12 +241,12 @@ end
 # TODO: this is very type unstable and it is using recursion
 # so not very julian. We should refactor everything to use
 get_spline(spline::Spline{0}, vals) = Float32(Int(spline.spline_type))
-function get_spline(spline::Spline{N}, vals::NTuple{N2,T}) where {N,N2,T}
+function get_spline(spline::Spline{N}, vals::NTuple{N2, T}) where {N, N2, T}
     if !((1 <= Int(spline.spline_type) <= 4) && (1 <= N <= 11))
         throw(
             ArgumentError(
-                lazy"getSpline(): bad parameters (spline_type: $(spline.spline_type), N: $N)",
-            ),
+            lazy"getSpline(): bad parameters (spline_type: $(spline.spline_type), N: $N)",
+        ),
         )
     end
 

@@ -35,7 +35,8 @@ const _DATA_NOISE_PARAM = Dict(
         id="minecraft:temperature",
         large=-12,
     ),
-    NP_HUMIDITY => (amp=(1, 1, 0, 0, 0, 0), oct=-8, id="minecraft:vegetation", large=-10),
+    NP_HUMIDITY =>
+        (amp=(1, 1, 0, 0, 0, 0), oct=-8, id="minecraft:vegetation", large=-10),
     NP_CONTINENTALNESS => (
         amp=(1, 1, 2, 2, 2, 1, 1, 1, 1),
         oct=-9,
@@ -43,7 +44,8 @@ const _DATA_NOISE_PARAM = Dict(
         large=-11,
     ),
     NP_EROSION => (amp=(1, 1, 0, 1, 1), oct=-9, id="minecraft:erosion", large=-11),
-    NP_WEIRDNESS => (amp=(1, 2, 1, 0, 0, 0), oct=-7, id="minecraft:ridge", large=nothing),
+    NP_WEIRDNESS =>
+        (amp=(1, 2, 1, 0, 0, 0), oct=-7, id="minecraft:ridge", large=nothing),
 )
 
 @assert Set(keys(_DATA_NOISE_PARAM)) == Set(NOISE_PARAMETERS)
@@ -87,16 +89,16 @@ end
 function BiomeNoise(::UndefInitializer)
     return BiomeNoise(
         Tuple(
-            Noise(
-                DoublePerlin{nb_octaves(np)},
-                    undef, length_of_trimmed(amplitudes(np), iszero)
-                ) for np in NOISE_PARAMETERS
-            ),
-        )
+        Noise(
+        DoublePerlin{nb_octaves(np)},
+        undef, length_of_trimmed(amplitudes(np), iszero),
+    ) for np in NOISE_PARAMETERS
+    ),
+    )
 end
 
 function set_seed!(
-    dp::DoublePerlin, xlo, xhi, noise_param, large=Val(true)
+    dp::DoublePerlin, xlo, xhi, noise_param, large=Val(true),
 )
     xlo ⊻= magic_xlo(noise_param, large)
     xhi ⊻= magic_xhi(noise_param, large)
@@ -144,16 +146,14 @@ end
 end
 Base.trunc(::Type{SplineType}, x) = SplineType(trunc(Int, x))
 
-struct Spline{N,T}
+struct Spline{N, T}
     spline_type::SplineType
-    locations::NTuple{N,Float32}
-    derivatives::NTuple{N,Float32}
+    locations::NTuple{N, Float32}
+    derivatives::NTuple{N, Float32}
     child_splines::T
 end
 
-function Spline{0}(spline_type::SplineType)
-    return Spline(spline_type, (), (), ())
-end
+Spline{0}(spline_type::SplineType) = Spline(spline_type, (), (), ())
 Spline{0}(spline_type::SplineType, ::Tuple{}, ::Tuple{}, ::Tuple{}) = Spline{0}(spline_type)
 Spline{0}(spline_value::Real) = Spline{0}(trunc(SplineType, spline_value))
 # ^
@@ -201,7 +201,7 @@ end
 end
 
 @only_float32 function spline_38219(
-    spline_type, slope, offset_pos1, offset_neg1, ::Val{true}
+    spline_type, slope, offset_pos1, offset_neg1, ::Val{true},
 )
     return Spline(
         spline_type,
@@ -212,7 +212,7 @@ end
 end
 
 @only_float32 function spline_38219(
-    spline_type, slope, offset_pos1, offset_neg1, ::Val{false}
+    spline_type, slope, offset_pos1, offset_neg1, ::Val{false},
 )
     return Spline(
         spline_type,
@@ -250,11 +250,9 @@ end
     return locations, child_splines
 end
 
-function additional_values_land_spline(x₁, x₂, x₃, x₅, spline_6, ::Val{false})
-    return (), ()
-end
+additional_values_land_spline(x₁, x₂, x₃, x₅, spline_6, ::Val{false}) = (), ()
 
-zeros_like(::NTuple{N,T}) where {N,T} = ntuple(i -> zero(T), Val{N}())
+zeros_like(::NTuple{N, T}) where {N, T} = ntuple(i -> zero(T), Val{N}())
 
 @only_float32 function land_spline(x₁, x₂, x₃, x₄, x₅, x₆, bl::Val{BL}) where {BL}
     # create initial splines with different linear interpolation values
@@ -295,23 +293,23 @@ function findfirst_default(predicate::Function, A, default)
     return default
 end
 
-function get_spline(spline::Spline{0}, vals::NTuple{N2,T}) where {N2,T}
+function get_spline(spline::Spline{0}, vals::NTuple{N2, T}) where {N2, T}
     Float32(Int(spline.spline_type))
 end
 
 # TODO: transform the recursive to an iterate one, since Julia is very bad with recursion :(
-function get_spline(spline::Spline{N}, vals::NTuple{N2,T}) where {N,N2,T}
+function get_spline(spline::Spline{N}, vals::NTuple{N2, T}) where {N, N2, T}
     if !((1 <= Int(spline.spline_type) <= 4) && (1 <= N <= 11))
         throw(
             ArgumentError(
-                lazy"getSpline(): bad parameters (spline_type: $(spline.spline_type), N: $N)",
-            ),
+            lazy"getSpline(): bad parameters (spline_type: $(spline.spline_type), N: $N)",
+        ),
         )
     end
 
     f = vals[Int(spline.spline_type)]
     i = findfirst_default(>=(f), spline.locations, N)
-    if i == 1f0 || i == N
+    if i == 1.0f0 || i == N
         loc, der, sp = spline.locations[i], spline.derivatives[i], spline.child_splines[i]
         v = get_spline(sp, vals)
         return muladd(der, f - loc, v)

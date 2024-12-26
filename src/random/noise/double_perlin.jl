@@ -13,9 +13,10 @@ A noise that store two octaves. Use [`DoublePerlinNoise`](@ref) to create one, a
 with [`set_rng!`](@ref). Or do both at the same time with [`DoublePerlinNoise🎲`](@ref).
 
 # Fields
-- `amplitude::Float64`: the amplitude that is common to each octave
-- `octave_A::OctaveNoise{N}`: the first octave, of size N
-- `octave_B::OctaveNoise{N}`: the second octave, of size N too.
+
+  - `amplitude::Float64`: the amplitude that is common to each octave
+  - `octave_A::OctaveNoise{N}`: the first octave, of size N
+  - `octave_B::OctaveNoise{N}`: the second octave, of size N too.
 """
 struct DoublePerlin{N} <: Noise
     amplitude::Float64
@@ -55,7 +56,6 @@ end
 function DoublePerlin{N}(::UndefInitializer, amplitude::Real) where {N}
     return DoublePerlin{N}(amplitude, Octaves{N}(undef), Octaves{N}(undef))
 end
-
 
 # we need to overload the default constructor here because we need to pass the amplitudes
 # to the undefined initializer

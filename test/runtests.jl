@@ -1,15 +1,21 @@
-if !("not_aqua" in ARGS)
-    include("aqua.jl")
-end
 
-try
-    include("rng.jl")
-catch e
-    if isa(e, JavaNotFoundException)
-        @warn "Java not found in the system. Skipping RNG tests."
-    else
-        throw(e)
+if !("not_aqua" in ARGS)
+    @testset begin
+        include("aqua.jl")
     end
 end
 
-include("noise.jl")
+try
+    using JavaCall: JavaCall
+    JavaCall.init()
+catch e
+    @warn "Something went wrong with Java. Probably it was not found in the system. Skipping RNG tests."
+else
+    @testset "JavaRNG" begin
+        include("rng.jl")
+    end
+end
+
+@testset "Noise" begin
+    include("noise.jl")
+end

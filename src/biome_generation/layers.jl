@@ -37,12 +37,6 @@ end
 # Essentials
 #==============================================================================#
 
-function f(x::Val{T}) where {T}
-    return T
-end
-
-f(Val(Apple))
-
 mutable struct Layer{kind}
     kind::Val{kind}
     version::MCVersion
@@ -54,9 +48,9 @@ mutable struct Layer{kind}
     start_salt::UInt64
     start_seed::UInt64
 
-    noise::Union{PerlinNoise,Nothing}
-    parent1::Union{Layer,Nothing}
-    parent2::Union{Layer,Nothing}
+    noise::Union{PerlinNoise, Nothing}
+    parent1::Union{Layer, Nothing}
+    parent2::Union{Layer, Nothing}
 end
 
 function Layer(
@@ -66,9 +60,9 @@ function Layer(
     edge::Integer,
     scale::Integer,
     salt::Integer;
-    noise::Union{PerlinNoise,Nothing}=nothing,
-    parent1::Union{Layer,Nothing}=nothing,
-    parent2::Union{Layer,Nothing}=nothing,
+    noise::Union{PerlinNoise, Nothing}=nothing,
+    parent1::Union{Layer, Nothing}=nothing,
+    parent2::Union{Layer, Nothing}=nothing,
 ) where {kind}
     return Layer(
         kind,
@@ -120,9 +114,7 @@ function set_seed!(layer::Layer, world_seed::UInt64)
 end
 
 set_seed!(layer::Layer, world_seed::Integer) = set_seed!(layer, UInt64(world_seed))
-function set_seed!(layer::Layer, world_seed::Int64)
-    return set_seed!(layer, unsigned(world_seed))
-end
+set_seed!(layer::Layer, world_seed::Int64) = set_seed!(layer, unsigned(world_seed))
 
 """
     map_layer!(layer::Layer, x::Int, z::Int, width::Int, height::Int, out::Matrix{Int})
@@ -176,7 +168,7 @@ end
 
 size_out(::Layer{Continent}, width, height) = width, height
 function map_layer!(
-    layer::Layer{Continent}, x::Int, z::Int, width::Int, height::Int, out::Matrix{Int}
+    layer::Layer{Continent}, x::Int, z::Int, width::Int, height::Int, out::Matrix{Int},
 )
     ss = layer.start_seed
     @inbounds for col in 1:height, row in 1:width
@@ -191,14 +183,14 @@ function map_layer!(
 end
 
 function map_layer!(
-    layer::Layer{ZoomFuzzy}, x::Int, z::Int, width::Int, height::Int, out::Matrix{Int}
+    layer::Layer{ZoomFuzzy}, x::Int, z::Int, width::Int, height::Int, out::Matrix{Int},
 )
     # TODO: implement
     return error("Not implemented")
 end
 
 function map_layer!(
-    layer::Layer{Zoom}, x::Int, z::Int, width::Int, height::Int, out::Matrix{Int}
+    layer::Layer{Zoom}, x::Int, z::Int, width::Int, height::Int, out::Matrix{Int},
 )
     return error("Not implemented")
 end
@@ -206,7 +198,7 @@ end
 # TODO: maybe refactor into small funcs
 size_out(::Layer{Land}, width, height) = width + 2, height + 2
 function map_layer!(
-    layer::Layer{Land}, x::Int, z::Int, width::Int, height::Int, out::Matrix{Int}
+    layer::Layer{Land}, x::Int, z::Int, width::Int, height::Int, out::Matrix{Int},
 )
     parent_x = x - 1
     parent_z = z - 1
@@ -269,9 +261,9 @@ function map_layer!(
                     if v22 != id_ocean
                         inc += 1
                         if inc == 1 && mc_first_is_zero(cs, 2) ||
-                            (inc == 2 && mc_first_is_zero(cs, 2)) ||
-                            (inc == 3 && mc_first_is_zero(cs, 3)) ||
-                            (inc > 3 && mc_first_is_zero(cs, 4))
+                           (inc == 2 && mc_first_is_zero(cs, 2)) ||
+                           (inc == 3 && mc_first_is_zero(cs, 3)) ||
+                           (inc > 3 && mc_first_is_zero(cs, 4))
                             v = 22
                         end
                         cs = mc_step_seed(cs, start_salt)
@@ -304,7 +296,7 @@ end
 
 size_out(::Layer{Land16}, width, height) = width + 2, height + 2
 function map_layer!(
-    layer::Layer{Land16}, x::Int, z::Int, width::Int, height::Int, out::Matrix{Int}
+    layer::Layer{Land16}, x::Int, z::Int, width::Int, height::Int, out::Matrix{Int},
 )
     parent_x = x - 1
     parent_z = z - 1
@@ -365,9 +357,9 @@ function map_layer!(
                 if v22 != id_ocean
                     inc += 1
                     if inc == 1 && mc_first_is_zero(cs, 2) ||
-                        (inc == 2 && mc_first_is_zero(cs, 2)) ||
-                        (inc == 3 && mc_first_is_zero(cs, 3)) ||
-                        (inc > 3 && mc_first_is_zero(cs, 4))
+                       (inc == 2 && mc_first_is_zero(cs, 2)) ||
+                       (inc == 3 && mc_first_is_zero(cs, 3)) ||
+                       (inc > 3 && mc_first_is_zero(cs, 4))
                         v = 22
                     end
                     cs = mc_step_seed(cs, start_salt)

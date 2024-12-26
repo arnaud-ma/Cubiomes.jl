@@ -1,7 +1,7 @@
 using StaticArrays: SizedVector
 using OffsetArrays: Origin
 
-struct EndNoise{S<:Union{Nothing,UInt64}} <: Noise
+struct EndNoise{S <: Union{Nothing, UInt64}} <: Noise
     perlin::Perlin
     sha::S
 end
@@ -60,7 +60,7 @@ function original_get_biome(end_noise::EndNoise, x, z, ::Scale{4})
         real_x = scaled_x + x_i
         real_z = scaled_z + z_i
         if real_x^2 + real_z^2 > 4096 &&
-            (sample_simplex(end_noise.perlin, real_x, real_z) < -0.9)
+           (sample_simplex(end_noise.perlin, real_x, real_z) < -0.9)
             elevation = (abs(real_x) * 3439 + abs(real_z) * 147) % 13 + 9
             smooth_x = odd_x - x_i * 2
             smooth_z = odd_z - z_i * 2
@@ -109,7 +109,7 @@ const SMOOTH_AXE_POSITIVE, SMOOTH_AXE_NEGATIVE = let
 end
 
 Base.@propagate_inbounds function _get_height_sample(
-    elevation_getter::Function, x, z, start_height, range::Integer=12
+    elevation_getter::Function, x, z, start_height, range::Integer=12,
 )
     height_sample = start_height
 
@@ -134,7 +134,7 @@ Base.@propagate_inbounds function _get_height_sample(
 end
 
 function get_height_sample(
-    elevations::AbstractMatrix{UInt16}, x, z, start_height, range::Integer=12
+    elevations::AbstractMatrix{UInt16}, x, z, start_height, range::Integer=12,
 )
     # TODO: know how to disable bounds checking (better: propagate_inbounds)
     return _get_height_sample((x, z) -> elevations[x, z], x, z, start_height, range)
@@ -142,13 +142,11 @@ end
 
 function get_height_sample(end_noise::EndNoise, x, z, start_height, range::Integer=12)
     return _get_height_sample(
-        (x, z) -> get_elevation(end_noise, x, z), x, z, start_height, range
+        (x, z) -> get_elevation(end_noise, x, z), x, z, start_height, range,
     )
 end
 
-function get_height_end(height_value)
-    return clamp(-100 - sqrt(height_value), -100, 80)
-end
+get_height_end(height_value) = clamp(-100 - sqrt(height_value), -100, 80)
 
 function get_height(end_noise::EndNoise, x, z, range::Integer=12)
     #  64 * (x^2 + z^2) <= 14400 <=> x^2 + z^2 <= 225 (circle of radius 15)
@@ -181,20 +179,20 @@ end
 
 # equivalent to `biome_from_height_sample ∘ get_height_sample`
 function get_biome_unsafe(
-    elevation_getter::T, x, z, ::Scale{16}, range::Integer=12
-) where {T<:Union{EndNoise,AbstractMatrix{UInt16}}}
+    elevation_getter::T, x, z, ::Scale{16}, range::Integer=12,
+) where {T <: Union{EndNoise, AbstractMatrix{UInt16}}}
     height_sample = get_height_sample(elevation_getter, x, z, 14_401, range)
     return biome_from_height_sample(height_sample)
 end
 
 function get_biome(
-    elevation_getter::T, x, z, ::Scale{16}, version::MCVersion, range::Integer=12
+    elevation_getter::T, x, z, ::Scale{16}, version::MCVersion, range::Integer=12,
 ) where {T}
     if version <= MC_1_0
         throw(
             ArgumentError(
-                lazy"Version less than 1.0 does not have the end dimension (got $version)"
-            ),
+            lazy"Version less than 1.0 does not have the end dimension (got $version)"
+        ),
         )
     end
     version <= MC_1_8 && return the_end
@@ -211,7 +209,7 @@ for func_name in (:get_biome_unsafe, :get_biome),
 
     @eval begin
         function $func_name(
-            height_getter::T, x, z, ::Scale{$S}, version::MCVersion, range::Integer=$range
+            height_getter::T, x, z, ::Scale{$S}, version::MCVersion, range::Integer=$range,
         ) where {T}
             return $func_name(height_getter, x >> $ω, z >> $ω, Scale(16), version, range)
         end
@@ -219,7 +217,7 @@ for func_name in (:get_biome_unsafe, :get_biome),
 end
 
 function _gen_biomes!(
-    biome_getter::Function, end_noise::EndNoise, map2D::MCMap{2}, range::Integer=12
+    biome_getter::Function, end_noise::EndNoise, map2D::MCMap{2}, range::Integer=12,
 )
     elevations = get_elevations(end_noise, map2D, range)
     x_is, z_is = axes(map2D)
@@ -230,18 +228,18 @@ function _gen_biomes!(
 end
 
 function gen_biomes!(
-    end_noise::EndNoise, map2D::MCMap{2}, ::Scale, version::MCVersion, range::Integer=12
+    end_noise::EndNoise, map2D::MCMap{2}, ::Scale, version::MCVersion, range::Integer=12,
 ) where {Scale}
     return _gen_biomes!(
-        (e, x, z) -> get_biome(e, x, z, Scale, version, range), end_noise, map2D, range
+        (e, x, z) -> get_biome(e, x, z, Scale, version, range), end_noise, map2D, range,
     )
 end
 
 function gen_biomes_unsafe!(
-    end_noise::EndNoise, map2D::MCMap{2}, ::Scale, range::Integer=12
+    end_noise::EndNoise, map2D::MCMap{2}, ::Scale, range::Integer=12,
 ) where {Scale}
     return _gen_biomes!(
-        (e, x, z) -> get_biome_unsafe(e, x, z, Scale, range), end_noise, map2D, range
+        (e, x, z) -> get_biome_unsafe(e, x, z, Scale, range), end_noise, map2D, range,
     )
 end
 

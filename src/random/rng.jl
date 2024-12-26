@@ -14,9 +14,7 @@ abstract type AbstractJavaRNG end
 Generate a random number of type `T` from the given random number generator. If `start` and `stop`
 are provided, the random number will be in the range `[start, stop]`. `start` is default to `0`.
 """
-function next🎲(rng::T, type) where T <: AbstractJavaRNG
-    throw(MethodError(next🎲, (T, type)))
-end
+next🎲(rng::T, type) where {T <: AbstractJavaRNG} = throw(MethodError(next🎲, (T, type)))
 
 """
     randjump🎲(rng::AbstractJavaRNG, ::Type{T}, n::Integer) where T
@@ -24,7 +22,7 @@ end
 Jump the state of the random number generator `n` steps forward, without generating
 any random numbers.
 """
-function randjump🎲(rng::T, type, n::Integer) where T<:AbstractJavaRNG
+function randjump🎲(rng::T, type, n::Integer) where {T <: AbstractJavaRNG}
     throw(MethodError(randjump🎲, (T, type, n)))
 end
 
@@ -33,14 +31,9 @@ end
 
 Initialize the rng with the given seed. Return the rng itself for convenience.
 """
-function set_seed!(rng::AbstractJavaRNG, seed, args...)
-    return set_seed!(rng, u64_seed(seed), args...)
-end
+set_seed!(rng::AbstractJavaRNG, seed, args...) = set_seed!(rng, u64_seed(seed), args...)
 
-
-function next🎲(rng::AbstractJavaRNG, ::Type{T}, stop::Real)::T where {T}
-    return next🎲(rng, T) * stop
-end
+next🎲(rng::AbstractJavaRNG, ::Type{T}, stop::Real)::T where {T} = next🎲(rng, T) * stop
 
 function next🎲(rng::AbstractJavaRNG, ::Type{T}, start::Real, stop::Real)::T where {T}
     return next🎲(rng, T, stop - start) + start
@@ -67,9 +60,11 @@ A pseudorandom number generator that mimics the behavior of Java's
 [`java.util.Random`](https://docs.oracle.com/javase/7/docs/api/java/util/Random.html) class.
 
 # Examples
+
 ```jldoctest
 julia> rng = JavaRandom(1234);
 JavaRandom(0x00000005deece2bf)
+
 julia> next_int32_range!(rng, 10)
 3
 ```
@@ -246,7 +241,11 @@ function next🎲(rng::JavaXoroshiro128PlusPlus, ::Type{Int32}, stop::Integer)::
     return val
 end
 
-function randjump🎲(rng::JavaXoroshiro128PlusPlus, ::Type{<:Union{UInt64,Int64}}, n::Integer)
+function randjump🎲(
+    rng::JavaXoroshiro128PlusPlus,
+    ::Type{<:Union{UInt64, Int64}},
+    n::Integer,
+)
     i = zero(n)
     while i < n
         next🎲(rng, UInt64)

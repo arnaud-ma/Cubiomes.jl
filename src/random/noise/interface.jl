@@ -18,11 +18,10 @@ Sample the given noise at the given coordinates.
 See also: [`sample_simplex`](@ref), [`Perlin`](@ref), [`Octaves`](@ref), [`DoublePerlin`](@ref)
 
 # Examples
+
 ```julia-repl
-julia> rng = JavaRandom(42);
-julia> noise = Noise🎲(PerlinNoise, rng);
 julia> sample_noise(noise, 0, 0, 0)
-0.07034195718122443
+rng = JavaRandom(42);
 ```
 """
 function sample_noise end
@@ -45,19 +44,17 @@ Create a noise of type `T` with an undefined state, i.e. it is not initialized y
 
 See also: [`Noise`](@ref), [`set_rng!🎲`](@ref)
 
-
 # Examples
+
 ```julia-repl
 julia> noise = Noise(PerlinNoise, undef)
 PerlinNoise(UInt8[...], NaN, NaN, NaN, NaN, 0x00, NaN, NaN, NaN)
-julia> set_rng!(noise, JavaRandom(1))
+
 julia> noise
-PerlinNoise(UInt8[...], 186.25630208841423, 174.90520877052043, 79.0321805651609, 0.9052087705204315, 0xae, 0.9926477865806907, 1.0, 1.0)
+set_rng!(noise, JavaRandom(1))
 ```
 """
-function Noise(::Type{T}, ::UndefInitializer, args...) where {T<:Noise}
-    return T(undef, args...)
-end
+Noise(::Type{T}, ::UndefInitializer, args...) where {T <: Noise} = T(undef, args...)
 
 """
     Noise🎲(::Type{T}, rng::AbstractJavaRNG, args...) where {N, T<:Noise}
@@ -70,9 +67,8 @@ Strictly equivalent to `noise = Noise(T, undef); set_rng!🎲(noise, rng, args..
 
 See also: [`Noise`](@ref), [`set_rng!🎲`](@ref)
 """
-function Noise🎲(::Type{T}, rng::AbstractJavaRNG, args...) where {T<:Noise}
+function Noise🎲(::Type{T}, rng::AbstractJavaRNG, args...) where {T <: Noise}
     noise = Noise(T, undef)
     set_rng!🎲(noise, rng, args...)
     return noise
 end
-

@@ -46,8 +46,8 @@ end
 #                                 Perlin Noise                                 #
 # ---------------------------------------------------------------------------- #
 
-PermsType = OffsetVector{UInt8,MVector{257,UInt8}}
-Perms(::UndefInitializer) = OffsetVector(MVector{257,UInt8}(undef), 0:256)
+PermsType = OffsetVector{UInt8, MVector{257, UInt8}}
+Perms(::UndefInitializer) = OffsetVector(MVector{257, UInt8}(undef), 0:256)
 
 @inline function init_perlin_noise_perm!(perms::PermsType)
     # we restrain the type to PermsType to be able to use the @inbounds macro
@@ -59,6 +59,7 @@ end
 
 """
     Perlin
+
 The type for the perlin noise. See https://en.wikipedia.org/Perlin_Noise to know how it works.
 
 See also: [`Noise`](@ref), [`sample_noise`](@ref), [`sample_simplex`](@ref), [`OctaveNoise`](@ref)
@@ -76,7 +77,7 @@ mutable struct Perlin <: Noise
 end
 
 function Perlin(perms::Array, args...)
-    Perlin(OffsetVector(MVector{257,UInt8}(perms), 0:256), args...)
+    Perlin(OffsetVector(MVector{257, UInt8}(perms), 0:256), args...)
 end
 
 function Perlin(::UndefInitializer)
@@ -95,7 +96,7 @@ end
 
 function is_undef(p::Perlin)
     return any(
-        isnan, (p.x, p.y, p.z, p.const_y, p.const_smooth_y, p.amplitude, p.lacunarity)
+        isnan, (p.x, p.y, p.z, p.const_y, p.const_smooth_y, p.amplitude, p.lacunarity),
     )
 end
 
@@ -160,9 +161,10 @@ smoothstep_perlin_unsafe(x) = x^3 * muladd(x, muladd(6, x, -15), 10)
 Initialize one coordinate for the Perlin noise sampling.
 
 # Returns:
-- the fractional part of `coord`
-- the integer part of `coord`, modulo UInt8
-- the smoothstep value of the fractional part of `coord`
+
+  - the fractional part of `coord`
+  - the integer part of `coord`, modulo UInt8
+  - the smoothstep value of the fractional part of `coord`
 
 See also: [`smoothstep_perlin_unsafe`](@ref)
 """
@@ -217,14 +219,15 @@ end
 Interpolate the Perlin noise at the given coordinates.
 
 # Arguments
-- The `idx` parameter is the permutations
-array.
-- The `d1`, `d2`, and `d3` parameters are the fractional parts of the `x`, `y`, and `z`
-coordinates.
-- The `h1`, `h2`, and `h3` parameters are the integer parts of the `x`, `y`, and `z`
-coordinates.
-- The `t1`, `t2`, and `t3` parameters are the smoothstep values of the fractional parts
-of the `x`, `y`, and `z` coordinates.
+
+  - The `idx` parameter is the permutations
+    array.
+  - The `d1`, `d2`, and `d3` parameters are the fractional parts of the `x`, `y`, and `z`
+    coordinates.
+  - The `h1`, `h2`, and `h3` parameters are the integer parts of the `x`, `y`, and `z`
+    coordinates.
+  - The `t1`, `t2`, and `t3` parameters are the smoothstep values of the fractional parts
+    of the `x`, `y`, and `z` coordinates.
 
 See also: [`init_coord_values`](@ref)
 """
@@ -289,12 +292,11 @@ function sample_noise(noise::Perlin, x, y, z, yamp=0, ymin=0)
     z, index_z, smooth_z = init_coord_values(z + noise.z)
     y = adjust_y(y, yamp, ymin)
 
-    #! format: off
     return interpolate_perlin(
         noise.permutations,
-        x,        y,       z,
-        index_x,  index_y, index_z,
-        smooth_x, smooth_y, smooth_z
+        x, y, z,
+        index_x, index_y, index_z,
+        smooth_x, smooth_y, smooth_z,
     )
     #! format: on
 end
@@ -330,8 +332,6 @@ const SKEW::Float64 = (√3 - 1) / 2
 const UNSKEW::Float64 = (3 - √3) / 6
 # unskew = (1 - 1/√3)/2 on the wiki page. Its the same thing if we simplify it. But
 # not the same for computer because of floating point precision.
-
-
 
 # only used with a perlin created with JavaRandom
 """

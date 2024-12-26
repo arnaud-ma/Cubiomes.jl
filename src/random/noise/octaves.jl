@@ -6,7 +6,7 @@ using StaticArrays: SizedArray
 #                                    Octaves                                   #
 # ---------------------------------------------------------------------------- #
 
-TypeInnerOctaves{N} = SizedArray{Tuple{N},Perlin,1,1,Vector{Perlin}}
+TypeInnerOctaves{N} = SizedArray{Tuple{N}, Perlin, 1, 1, Vector{Perlin}}
 
 """
     Octaves{N}
@@ -22,19 +22,16 @@ struct Octaves{N} <: Noise
     Octaves{N}(x) where {N} = new(TypeInnerOctaves{N}(x))
 end
 
-function Octaves{N}(::UndefInitializer) where {N}
-    Octaves{N}([Perlin(undef) for _ in 1:N])
-end
+Octaves{N}(::UndefInitializer) where {N} = Octaves{N}([Perlin(undef) for _ in 1:N])
 is_undef(x::Octaves{N}) where {N} = any(is_undef, x.octaves)
-
 
 function set_rng!🎲(noise::Octaves{N}, rng::JavaRandom, octave_min) where {N}
     end_ = octave_min + N - 1
     if N < 1 || end_ > 0
         throw(
             ArgumentError(
-                lazy"we must have at least one octave and octave_min must be <= 1 - N"
-            ),
+            lazy"we must have at least one octave and octave_min must be <= 1 - N"
+        ),
         )
     end
     persistence = 1 / (2.0^N - 1)
@@ -79,8 +76,8 @@ function set_rng!🎲(
     if N < 1 || (octave_min + N - 1) > 0
         throw(
             ArgumentError(
-                lazy"we must have at least one octave and octave_min must be <= 1 - N"
-            ),
+            lazy"we must have at least one octave and octave_min must be <= 1 - N"
+        ),
         )
     end
     lacunarity = LACUNARITY_INI[-octave_min]

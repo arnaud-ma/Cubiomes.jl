@@ -137,7 +137,6 @@ isnone(biome::BiomeID) = biome == BIOME_NONE
 #                   Utility Functions for Biomes and Versions                  #
 # ---------------------------------------------------------------------------- #
 
-
 function biome_exists(version::MCVersion, biome::BiomeID)
     if version >= MC_1_18
         soul_sand_valley <= biome <= basalt_deltas && return true
