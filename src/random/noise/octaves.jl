@@ -136,6 +136,6 @@ end
 
 #endregion
 
-seed = 0x7918d3d767fce5d3
-rng = JavaRandom(seed)
-oct = Noise🎲(Octaves{7}, rng, -6)
+seed = 0xcd5b3a953121fcf0
+# rng = JavaRandom(seed)
+# oct = Noise🎲(Octaves{7}, rng, -6)
