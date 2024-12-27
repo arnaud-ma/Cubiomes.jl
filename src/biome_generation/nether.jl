@@ -1,7 +1,9 @@
-#==========================================================================================#
-# Noise Struct Definition and Noise Generation
-#==========================================================================================#
 include("infra.jl")
+
+#region struct definition
+# ---------------------------------------------------------------------------- #
+#                 Noise Struct Definition and Noise Generation                 #
+# ---------------------------------------------------------------------------- #
 
 """
     Nether{S<:Union{Nothing,UInt64}}
@@ -78,10 +80,12 @@ set_seed!(gen::Nether, seed::UInt64) = set_seed!(gen, seed, Val(true))
 function get_biome end
 function gen_biomes end
 function gen_biomes_unsafe! end
+#endregion
 
-#==========================================================================================#
-# Nether Biome Point Access (Scale 4 and 1)
-#==========================================================================================#
+#region point 4 and 1
+# ---------------------------------------------------------------------------- #
+#                   Nether Biome Point Access (Scale 4 and 1)                  #
+# ---------------------------------------------------------------------------- #
 
 function get_biome(nn::Nether, x, z, y, scale::Scale{S}, version, sha=nothing) where {S}
     (version <= MC_1_15 && version != MC_UNDEF) && return nether_wastes
@@ -111,6 +115,8 @@ function get_biome_unsafe(nn::Nether, x, z, scale::Scale{4})
     humidity = sample_noise(nn.humidity, x, 0, z)
     return find_closest_biomes(temperature, humidity)[1]
 end
+
+# TODO: get_biome for scale != (1, 4)
 
 function get_biome_and_delta(nn::Nether, x, z)
     temperature = sample_noise(nn.temperature, x, 0, z)
@@ -149,10 +155,12 @@ const NETHER_POINTS = (
     (x=0.0, y=0.5, z=0.375^2, biome=warped_forest),
     (x=-0.5, y=0.0, z=0.175^2, biome=basalt_deltas),
 )
+#endregion
 
-#==========================================================================================#
-# Biome Generation for 2D and 3D, with scale != 1
-#==========================================================================================#
+#region generation != 1
+# ---------------------------------------------------------------------------- #
+#                Biome Generation for 2D and 3D, with scale != 1               #
+# ---------------------------------------------------------------------------- #
 
 # For basically most of the functions, we need one method for the square and one for the cube.
 # We could have a single method and doing something like a reshape if the cube is a square but
@@ -249,10 +257,12 @@ function gen_biomes!(
     gen_biomes_unsafe!(nn, mc_map, scale, confidence)
     return nothing
 end
+#endregion
 
-#==========================================================================================#
-# Biome Generation for 2D and 3D, with scale == 1
-#==========================================================================================#
+#region generation == 1
+# ---------------------------------------------------------------------------- #
+#                Biome Generation for 2D and 3D, with scale == 1               #
+# ---------------------------------------------------------------------------- #
 
 # See the comment on get_biome_unsafe for the explanation of the main idea
 
