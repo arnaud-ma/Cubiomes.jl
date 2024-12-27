@@ -126,24 +126,33 @@ end
 end
 
 
-function test_octaves_creations(octaves_test, nb, rng, octave_min)
+function test_octaves_creations(octaves_test, nb, rng, args...)
     rng2 = copy(rng)
-    noise = Noise🎲(Octaves{nb}, rng, octave_min)
+    noise = Noise🎲(Octaves{nb}, rng, args...)
     noise2 = Noise(Octaves{nb}, undef)
-    set_rng!🎲(noise2, rng2, octave_min)
+    set_rng!🎲(noise2, rng2, args...)
     @test noise == octaves_test
     @test noise == noise2
 end
 
 @testset "Octaves" begin
 
-    @test_throws ArgumentError Noise(Octaves{-6}, undef)
-    @test_throws ArgumentError Noise(Octaves{0}, undef)
+    @test_throws "at least one octave" Noise(Octaves{-6}, undef)
+    @test_throws "at least one octave" Noise(Octaves{0}, undef)
+    @test_throws "octave_min ≤ 1 - N" Noise🎲(Octaves{6}, JavaRandom(42), -2)
+    @test_throws "octave_min ≤ 1 - N" Noise🎲(Octaves{1}, JavaXoroshiro128PlusPlus(42), (1,), 1)
 
     @testset "creation with JavaRandom rng" begin
-        for ((seed, nb, octave_min), octaves_test) in OCTAVES_JAVA_RANDOM
-            rng = JavaRandom(seed)
-            test_octaves_creations(octaves_test, nb, rng, octave_min)
+        for (params, octaves_test) in OCTAVES_JAVA_RANDOM
+            rng = JavaRandom(params.seed)
+            test_octaves_creations(octaves_test, params.nb, rng, params.octave_min)
+        end
+    end
+
+    @testset "creation with Xoshiro rng" begin
+        for (params, octave_test) in OCTAVES_XOROSHIRO
+            rng = JavaXoroshiro128PlusPlus(params.seed)
+            test_octaves_creations(octave_test, params.nb, rng, params.amp, params.octave_min)
         end
     end
 end

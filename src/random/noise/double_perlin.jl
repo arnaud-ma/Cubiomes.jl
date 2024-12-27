@@ -24,6 +24,10 @@ struct DoublePerlin{N} <: Noise
     octave_B::Octaves{N}
 end
 
+function DoublePerlin{N}(::UndefInitializer, amplitude::Real) where {N}
+    return DoublePerlin{N}(amplitude, Octaves{N}(undef), Octaves{N}(undef))
+end
+
 function DoublePerlin{N}(x::UndefInitializer, len::Integer) where {N}
     # Xoroshiro128PlusPlus implementation
     # Optimization: len must always be equal to length_of_trimmed(amplitudes, iszero)
@@ -51,10 +55,6 @@ end
 function set_rng!🎲(dp::DoublePerlin, rng, amplitudes, octave_min)
     set_rng!🎲(dp.octave_A, rng, amplitudes, octave_min)
     set_rng!🎲(dp.octave_B, rng, amplitudes, octave_min)
-end
-
-function DoublePerlin{N}(::UndefInitializer, amplitude::Real) where {N}
-    return DoublePerlin{N}(amplitude, Octaves{N}(undef), Octaves{N}(undef))
 end
 
 # we need to overload the default constructor here because we need to pass the amplitudes

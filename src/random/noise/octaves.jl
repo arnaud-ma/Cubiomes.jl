@@ -34,11 +34,15 @@ end
 Octaves{N}(::UndefInitializer) where {N} = Octaves{N}([Perlin(undef) for _ in 1:N])
 is_undef(x::Octaves{N}) where {N} = any(is_undef, x.octaves)
 
-function set_rng!🎲(noise::Octaves{N}, rng::JavaRandom, octave_min) where {N}
-    end_ = octave_min + N - 1
-    if end_ > 0
+function check_octave_min(N, octave_min)
+    if octave_min > 1 - N
         throw(ArgumentError(lazy"we must have octave_min ≤ 1 - N. Got $octave_min > $(1- N)"))
     end
+end
+
+function set_rng!🎲(noise::Octaves{N}, rng::JavaRandom, octave_min) where {N}
+    check_octave_min(N, octave_min)
+    end_ = octave_min + N - 1
     persistence = 1 / (2.0^N - 1)
     lacunarity = 2.0^end_
     octaves = noise.octaves
@@ -68,8 +72,8 @@ function set_rng!🎲(noise::Octaves{N}, rng::JavaRandom, octave_min) where {N}
 end
 
 const MD5_OCTAVE_NOISE = Tuple(Tuple(md5_to_uint64("octave_$i")) for i in -12:0)
-const LACUNARITY_INI = Tuple(@. 1 / 2^(1:12)) # -omin = 3:12
-const PERSISTENCE_INI = Tuple(2^n / (2^(n + 1) - 1) for n in 0:8) # len = 4:9
+const LACUNARITY_INI = Tuple(@. 1 / 2^(0:12)) # -omin = 3:12
+const PERSISTENCE_INI = (0, (2^n / (2^(n + 1) - 1) for n in 0:8)...) # len = 4:9
 
 function set_rng!🎲(
     octaves_type::Octaves{N},
@@ -78,14 +82,8 @@ function set_rng!🎲(
     octave_min,
     # TODO: the nmax parameter (see xOctaveInit in the original code)
 ) where {N}
-    if N < 1 || (octave_min + N - 1) > 0
-        throw(
-            ArgumentError(
-            lazy"we must have at least one octave and octave_min must be <= 1 - N"
-        ),
-        )
-    end
-    lacunarity = LACUNARITY_INI[-octave_min]
+    check_octave_min(N, octave_min)
+    lacunarity = LACUNARITY_INI[-octave_min + 1]
     persistence = PERSISTENCE_INI[N]
     xlo, xhi = next🎲(rng, UInt64), next🎲(rng, UInt64)
     octaves = octaves_type.octaves
@@ -135,7 +133,3 @@ function sample_octave_beta17_terrain()
 end
 
 #endregion
-
-seed = 0xcd5b3a953121fcf0
-# rng = JavaRandom(seed)
-# oct = Noise🎲(Octaves{7}, rng, -6)
