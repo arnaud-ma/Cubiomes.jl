@@ -1,4 +1,4 @@
-import Cubiomes:
+using Cubiomes:
     Noise,
     Noise🎲,
     Perlin,

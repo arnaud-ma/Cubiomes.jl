@@ -248,7 +248,7 @@ function interpolate_perlin(idx::PermsType, d1, d2, d3, h1, h2, h3, t1, t2, t3)
     l7 = indexed_lerp(idx[a3 + 1], d1    , d2 - 1, d3 - 1)
     l8 = indexed_lerp(idx[b3 + 1], d1 - 1, d2 - 1, d3 - 1)
     #! format: on
-    # end
+
     l1 = lerp(t1, l1, l2)
     l3 = lerp(t1, l3, l4)
     l5 = lerp(t1, l5, l6)

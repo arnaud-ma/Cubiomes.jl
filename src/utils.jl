@@ -39,8 +39,7 @@ u64_seed(x::Union{String, Char}) = java_hashcode(x)
 #                    SHA                                                      #
 #=============================================================================#
 
-#! format: off
-const SHA256_CONSTANTS = (
+SHA256_ROUND_CONSTANTS::NTuple{64, UInt32} = (
     0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5,
     0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
     0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3,
@@ -59,7 +58,8 @@ const SHA256_CONSTANTS = (
     0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
 )
 
-const SHA256_INITIAL_VALUES = (
+# first 32 bits of the fractional parts of the square roots of the first 8 primes 2..19)
+const SHA256_INITIAL_VALUES::NTuple{8, UInt32} = (
     0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
     0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19,
 )
@@ -67,59 +67,38 @@ const SHA256_INITIAL_VALUES = (
 split_u64(x::UInt64) = UInt32(x & typemax(UInt32)), UInt32(x >> 32)
 concat_u32(x::UInt32, y::UInt32) = UInt64(x) << 32 | y
 
-function sha256_from_seed(seed::UInt64)::UInt64
-    m = Vector{UInt32}(undef, 64)
-    m[1], m[2] = bswap.(split_u64(seed))
-    m[3] = 1 << 31
-    for i in 4:15
-        m[i] = 0
-    end
-    m[16] = 0x40
+sha256_from_seed(seed::UInt64) = sha256_from_seed!(Array{UInt32}(undef, 64), seed)
+function sha256_from_seed!(w, seed::UInt64)
+    w[1], w[2] = bswap.(split_u64(seed))
+    w[3] = 1 << 31
+    w[4:15] .= 0
+    w[16] = 0x40
+
     for i in 17:64
-        m[i] = m[i - 7] + m[i - 16]
-        x = m[i - 15]
-        m[i] += bitrotate(x, -7) ⊻ bitrotate(x, -18) ⊻ (x >> 3)
-        x = m[i - 2]
-        m[i] += bitrotate(x, -17) ⊻ bitrotate(x, -19) ⊻ (x >> 10)
+        x = w[i - 15]
+        s0 = bitrotate(x, -7) ⊻ bitrotate(x, -18) ⊻ (x >> 3)
+        x = w[i - 2]
+        s1 = bitrotate(x, -17) ⊻ bitrotate(x, -19) ⊻ (x >> 10)
+        w[i] = w[i - 7] + s0 + w[i - 16] + s1
     end
 
-    a = SHA256_INITIAL_VALUES[1]
-    b = SHA256_INITIAL_VALUES[2]
-    c = SHA256_INITIAL_VALUES[3]
-    d = SHA256_INITIAL_VALUES[4]
-    e = SHA256_INITIAL_VALUES[5]
-    f = SHA256_INITIAL_VALUES[6]
-    g = SHA256_INITIAL_VALUES[7]
-    h = SHA256_INITIAL_VALUES[8]
-
+    x₁, x₂, x₃, x₄, x₅, x₆, x₇, x₈ = SHA256_INITIAL_VALUES
     for i in 1:64
-        x = h + SHA256_CONSTANTS[i] + m[i]
-        x += bitrotate(e, -6) ⊻ bitrotate(e, -11) ⊻ bitrotate(e, -25)
-        x += (e & f) ⊻ (~e & g)
+        Σ₁ = bitrotate(x₅, -6) ⊻ bitrotate(x₅, -11) ⊻ bitrotate(x₅, -25)
+        ch = (x₅ & x₆) ⊻ (~x₅ & x₇)
+        temp1 = x₈ + Σ₁ + ch + SHA256_ROUND_CONSTANTS[i] + w[i]
 
-        y = bitrotate(a, -2) ⊻ bitrotate(a, -13) ⊻ bitrotate(a, -22)
-        y += (a & b) ⊻ (a & c) ⊻ (b & c)
+        Σ₀ = bitrotate(x₁, -2) ⊻ bitrotate(x₁, -13) ⊻ bitrotate(x₁, -22)
+        maj = (x₁ & x₂) ⊻ (x₁ & x₃) ⊻ (x₂ & x₃)
+        temp2 = Σ₀ + maj
 
-        h = g
-        g = f
-        f = e
-        e = d + x
-        d = c
-        c = b
-        b = a
-        a = x + y
+        x₁, x₂, x₃, x₄, x₅, x₆, x₇, x₈ = temp1 + temp2, x₁, x₂, x₃, x₄ + temp1, x₅, x₆, x₇
     end
 
-    a += SHA256_INITIAL_VALUES[1]
-    b += SHA256_INITIAL_VALUES[2]
-    c += SHA256_INITIAL_VALUES[3]
-    d += SHA256_INITIAL_VALUES[4]
-    e += SHA256_INITIAL_VALUES[5]
-    f += SHA256_INITIAL_VALUES[6]
-    g += SHA256_INITIAL_VALUES[7]
-    h += SHA256_INITIAL_VALUES[8]
+    x₁ += SHA256_INITIAL_VALUES[1]
+    x₂ += SHA256_INITIAL_VALUES[2]
 
-    return concat_u32(bswap(b), bswap(a))
+    return concat_u32(bswap(x₂), bswap(x₁))
 end
 
 #=============================================================================#
@@ -157,11 +136,9 @@ clamped_lerp(part, from, to) = lerp(clamp(part, 0, 1), from, to)
 
 mulinv(x, m) = throw(ErrorException(lazy"Use `Base.invmod` instead."))
 
-
 #=============================================================================#
 #                    Arrays                                                   #
 #=============================================================================#
-
 
 # i do not have the motivation to write a generic version of this function, instead
 # of limiting to NTuple{N}
@@ -171,12 +148,12 @@ mulinv(x, m) = throw(ErrorException(lazy"Use `Base.invmod` instead."))
 Returns the length of the tuple `x` after removing the elements from the beginning and the end
 that satisfy the `predicate`.
 """
-function length_of_trimmed(x::NTuple{N}, predicate) where N
+function length_of_trimmed(x::NTuple{N}, predicate) where {N}
     len = N
     i = len
     while predicate(@inbounds x[i])
         i -= 1
-        len-=1
+        len -= 1
     end
     i = 1
     while predicate(@inbounds x[i])
@@ -186,11 +163,9 @@ function length_of_trimmed(x::NTuple{N}, predicate) where N
     return len
 end
 
-
 #=============================================================================#
 #                    Functools                                                #
 #=============================================================================#
-
 
 """
     @only_float32 expr
@@ -208,7 +183,7 @@ end
 """
 macro only_float32(expr)
     transform(x) = x
-    transform(x::T) where T<:Real = Meta.parse(string(x, "f0"))
+    transform(x::T) where {T <: Real} = Meta.parse(string(x, "f0"))
     transform(x::Float32) = x
     transform(x::Bool) = x
     function transform(x::Expr)
