@@ -24,13 +24,13 @@ function next_perlin🎲(rng::JavaXoroshiro128PlusPlus, ::Type{Int32}, stop::Rea
     stop += 1
     mask = typemax(UInt32)
     r = (next🎲(rng, UInt64) & mask) * stop
-    if (r & mask) < stop
-        while (r & mask) < ((~stop + 1) % stop)
-            r = (next🎲(rng, UInt64) & mask) * stop
-        end
-    end
     return r >> 32
+    #TODO: see https://github.com/Cubitect/cubiomes/issues/134
 end
+
+
+rng = JavaXoroshiro128PlusPlus(0x7b45d6ae4dd0f437, 0x9415f7f682e26e57)
+next_perlin🎲(rng, Int32, 256)
 
 function next_perlin🎲(rng::AbstractJavaRNG, ::Type{T}, start::Real, stop::Real) where {T}
     return next_perlin🎲(rng, Int32, stop - start) + start
@@ -208,7 +208,7 @@ function indexed_lerp(idx::Integer, x, y, z)
     lower_4bits == 0xE && return -x + y
     lower_4bits == 0xF && return -y - z
 
-    error(lazy"lower 4 bits are in fact more than 4 bits ???") # COLV_EXCL_LINE
+    error(lazy"lower 4 bits are in fact more than 4 bits ???") # COV_EXCL_LINE
 end
 
 """
