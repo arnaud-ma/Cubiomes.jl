@@ -299,11 +299,7 @@ end
 
 sample_noise(noise::Perlin, x, y, z, ::Missing, ::Missing) = sample_noise(noise, x, y, z)
 
-function sample_perlin_beta17_terrain(noise::Perlin, v, d1, d2, d3, yLacAmp)
-    # TODO
-    error("not implemented")
-    return nothing
-end
+# TODO: sample_perlin_beta17_terrain(noise::Perlin, v, d1, d2, d3, yLacAmp)
 
 #endregion
 #region simplex

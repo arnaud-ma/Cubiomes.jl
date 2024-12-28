@@ -7,7 +7,8 @@ using Cubiomes:
     set_rng!🎲,
     sample_noise,
     sample_simplex,
-    Octaves
+    Octaves,
+    is_undef
 
 using Test: @test, @testset, @test_throws
 include("data.jl")
@@ -33,7 +34,7 @@ end
 
     @testset "next perlin" begin
         rng = JavaRandom(42)
-        
+
     end
 
     @testset "is_undef" begin

@@ -122,22 +122,6 @@ function sample_noise(octaves::Octaves{N}, x, y, z, yamp=missing, ymin=missing) 
     return v
 end
 
-seed = 0x03f966b1c9dd8063
-noise = Noise🎲(Octaves{6}, JavaRandom(seed), -6)
-
-x = 72039.53368288082
-y = 0
-z = 51804.97366043652
-sample_noise(noise, x, y, z)
-
-function sample_octave_beta17_biome()
-    throw("not implemented")
-    # TODO: implement
-end
-
-function sample_octave_beta17_terrain()
-    throw("not implemented")
-    # TODO: implement
-end
-
+# TODO: sample_octave_beta17_biome
+# TODO: sample_octave_beta17_terrain
 #endregion
