@@ -6,6 +6,10 @@ abstract type Noise end
 # for example with the dot syntax sample_noise.(noise, X, Y, Z) where X, Y and Z are arrays
 Base.broadcastable(noise::Noise) = Ref(noise)
 
+function Base.:(==)(n1::Noise, n2::Noise)
+    return all(getproperty(n1, x) == getproperty(n2, x) for x in propertynames(n1))
+end
+
 """
     sample_noise(noise::Perlin, x, y, z, yamp=0, ymin=0) -> Float64
     sample_noise(noise::Octaves, x, y, z) -> Float64
@@ -54,7 +58,8 @@ julia> noise
 set_rng!(noise, JavaRandom(1))
 ```
 """
-Noise(::Type{T}, ::UndefInitializer, args...) where {T <: Noise} = T(undef, args...)
+Noise(::Type{T}, ::UndefInitializer, args::Vararg{Any, N}) where {T <: Noise, N} =
+    T(undef, args...)
 
 """
     Noise🎲(::Type{T}, rng::AbstractJavaRNG, args...) where {N, T<:Noise}
@@ -67,7 +72,7 @@ Strictly equivalent to `noise = Noise(T, undef); set_rng!🎲(noise, rng, args..
 
 See also: [`Noise`](@ref), [`set_rng!🎲`](@ref)
 """
-function Noise🎲(::Type{T}, rng::AbstractJavaRNG, args...) where {T <: Noise}
+function Noise🎲(::Type{T}, rng::AbstractJavaRNG, args::Vararg{Any, N}) where {T <: Noise, N}
     noise = Noise(T, undef)
     set_rng!🎲(noise, rng, args...)
     return noise

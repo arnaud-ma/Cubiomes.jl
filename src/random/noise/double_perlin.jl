@@ -24,7 +24,11 @@ struct DoublePerlin{N} <: Noise
     octave_B::Octaves{N}
 end
 
-function DoublePerlin{N}(::UndefInitializer, amplitude::Real) where {N}
+
+
+# amplitude can be in fact any real number, but we restrain to Float64
+# to really make the difference with the method with len::Integer
+function DoublePerlin{N}(::UndefInitializer, amplitude::Float64) where {N}
     return DoublePerlin{N}(amplitude, Octaves{N}(undef), Octaves{N}(undef))
 end
 
@@ -43,18 +47,15 @@ end
 function DoublePerlin{N}(x::UndefInitializer) where {N}
     # JavaRandom implementation
     amplitude = (10 / 6) * N / (N + 1)
-    return DoublePerlin{N}(amplitude, x)
+    return DoublePerlin{N}(x, amplitude)
 end
 
 is_undef(x::DoublePerlin{N}) where {N} = is_undef(x.octave_A) || is_undef(x.octave_B)
 
-function set_rng!🎲(dp::DoublePerlin, rng::AbstractJavaRNG, octave_min)
-    set_rng!🎲(dp.octave_A, rng, octave_min)
-    set_rng!🎲(dp.octave_B, rng, octave_min)
-end
-function set_rng!🎲(dp::DoublePerlin, rng, amplitudes, octave_min)
-    set_rng!🎲(dp.octave_A, rng, amplitudes, octave_min)
-    set_rng!🎲(dp.octave_B, rng, amplitudes, octave_min)
+
+function set_rng!🎲(noise::DoublePerlin, rng, args::Vararg{Any, N}) where {N}
+    set_rng!🎲(noise.octave_A, rng, args...)
+    set_rng!🎲(noise.octave_B, rng, args...)
 end
 
 # we need to overload the default constructor here because we need to pass the amplitudes
@@ -77,3 +78,17 @@ function sample_noise(noise::DoublePerlin, x, y, z, move_factor=337 / 331)
         sample_noise(noise.octave_B, x * f, y * f, z * f)
     return v * noise.amplitude
 end
+
+seed = 0xb8cfde1c2decb7a3;
+rng = JavaRandom(seed);
+nb = 9;
+omin = -10;
+noise = Noise🎲(DoublePerlin{nb}, rng, omin)
+
+# open("a.txt", "w") do io
+#     print(io, noise)
+# end
+# x = 33860.49100816767;
+# y = 52.69376987529392;
+# z = -70117.25276887477;
+# sample_noise(noise, x, y, z)

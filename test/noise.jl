@@ -8,6 +8,7 @@ using Cubiomes:
     sample_noise,
     sample_simplex,
     Octaves,
+    DoublePerlin,
     is_undef
 
 using Test: @test, @testset, @test_throws
@@ -197,5 +198,25 @@ end
             result=-0.0846321181639296,
             rng=JavaRandom(0x34e5c56112cddd55),
         )
+    end
+
+    # TODO: sample noise with Xoroshiro
+end
+
+@testset "Double perlin" begin
+    function test_double_creation(double_test, nb, rng, args...)
+        rng2 = copy(rng)
+        noise = Noise🎲(DoublePerlin{nb}, rng, args...)
+        noise2 = Noise(DoublePerlin{nb}, undef)
+        set_rng!🎲(noise2, rng2, args...)
+        @test noise == double_test
+        @test noise == noise2
+    end
+
+    @testset "creation with JavaRandom rng" begin
+        for (params, double_test) in DOUBLE_PERLIN_JAVA_RANDOM
+            rng = JavaRandom(params.seed)
+            test_double_creation(double_test, params.nb, rng, params.octave_min)
+        end
     end
 end

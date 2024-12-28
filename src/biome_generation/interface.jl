@@ -40,11 +40,15 @@ function set_rng!🎲(noise::Dimension, rng::AbstractJavaRNG, args...)
 end
 
 # Dimension is simply an alias to Noise here
-function Dimension(d::Type{D}, u::UndefInitializer, args...) where {D <: Dimension}
+function Dimension(
+    d::Type{D},
+    u::UndefInitializer,
+    args::Vararg{Any, N},
+) where {D <: Dimension, N}
     Noise(d, u, args...)
 end
 
-function Dimension(::Type{D}, seed, args...) where {D <: Dimension}
+function Dimension(::Type{D}, seed, args::Vararg{Any, N}) where {D <: Dimension, N}
     dim = Dimension(D, undef)
     set_seed!(dim, seed, args...)
     return dim

@@ -28,7 +28,6 @@ function next_perlin🎲(rng::JavaXoroshiro128PlusPlus, ::Type{Int32}, stop::Rea
     #TODO: see https://github.com/Cubitect/cubiomes/issues/134
 end
 
-
 rng = JavaXoroshiro128PlusPlus(0x7b45d6ae4dd0f437, 0x9415f7f682e26e57)
 next_perlin🎲(rng, Int32, 256)
 
@@ -112,18 +111,6 @@ function set_rng!🎲(perlin::Perlin, rng::AbstractJavaRNG)
     perlin.lacunarity = one(Float64)
     perlin.x, perlin.y, perlin.z = x, y, z
     return nothing
-end
-
-function Base.:(==)(p1::Perlin, p2::Perlin)
-    return p1.permutations == p2.permutations &&
-           p1.x == p2.x &&
-           p1.y == p2.y &&
-           p1.z == p2.z &&
-           p1.const_y == p2.const_y &&
-           p1.const_index_y == p2.const_index_y &&
-           p1.const_smooth_y == p2.const_smooth_y &&
-           p1.amplitude == p2.amplitude &&
-           p1.lacunarity == p2.lacunarity
 end
 
 """
