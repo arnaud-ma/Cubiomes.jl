@@ -48,9 +48,7 @@ function DoublePerlin{N}(x::UndefInitializer, amplitudes) where {N}
     return DoublePerlin{N}(x, length_of_trimmed(iszero, amplitudes))
 end
 
-
 is_undef(x::DoublePerlin{N}) where {N} = is_undef(x.octave_A) || is_undef(x.octave_B)
-
 
 function set_rng!🎲(noise::DoublePerlin, rng, args::Vararg{Any, N}) where {N}
     set_rng!🎲(noise.octave_A, rng, args...)

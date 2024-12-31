@@ -32,10 +32,8 @@ function test_perlin_sample(args...; result, rng)
 end
 
 @testset "Perlin" begin
-
     @testset "next perlin" begin
         rng = JavaRandom(42)
-
     end
 
     @testset "is_undef" begin
@@ -136,7 +134,6 @@ function test_octaves_sample(nb, omin, args...; result, rng)
 end
 
 @testset "Octaves" begin
-
     @test_throws "at least one octave" Noise(Octaves{-6}, undef)
     @test_throws "at least one octave" Noise(Octaves{0}, undef)
     @test_throws "octave_min ≤ 1 - N" Noise🎲(Octaves{6}, JavaRandom(42), -2)

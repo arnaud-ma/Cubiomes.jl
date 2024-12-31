@@ -1,6 +1,7 @@
 include("perlin.jl")
 
 using StaticArrays: SizedArray
+using Base.Iterators: countfrom
 #region Octaves
 # ---------------------------------------------------------------------------- #
 #                                    Octaves                                   #
@@ -53,18 +54,24 @@ function set_rng!🎲(noise::Octaves{N}, rng::JavaRandom, octave_min) where {N}
     end
 
     @inbounds for i in 1:N
-        persistence, lacunarity = set_rng_octave!🎲(octaves[i], rng, persistence, lacunarity)
+        set_rng_octave!🎲(octaves[i], rng, persistence, lacunarity)
+        persistence *= 2
+        lacunarity /= 2
     end
     return nothing
 end
 
-_update_persistence_lacu(persistence, lacunarity) = persistence * 2, lacunarity / 2
-
-function set_rng_octave!🎲(octave::Perlin, rng::JavaRandom, persistence::T, lacunarity, amp=one(T)) where {T}
+function set_rng_octave!🎲(
+    octave::Perlin,
+    rng,
+    persistence::T,
+    lacunarity,
+    amp=one(T),
+) where {T}
     set_rng!🎲(octave, rng)
     octave.amplitude = persistence * amp
     octave.lacunarity = lacunarity
-    return _update_persistence_lacu(persistence, lacunarity)
+    return nothing
 end
 
 const MD5_OCTAVE_NOISE = Tuple(@. Tuple(md5_to_uint64("octave_" * string(-12:0))))
@@ -76,48 +83,56 @@ function set_rng!🎲(
     rng::JavaXoroshiro128PlusPlus,
     amplitudes,
     octave_min,
-    nmax=Val(N),
 ) where {N}
     if N != length_filter(!iszero, amplitudes)
         throw(ArgumentError(lazy"the number of octaves must be equal to length_filter(!iszero, amplitudes). \
                                  Got $N != $length_filter(!iszero, amplitudes)."))
     end
-    return unsafe_set_rng!🎲(octaves_type, rng, amplitudes, octave_min, nmax)
+    return unsafe_set_rng!🎲(octaves_type, rng, amplitudes, octave_min)
 end
 
+# In the ideal world, N is equal to the number of non-zero amplitudes
+# but in the unsafe version, it can be less than the number of non-zero amplitudes
+# it means that we skip some octaves, maybe for performance reasons
+# if N is greater, undefined behavior can occur
 function unsafe_set_rng!🎲(
     octaves_type::Octaves{N},
     rng::JavaXoroshiro128PlusPlus,
     amplitudes,
     octave_min,
-    nmax=length(amplitudes),
 ) where {N}
+    # Initialize lacunarity and persistence based on octave_min and amplitudes length
     lacunarity = LACUNARITY_INI[-octave_min + 1]
     persistence = PERSISTENCE_INI[length(amplitudes)]
     xlo, xhi = next🎲(rng, UInt64), next🎲(rng, UInt64)
-    octaves = octaves_type.octaves
 
+    # Initialize a temporary RNG state and the iterator over octaves
     rng_temp = copy(rng)
+    octaves = octaves_type.octaves
     octave_counter = 1
-    for (i, amp) in enumerate(amplitudes)
-        # skip if amplitude is zero
-        if iszero(amp)
-            lacunarity, persistence = _update_persistence_lacu(persistence, lacunarity)
-            continue
+
+    # Iterate over amplitudes and set RNG for each octave
+    for (i, amp) in zip(countfrom(1), amplitudes)
+        # Skip if amplitude is zero
+        if !iszero(amp)
+            # Update RNG state with MD5 noise values
+            lo, hi = MD5_OCTAVE_NOISE[12 + octave_min + i]
+            rng_temp.lo = xlo ⊻ lo
+            rng_temp.hi = xhi ⊻ hi
+
+            # Set RNG for the current octave
+            # nb of octaves are always >= 1 so we can safely use @inbounds
+            @inbounds octave = octaves[octave_counter]
+            set_rng_octave!🎲(octave, rng_temp, persistence, lacunarity, amp)
+
+            # Move to the next octave
+            if octave_counter == N
+                break
+            end
+            octave_counter += 1
         end
-
-        lo, hi = MD5_OCTAVE_NOISE[12 + octave_min + i]
-        rng_temp.lo = xlo ⊻ lo
-        rng_temp.hi = xhi ⊻ hi
-
-        octave = octaves[octave_counter]
-        lacunarity, persistence = set_rng_octave!🎲(octave, rng_temp, persistence, lacunarity, amp)
-
-        octave_counter += 1
-        if octave_counter > nmax
-            break
-        end
-        lacunarity, persistence = _update_persistence_lacu(persistence, lacunarity)
+        lacunarity *= 2
+        persistence /= 2
     end
     return nothing
 end
@@ -127,47 +142,22 @@ end
 get_ay(y::Nothing, perlin, lf) = -perlin.y
 get_ay(y, perlin, lf) = y * lf
 
+function sample_octave_noise(octave::Perlin, x, y, z, yamp=missing, ymin=missing)
+    lf = octave.lacunarity
+    ax = x * lf
+    ay = get_ay(y, octave, lf)
+    az = z * lf
+    return sample_noise(octave, ax, ay, az, yamp * lf, ymin * lf) * octave.amplitude
+end
+
 function sample_noise(octaves::Octaves{N}, x, y, z, yamp=missing, ymin=missing) where {N}
     v = zero(Float64)
-    for perlin in octaves.octaves
-        lf = perlin.lacunarity
-        ax = x * lf
-        ay = get_ay(y, perlin, lf)
-        az = z * lf
-        pv = sample_noise(perlin, ax, ay, az, yamp * lf, ymin * lf)
-        @show pv
-        v += pv * perlin.amplitude
-        @show perlin.amplitude
-        @show v
+    for octave in octaves.octaves
+        v += sample_octave_noise(octave, x, y, z, yamp, ymin)
     end
     return v
 end
 
-seed = 0x47e38685b75f2a1d
-nb = 3
-amp = (2.2948331015787096, 3.7393021733500995, 0.0, 2.2193150739468606)
-octave_min = -3
-
-rng = JavaXoroshiro128PlusPlus(seed)
-noise = Octaves{nb}(undef)
-set_rng!🎲(noise, rng, amp, octave_min)
-println(noise.octaves[end])
-
-# @code_warntype Noise🎲(Octaves{nb}, rng, amp, octave_min)
-x = 33860.49100816767
-y = 52.69376987529392
-z = -70117.25276887477
-sample_noise(noise, x, y, z)
-
 # TODO: sample_octave_beta17_biome
 # TODO: sample_octave_beta17_terrain
 #endregion
-
-function f(x)
-    y = 3
-    iter = ((y, i) for i in x if !iszero(i))
-    for (y, i) in iter
-        println(y)
-        y *= 2
-    end
-end
