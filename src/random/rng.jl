@@ -32,7 +32,7 @@ end
 
 Initialize the rng with the given seed. Return the rng itself for convenience.
 """
-set_seed!(rng::AbstractJavaRNG, seed, args...) = set_seed!(rng, u64_seed(seed), args...)
+set_seed🎲(rng::AbstractJavaRNG, seed, args...) = set_seed🎲(rng, u64_seed(seed), args...)
 
 next🎲(rng::AbstractJavaRNG, ::Type{T}, stop::Real) where {T} = next🎲(rng, T) * stop
 
@@ -83,7 +83,7 @@ end
 Base.copy(rng::JavaRandom) = copy!(JavaRandom(0), rng)
 Base.:(==)(a::JavaRandom, b::JavaRandom) = a.seed == b.seed
 
-function set_seed!(rng::JavaRandom, seed::UInt64)
+function set_seed🎲(rng::JavaRandom, seed::UInt64)
     rng.seed = _new_seed(seed)
     return rng
 end
@@ -188,7 +188,7 @@ function _get_lo_hi(seed::UInt64)
     return l, h
 end
 
-function set_seed!(rng::JavaXoroshiro128PlusPlus, seed::UInt64)
+function set_seed🎲(rng::JavaXoroshiro128PlusPlus, seed::UInt64)
     rng.lo, rng.hi = _get_lo_hi(seed)
     return rng
 end

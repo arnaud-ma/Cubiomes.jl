@@ -91,7 +91,7 @@ function BiomeNoise(::UndefInitializer)
         Tuple(
         Noise(
         DoublePerlin{nb_octaves(np)},
-        undef, length_of_trimmed(amplitudes(np), iszero),
+        undef, length_of_trimmed(iszero, amplitudes(np)),
     ) for np in NOISE_PARAMETERS
     ),
     )

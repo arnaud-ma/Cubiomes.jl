@@ -24,24 +24,10 @@ struct DoublePerlin{N} <: Noise
     octave_B::Octaves{N}
 end
 
-
-
-# amplitude can be in fact any real number, but we restrain to Float64
+# amplitude can be in fact any real number, but we restrain to a float
 # to really make the difference with the method with len::Integer
-function DoublePerlin{N}(::UndefInitializer, amplitude::Float64) where {N}
+function DoublePerlin{N}(::UndefInitializer, amplitude::AbstractFloat) where {N}
     return DoublePerlin{N}(amplitude, Octaves{N}(undef), Octaves{N}(undef))
-end
-
-function DoublePerlin{N}(x::UndefInitializer, len::Integer) where {N}
-    # Xoroshiro128PlusPlus implementation
-    # Optimization: len must always be equal to length_of_trimmed(amplitudes, iszero)
-    # but we can pass it directly
-    amplitude = AMPLITUDE_INI[len]
-    return DoublePerlin{N}(x, amplitude)
-end
-
-function DoublePerlin{N}(x::UndefInitializer, amplitudes) where {N}
-    return DoublePerlin{N}(x, length_of_trimmed(amplitudes, iszero))
 end
 
 function DoublePerlin{N}(x::UndefInitializer) where {N}
@@ -49,6 +35,19 @@ function DoublePerlin{N}(x::UndefInitializer) where {N}
     amplitude = (10 / 6) * N / (N + 1)
     return DoublePerlin{N}(x, amplitude)
 end
+
+function DoublePerlin{N}(x::UndefInitializer, len::Integer) where {N}
+    # Xoroshiro128PlusPlus implementation
+    # Optimization: len must always be equal to length_of_trimmed(iszero, amplitudes)
+    # but we can pass it directly
+    return DoublePerlin{N}(x, AMPLITUDE_INI[len])
+end
+
+function DoublePerlin{N}(x::UndefInitializer, amplitudes) where {N}
+    # the non-optimized version, if we do not already know length_of_trimmed(iszero, amplitudes)
+    return DoublePerlin{N}(x, length_of_trimmed(iszero, amplitudes))
+end
+
 
 is_undef(x::DoublePerlin{N}) where {N} = is_undef(x.octave_A) || is_undef(x.octave_B)
 
@@ -63,11 +62,11 @@ end
 function Noise🎲(
     ::Type{DoublePerlin{N}},
     rng::JavaXoroshiro128PlusPlus,
-    amplitudes_or_len,
+    amplitudes,
     octave_min,
 ) where {N}
-    dp = DoublePerlin{N}(undef, amplitudes_or_len) # here it's why we need to overload
-    set_rng!🎲(dp, rng, amplitudes_or_len, octave_min)
+    dp = Noise(DoublePerlin{N}, undef, amplitudes) # here it's why we need to overload
+    set_rng!🎲(dp, rng, amplitudes, octave_min)
     return dp
 end
 
@@ -79,11 +78,12 @@ function sample_noise(noise::DoublePerlin, x, y, z, move_factor=337 / 331)
     return v * noise.amplitude
 end
 
-seed = 0xb8cfde1c2decb7a3;
-rng = JavaRandom(seed);
-nb = 9;
-omin = -10;
-noise = Noise🎲(DoublePerlin{nb}, rng, omin)
+# seed = 0xb8cfde1c2decb7a3;
+# rng = JavaXoroshiro128PlusPlus(seed)
+# nb = 7;
+# omin = -10;
+# amplitudes = (0.0, 3.759029398181129, 0.6857347567864969, 1.0, 0.0, 8.4830289242609399, 0.0);
+# noise = Noise🎲(DoublePerlin{nb}, rng, amplitudes, omin)
 
 # open("a.txt", "w") do io
 #     print(io, noise)

@@ -34,11 +34,12 @@ end
 Octaves{N}(::UndefInitializer) where {N} = Octaves{N}([Perlin(undef) for _ in 1:N])
 is_undef(x::Octaves{N}) where {N} = any(is_undef, x.octaves)
 
-function check_octave_min(N, octave_min)
+function check_octave_min(N::Int, octave_min)
     if octave_min > 1 - N
         throw(ArgumentError(lazy"we must have octave_min ≤ 1 - N. Got $octave_min > $(1- N)"))
     end
 end
+check_octave_min(octaves, octave_min) = check_octave_min(length(octaves), octave_min)
 
 function set_rng!🎲(noise::Octaves{N}, rng::JavaRandom, octave_min) where {N}
     check_octave_min(N, octave_min)
@@ -47,59 +48,95 @@ function set_rng!🎲(noise::Octaves{N}, rng::JavaRandom, octave_min) where {N}
     lacunarity = 2.0^end_
     octaves = noise.octaves
 
-    if iszero(end_)
-        octave = octaves[1]
-        set_rng!🎲(octave, rng)
-        octave.amplitude = persistence
-        octave.lacunarity = lacunarity
-        persistence *= 2
-        lacunarity /= 2
-        start = 2
-    else
+    if !iszero(end_)
         randjump🎲(rng, Int32, -end_ * 262)
-        start = 1
     end
 
-    @inbounds for i in start:N
-        octave = octaves[i]
-        set_rng!🎲(octave, rng)
-        octave.amplitude = persistence
-        octave.lacunarity = lacunarity
-        persistence *= 2
-        lacunarity /= 2
+    @inbounds for i in 1:N
+        persistence, lacunarity = set_rng_octave!🎲(octaves[i], rng, persistence, lacunarity)
     end
     return nothing
 end
 
-const MD5_OCTAVE_NOISE = Tuple(Tuple(md5_to_uint64("octave_$i")) for i in -12:0)
+_update_persistence_lacu(persistence, lacunarity) = persistence * 2, lacunarity / 2
+
+function set_rng_octave!🎲(octave::Perlin, rng::JavaRandom, persistence::T, lacunarity, amp=one(T)) where {T}
+    set_rng!🎲(octave, rng)
+    octave.amplitude = persistence * amp
+    octave.lacunarity = lacunarity
+    return _update_persistence_lacu(persistence, lacunarity)
+end
+
+const MD5_OCTAVE_NOISE = Tuple(@. Tuple(md5_to_uint64("octave_" * string(-12:0))))
 const LACUNARITY_INI = Tuple(@. 1 / 2^(0:12)) # -omin = 3:12
-const PERSISTENCE_INI = (0, (2^n / (2^(n + 1) - 1) for n in 0:8)...) # len = 4:9
+const PERSISTENCE_INI = Tuple(2^n / (2^(n + 1) - 1) for n in 0:8) # len = 4:9
 
 function set_rng!🎲(
     octaves_type::Octaves{N},
     rng::JavaXoroshiro128PlusPlus,
-    amplitudes::NTuple{N},
+    amplitudes,
     octave_min,
-    # TODO: the nmax parameter (see xOctaveInit in the original code)
+    nmax=Val(N),
+) where {N}
+    if N != length_filter(!iszero, amplitudes)
+        throw(ArgumentError(lazy"the number of octaves must be equal to length_filter(!iszero, amplitudes). \
+                                 Got $N != $length_filter(!iszero, amplitudes)."))
+    end
+    return unsafe_set_rng!🎲(octaves_type, rng, amplitudes, octave_min, nmax)
+end
+
+function unsafe_set_rng!🎲(
+    octaves_type::Octaves{N},
+    rng::JavaXoroshiro128PlusPlus,
+    amplitudes,
+    octave_min,
+    nmax=Val(N),
 ) where {N}
     check_octave_min(N, octave_min)
-    lacunarity = LACUNARITY_INI[-octave_min + 1]
-    persistence = PERSISTENCE_INI[N]
+    if !(0 <= -octave_min < length(LACUNARITY_INI))
+        throw(ArgumentError(lazy"We must have 0 <= -octave_min < $(length(LACUNARITY_INI)). \
+                                 Got octave_min=$octave_min"))
+    end
+    if !(N < length(PERSISTENCE_INI))
+        throw(ArgumentError(lazy"We must have N < $(length(PERSISTENCE_INI)). \
+                                 Got N=$N octaves"))
+    end
+    return _really_unsafe_set_rng!🎲(octaves_type, rng, amplitudes, octave_min, nmax)
+end
+
+function _really_unsafe_set_rng!🎲(
+    octaves_type::Octaves{N},
+    rng::JavaXoroshiro128PlusPlus,
+    amplitudes::NTuple{N_amp},
+    octave_min,
+    nmax::Val{N_max}=Val(N),
+) where {N, N_amp, N_max}
+    @inbounds lacunarity = LACUNARITY_INI[-octave_min + 1]
+    @inbounds persistence = PERSISTENCE_INI[N_amp]
     xlo, xhi = next🎲(rng, UInt64), next🎲(rng, UInt64)
     octaves = octaves_type.octaves
-    for i in 1:N
-        amp = amplitudes[i]
-        iszero(amp) && continue
+
+    rng_temp = copy(rng)
+    octave_counter = 1
+    for (i, amp) in enumerate(amplitudes)
+        # skip if amplitude is zero
+        if iszero(amp)
+            lacunarity, persistence = _update_persistence_lacu(persistence, lacunarity)
+            continue
+        end
+
         lo, hi = MD5_OCTAVE_NOISE[12 + octave_min + i]
-        lo ⊻= xlo
-        hi ⊻= xhi
-        xoshiro = JavaXoroshiro128PlusPlus(lo, hi)
-        perlin = Noise🎲(Perlin, xoshiro)
-        perlin.amplitude = amp * persistence
-        perlin.lacunarity = lacunarity
-        octaves[i] = perlin
-        lacunarity *= 2
-        persistence /= 2
+        rng_temp.lo = xlo ⊻ lo
+        rng_temp.hi = xhi ⊻ hi
+
+        octave = octaves[octave_counter]
+        lacunarity, persistence = set_rng_octave!🎲(octave, rng_temp, persistence, lacunarity, amp)
+
+        octave_counter += 1
+        if octave_counter > N_max
+            break
+        end
+        lacunarity, persistence = _update_persistence_lacu(persistence, lacunarity)
     end
     return nothing
 end
@@ -117,11 +154,39 @@ function sample_noise(octaves::Octaves{N}, x, y, z, yamp=missing, ymin=missing) 
         ay = get_ay(y, perlin, lf)
         az = z * lf
         pv = sample_noise(perlin, ax, ay, az, yamp * lf, ymin * lf)
+        @show pv
         v += pv * perlin.amplitude
+        @show perlin.amplitude
+        @show v
     end
     return v
 end
 
+seed = 0x47e38685b75f2a1d
+nb = 3
+amp = (2.2948331015787096, 3.7393021733500995, 0.0, 2.2193150739468606)
+octave_min = -3
+
+rng = JavaXoroshiro128PlusPlus(seed)
+noise = Octaves{nb}(undef)
+set_rng!🎲(noise, rng, amp, octave_min)
+println(noise.octaves[end])
+
+# @code_warntype Noise🎲(Octaves{nb}, rng, amp, octave_min)
+x = 33860.49100816767
+y = 52.69376987529392
+z = -70117.25276887477
+sample_noise(noise, x, y, z)
+
 # TODO: sample_octave_beta17_biome
 # TODO: sample_octave_beta17_terrain
 #endregion
+
+function f(x)
+    y = 3
+    iter = ((y, i) for i in x if !iszero(i))
+    for (y, i) in iter
+        println(y)
+        y *= 2
+    end
+end

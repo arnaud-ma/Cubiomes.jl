@@ -155,7 +155,7 @@ end
         end
     end
 
-    @testset "creation with Xoshiro rng" begin
+    @testset "creation with Xoroshiro rng" begin
         for (params, octave_test) in OCTAVES_XOROSHIRO
             rng = JavaXoroshiro128PlusPlus(params.seed)
             test_octaves_creations(
@@ -219,4 +219,10 @@ end
             test_double_creation(double_test, params.nb, rng, params.octave_min)
         end
     end
+
+    # @testset "creation with Xoroshiro rng" begin
+    #     for (params, double_test) in DOUBLE_PERLIN_XOROSHIRO
+    #         rng = JavaXoroshiro128PlusPlus(params.seed)
+    #     end
+    # end
 end

@@ -140,27 +140,38 @@ mulinv(x, m) = throw(ErrorException(lazy"Use `Base.invmod` instead."))
 #                    Arrays                                                   #
 #=============================================================================#
 
-# i do not have the motivation to write a generic version of this function, instead
-# of limiting to NTuple{N}
 """
-    length_of_trimmed(x::NTuple{N}, predicate) where N
+    length_of_trimmed(predicate, x) where N
 
-Returns the length of the tuple `x` after removing the elements from the beginning and the end
+Returns the length of the collection `x` after removing the elements from the beginning and the end
 that satisfy the `predicate`.
+
+⚠ The collection *must* have the property so that `x[i]` for `i` in firstindex(x):lastindex(x)
+is valid.
 """
-function length_of_trimmed(x::NTuple{N}, predicate) where {N}
-    len = N
-    i = len
-    while predicate(@inbounds x[i])
+function length_of_trimmed(predicate, x)
+    len = length(x)
+    i = lastindex(x)
+    while predicate(x[i])
         i -= 1
         len -= 1
     end
-    i = 1
-    while predicate(@inbounds x[i])
+    i = firstindex(x)
+    while predicate(x[i])
         i += 1
         len -= 1
     end
     return len
+end
+
+function length_filter(predicate, x)
+    count = zero(Int)
+    for i in x
+        if predicate(i)
+            count += 1
+        end
+    end
+    return count
 end
 
 #=============================================================================#

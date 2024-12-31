@@ -24,12 +24,10 @@ function next_perlin🎲(rng::JavaXoroshiro128PlusPlus, ::Type{Int32}, stop::Rea
     stop += 1
     mask = typemax(UInt32)
     r = (next🎲(rng, UInt64) & mask) * stop
-    return r >> 32
+    # trunc_int is the unsafe function for converting to Int32
+    return Base.trunc_int(Int32, r >> 32)
     #TODO: see https://github.com/Cubitect/cubiomes/issues/134
 end
-
-rng = JavaXoroshiro128PlusPlus(0x7b45d6ae4dd0f437, 0x9415f7f682e26e57)
-next_perlin🎲(rng, Int32, 256)
 
 function next_perlin🎲(rng::AbstractJavaRNG, ::Type{T}, start::Real, stop::Real) where {T}
     return next_perlin🎲(rng, Int32, stop - start) + start
@@ -74,7 +72,7 @@ mutable struct Perlin <: Noise
     lacunarity::Float64
 end
 
-function Perlin(perms::Array, args...)
+function Perlin(perms::Array, args::Vararg{Any, N}) where {N}
     Perlin(OffsetVector(MVector{257, UInt8}(perms), 0:256), args...)
 end
 

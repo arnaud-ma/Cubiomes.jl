@@ -135,11 +135,16 @@ struct Scale{N} end
 Scale(N::Integer) = Scale{N}()
 
 macro scale_str(str)
-    x = split(str, ':')
-    if length(x) != 2 || x[1] != "1"
+    splitted = split(str, ':')
+    if length(splitted) != 2
         throw(ArgumentError("Bad scale format."))
     end
-    return Scale(parse(Int, x[2]))
+    num, denom = parse.(Int, splitted)
+    scale = num // denom
+    if numerator(scale) != 1
+        throw(ArgumentError("The numerator of the scale must be 1."))
+    end
+    return Scale(denominator(scale))
 end
 const var"@📏_str" = var"@scale_str"
 
