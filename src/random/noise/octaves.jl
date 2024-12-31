@@ -90,29 +90,10 @@ function unsafe_set_rng!🎲(
     rng::JavaXoroshiro128PlusPlus,
     amplitudes,
     octave_min,
-    nmax=Val(N),
+    nmax=length(amplitudes),
 ) where {N}
-    check_octave_min(N, octave_min)
-    if !(0 <= -octave_min < length(LACUNARITY_INI))
-        throw(ArgumentError(lazy"We must have 0 <= -octave_min < $(length(LACUNARITY_INI)). \
-                                 Got octave_min=$octave_min"))
-    end
-    if !(N < length(PERSISTENCE_INI))
-        throw(ArgumentError(lazy"We must have N < $(length(PERSISTENCE_INI)). \
-                                 Got N=$N octaves"))
-    end
-    return _really_unsafe_set_rng!🎲(octaves_type, rng, amplitudes, octave_min, nmax)
-end
-
-function _really_unsafe_set_rng!🎲(
-    octaves_type::Octaves{N},
-    rng::JavaXoroshiro128PlusPlus,
-    amplitudes::NTuple{N_amp},
-    octave_min,
-    nmax::Val{N_max}=Val(N),
-) where {N, N_amp, N_max}
-    @inbounds lacunarity = LACUNARITY_INI[-octave_min + 1]
-    @inbounds persistence = PERSISTENCE_INI[N_amp]
+    lacunarity = LACUNARITY_INI[-octave_min + 1]
+    persistence = PERSISTENCE_INI[length(amplitudes)]
     xlo, xhi = next🎲(rng, UInt64), next🎲(rng, UInt64)
     octaves = octaves_type.octaves
 
@@ -133,7 +114,7 @@ function _really_unsafe_set_rng!🎲(
         lacunarity, persistence = set_rng_octave!🎲(octave, rng_temp, persistence, lacunarity, amp)
 
         octave_counter += 1
-        if octave_counter > N_max
+        if octave_counter > nmax
             break
         end
         lacunarity, persistence = _update_persistence_lacu(persistence, lacunarity)
