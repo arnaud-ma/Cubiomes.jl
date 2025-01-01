@@ -151,12 +151,16 @@ is valid.
 """
 function length_of_trimmed(predicate, x)
     len = length(x)
-    i = lastindex(x)
+    first, last = firstindex(x), lastindex(x)
+    i = last
     while predicate(x[i])
         i -= 1
         len -= 1
+        if i == first
+            return 0
+        end
     end
-    i = firstindex(x)
+    i = first
     while predicate(x[i])
         i += 1
         len -= 1

@@ -117,9 +117,6 @@ end
 Fill the permutations vector with the values [|0, 255|] in a random order.
 """
 function fill_permutations!🎲(rng::AbstractJavaRNG, perms::PermsType)
-    @inbounds for i in 0:255
-        perms[i] = i
-    end
     # shuffle the values
     @inbounds for i in 0:255
         j = next_perlin🎲(rng, Int32, i:255)
@@ -261,6 +258,7 @@ function adjust_y(y, yamp, ymin)
             # fld(x, y) = floor(x/y), but with floating point numbers, so maybe less accurate
             # see the doc of fld for more details
             y -= fld(yclamp, yamp) * yamp
+            # y -= floor(yclamp / yamp) * yamp
         end
         # if yclamp < yamp, then yclamp/yamp < 1 so fld(yclamp, yamp) = 0
         # therefore y -= 0 * yamp = 0, i.e. no change

@@ -156,7 +156,6 @@ end
     end
 
     @testset "sample noise with JavaRandom rng" begin
-
         function test_octaves_java_sample(nb, omin, args...; result, rng)
             noise = Noise🎲(Octaves{nb}, rng, omin)
             @test sample_noise(noise, args...) ≈ result atol = atol_f64
@@ -198,7 +197,6 @@ end
     end
 
     @testset "sample noise with Xoroshiro rng" begin
-
         function test_octaves_xoroshiro_sample(nb, omin, amp, args...; result, rng)
             noise = Noise🎲(Octaves{nb}, rng, amp, omin)
             @test sample_noise(noise, args...) ≈ result atol = atol_f64
@@ -247,9 +245,9 @@ end
         end
     end
 
-    # @testset "creation with Xoroshiro rng" begin
-    #     for (params, double_test) in DOUBLE_PERLIN_XOROSHIRO
-    #         rng = JavaXoroshiro128PlusPlus(params.seed)
-    #     end
-    # end
+    @testset "creation with Xoroshiro rng" begin
+        for (params, double_test) in DOUBLE_PERLIN_XOROSHIRO
+            rng = JavaXoroshiro128PlusPlus(params.seed)
+        end
+    end
 end

@@ -107,7 +107,7 @@ function unsafe_set_rng!🎲(
     xlo, xhi = next🎲(rng, UInt64), next🎲(rng, UInt64)
 
     # Initialize a temporary RNG state and the iterator over octaves
-    rng_temp = copy(rng)
+    rng_temp = typeof(rng)(xlo, xhi)
     octaves = octaves_type.octaves
     octave_counter = 1
 
