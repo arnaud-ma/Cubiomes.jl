@@ -128,16 +128,11 @@ function test_octaves_creations(octaves_test, nb, rng, args...)
     @test noise == noise2
 end
 
-function test_octaves_sample(nb, omin, args...; result, rng)
-    noise = Noise🎲(Octaves{nb}, rng, omin)
-    @test sample_noise(noise, args...) ≈ result atol = atol_f64
-end
-
 @testset "Octaves" begin
     @test_throws "at least one octave" Noise(Octaves{-6}, undef)
     @test_throws "at least one octave" Noise(Octaves{0}, undef)
     @test_throws "octave_min ≤ 1 - N" Noise🎲(Octaves{6}, JavaRandom(42), -2)
-    @test_throws "octave_min ≤ 1 - N" Noise🎲(
+    @test_throws BoundsError Noise🎲(
         Octaves{1}, JavaXoroshiro128PlusPlus(42), (1,), 1)
 
     @testset "is_undef" begin
@@ -162,8 +157,13 @@ end
 
     @testset "sample noise with JavaRandom rng" begin
 
+        function test_octaves_java_sample(nb, omin, args...; result, rng)
+            noise = Noise🎲(Octaves{nb}, rng, omin)
+            @test sample_noise(noise, args...) ≈ result atol = atol_f64
+        end
+
         # test x, y, z
-        test_octaves_sample(
+        test_octaves_java_sample(
             6, -6,
             -55821.65547161641, -59.05810060012, 78572.68143564471;
             result=-0.0120778804692121,
@@ -171,7 +171,7 @@ end
         )
 
         # test y=0
-        test_octaves_sample(
+        test_octaves_java_sample(
             6, -6,
             72039.53368288082, 0, 51804.97366043652;
             result=-0.2166285933836845,
@@ -179,7 +179,7 @@ end
         )
 
         # test with yamp and ymin
-        test_octaves_sample(
+        test_octaves_java_sample(
             5, -7,
             -88134.5908954708, 52.69376987529392, 91341.66243916987, # x, y, z
             113.4582167462825, 10.558772655520132; # yamp, ymin
@@ -188,7 +188,7 @@ end
         )
 
         # test with yamp and ymin and y=nothing
-        test_octaves_sample(
+        test_octaves_java_sample(
             9, -10,
             33860.49100816767, nothing, -70117.25276887477, # x, y, z
             113.4582167462825, 10.558772655520132; # yamp, ymin
@@ -197,7 +197,37 @@ end
         )
     end
 
-    # TODO: sample noise with Xoroshiro
+    @testset "sample noise with Xoroshiro rng" begin
+
+        function test_octaves_xoroshiro_sample(nb, omin, amp, args...; result, rng)
+            noise = Noise🎲(Octaves{nb}, rng, amp, omin)
+            @test sample_noise(noise, args...) ≈ result atol = atol_f64
+        end
+
+        test_octaves_xoroshiro_sample(
+            4, -5,
+            (4.2924900488084425, 10.151127186787392, 8.852659985347511, 4.872098229275968),
+            -36037.7830286071, -45.96292447528, -67113.8288679576;
+            result=-1.7785759425550967,
+            rng=JavaXoroshiro128PlusPlus(0x022843273ec17350),
+        )
+
+        test_octaves_xoroshiro_sample(
+            2, -3,
+            (0, 3.6085191731282653, 0, 6.120582507763649),
+            905.788158662778, 16.88841898837666, -54162.592229314774;
+            result=-0.3637842988331072,
+            rng=JavaXoroshiro128PlusPlus(0x6905976105f4f341),
+        )
+
+        test_octaves_xoroshiro_sample(
+            2, -6,
+            (0, 3.6085191731282653, 0, 0, 6.120582507763649),
+            905.788158662778, 16.88841898837666, -54162.592229314774;
+            result=-0.0047320120208560745,
+            rng=JavaXoroshiro128PlusPlus(0x62342335dd25f7ed),
+        )
+    end
 end
 
 @testset "Double perlin" begin
