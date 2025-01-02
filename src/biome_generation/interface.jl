@@ -1,4 +1,4 @@
-include("../random/noise/noise.jl")
+include("../noise/noise.jl")
 include("biomes.jl")
 using OffsetArrays
 

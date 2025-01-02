@@ -1,4 +1,4 @@
-include("../utils.jl")
+include("utils.jl")
 
 # ---------------------------------------------------------------------------- #
 #                            Interface for Java RNGs                           #
