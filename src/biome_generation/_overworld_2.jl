@@ -1,4 +1,4 @@
-include("../biome_generation/infra.jl")
+include("../biome_generation/interface.jl")
 
 #region Noise Parameters
 # ---------------------------------------------------------------------------- #

@@ -6,9 +6,10 @@
 [![Code Style: Blue](https://img.shields.io/badge/code%20style-blue-4495d1.svg)](https://github.com/invenia/BlueStyle)
 
 ## ⚠️⚠️⚠️ WARNING ⚠️⚠️⚠️
+
 The code is still in early development, and everything can change at any time. This repo should be seen as a proof of concept and nothing else.
 
-The faster and easy-to-use Minecraft biome finder, written in ~~rust~~ Julia, the best ~~llvm wrapper~~ programming language for this specific task!
+The faster and easy-to-use Minecraft biome finder, written in Julia, the best programming language for this specific task!
 
 It is in fact a complete rewrite of the original [Cubiomes](https://github.com/Cubitect/cubiomes) C library, line by line, while using every advantage of the Julia language.
 
@@ -50,12 +51,53 @@ Let's explain step by step:
 4. We generate the biomes with the `gen_biomes!` function. It will fill the `MCMap` with the biomes. The last argument is the scale of the biomes, i.e. how many blocks in the world correspond to one biome value in the map. For example, with a scale of 1, one biome value in the map corresponds to one block in the world. The only supported values are `📏"1:1"`, `📏"1:4"`, `📏"1:16"` and `📏"1:64"`. The symbol name is ":straight_ruler:".
 5. We can visualize a 2D slice of the map with `plot`. The colors are the same as in Minecraft, so you can easily recognize the biomes.
 
+## TODO
+
+### Java implementation of rng
+
+- [X] JavaRandom
+- [X] Xoroshiro128PlusPlus
+- [X] Test with [Suppositions.jl](https://github.com/Seelengrab/Supposition.jl)
+
+### Noise
+
+- [X] Perlin noise
+- [X] Octaves noise
+- [ ] Simplex noise
+- [X] Double Perlin noise
+
+### Interface
+
+- [ ] Use the [broadcasting interface](https://docs.julialang.org/en/v1/manual/interfaces/#man-interfaces-broadcasting) for the `MCMap` object, to be able to use the dot syntax, i.e.
+
+    ```julia
+    mc_map = MCMap(-1000:1000, -1000:1000)
+    mc_map .= get_biomes.(nether_generator, mc_map, 📏"1:4")
+    ```
+
+    instead of the `gen_biomes!` function.
+
+### Features
+
+- [ ] Nether generation
+- [ ] Overworld 1.18+ generation
+- [ ] Overworld beta generation
+- [ ] Overworld generation
+- [ ] End generation
+- [ ] Structure generation
+- [ ] Use of [recipes](https://docs.juliaplots.org/stable/recipes/) for the plots of maps without the need of depending on Plots.jl
+
+### Performance
+
+- [ ] Threading for the biome generation
+- [ ] GPU acceleration for the biome generation
+
 ## Contributing
 
 ### Conventions
 
-- The code should be formatted with the [BlueStyle](https://github.com/JuliaDiff/BlueStyle) code style.
-- For random generator, each function that modifies the state inplace should be prefixed with a `🎲`.
+- The code should be formatted with `using JuliaFormatter; format(".")`.
+- For random generator, each function that modifies the state inplace should be prefixed with a `🎲` (:game_die:)
 - For array manipulation, each function that modifies the array inplace should be prefixed with a `!`.
 - Each new feature should be tested with unit tests (with the `Test` module) and if possible with property-based tests (with [Suppositions.jl](https://github.com/Seelengrab/Supposition.jl))
 
