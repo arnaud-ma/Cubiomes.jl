@@ -3,15 +3,12 @@
 [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://arnaud-ma.github.io/cubiomes.jl/stable/)
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://arnaud-ma.github.io/cubiomes.jl/dev/)
 [![Build Status](https://github.com/arnaud-ma/cubiomes.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/arnaud-ma/cubiomes.jl/actions/workflows/CI.yml?query=branch%3Amain)
-[![Code Style: Blue](https://img.shields.io/badge/code%20style-blue-4495d1.svg)](https://github.com/invenia/BlueStyle)
+
+Cubiomes.jl is the faster and easy-to-use Minecraft biome and feature generation library, written in Julia—the best programming language for this specific task! By harnessing Julia’s modern features, this library delivers exceptional performance and ease of use, making it the ideal choice for custom seed-finding tools and large-scale map generation. As a complete rewrite of the original [Cubiomes](https://github.com/Cubitect/cubiomes) library in C, Cubiomes.jl combines the same powerful functionality with the added benefits of Julia’s performance and simplicity.
 
 ## ⚠️⚠️⚠️ WARNING ⚠️⚠️⚠️
 
 The code is still in early development, and everything can change at any time. This repo should be seen as a proof of concept and nothing else.
-
-The faster and easy-to-use Minecraft biome finder, written in Julia, the best programming language for this specific task!
-
-It is in fact a complete rewrite of the original [Cubiomes](https://github.com/Cubitect/cubiomes) C library, line by line, while using every advantage of the Julia language.
 
 ## Why Cubiomes.jl?
 
