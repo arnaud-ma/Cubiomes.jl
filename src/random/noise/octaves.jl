@@ -1,20 +1,15 @@
 include("perlin.jl")
 
 using StaticArrays: SizedArray
-using Base.Iterators: countfrom
-#region Octaves
-# ---------------------------------------------------------------------------- #
-#                                    Octaves                                   #
-# ---------------------------------------------------------------------------- #
 
 TypeInnerOctaves{N} = SizedArray{Tuple{N}, Perlin, 1, 1, Vector{Perlin}}
 
 """
-    Octaves{N}
+    Octaves{N} <: Noise
 
 An ordered collection of `N` Perlin objects representing the octaves of a noise.
 
-See also: [`Noise`](@ref), [`sample_noise`], [`PerlinNoise`](@ref), [`DoublePerlinNoise`](@ref)
+See also: [`Noise`](@ref), [`sample_noise`], [`Perlin`](@ref), [`DoublePerlin`](@ref)
 """
 struct Octaves{N} <: Noise
     octaves::TypeInnerOctaves{N}
@@ -112,7 +107,7 @@ function unsafe_set_rng!🎲(
     octave_counter = 1
 
     # Iterate over amplitudes and set RNG for each octave
-    for (i, amp) in zip(countfrom(1), amplitudes)
+    for (i, amp) in zip(Iterators.countfrom(1), amplitudes)
         # Skip if amplitude is zero
         if !iszero(amp)
             # Update RNG state with MD5 noise values
@@ -160,4 +155,3 @@ end
 
 # TODO: sample_octave_beta17_biome
 # TODO: sample_octave_beta17_terrain
-#endregion

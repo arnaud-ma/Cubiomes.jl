@@ -27,7 +27,7 @@ function randjump🎲(rng::T, type, n::Integer) where {T <: AbstractJavaRNG}
 end
 
 """
-    set_seed!(rng::AbstractJavaRNG, seed) -> AbstractJavaRNG
+    set_seed🎲(rng::AbstractJavaRNG, seed) -> AbstractJavaRNG
 
 Initialize the rng with the given seed. Return the rng itself for convenience.
 """

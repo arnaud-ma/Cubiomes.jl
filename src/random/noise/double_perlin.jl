@@ -1,15 +1,18 @@
 include("octaves.jl")
 
-# ---------------------------------------------------------------------------- #
-#                              Double Perlin Noise                             #
-# ---------------------------------------------------------------------------- #
-
 const MAX_AMPLITUDE = 9
 
 # almost equal to (5/3 * x / (x + 1)) for x in 1:MAX_AMPLITUDE
 # but with use rational numbers to avoid floating point errors
 const AMPLITUDE_INI = float.(Tuple(5 // 3 * x // (x + 1) for x in 1:MAX_AMPLITUDE))
 
+
+"""
+    DoublePerlin{N} <: Noise
+
+A double Perlin noise implementation. It's a sum of two independent and identically distributed
+(iid) Octaves{N} noise.
+"""
 struct DoublePerlin{N} <: Noise
     amplitude::Float64
     octave_A::Octaves{N}

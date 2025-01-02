@@ -42,6 +42,13 @@ end
 @testset "Random" begin
     rng_gen = @rng_gen("Random", Cubiomes.JavaRandom, Data.Integers{Int64}())
 
+    @check function set_seed(seed=Data.Integers{Int64}())
+        rng = Cubiomes.JavaRandom(1)
+        rng2 = Cubiomes.JavaRandom(seed)
+        Cubiomes.set_seed🎲(rng, seed)
+        rng == rng2
+    end
+
     @check function next_int_stop(rng=rng_gen, start_stop=start_stop_int32_gen)
         start, stop = start_stop
         java_value =
@@ -70,13 +77,6 @@ end
         end
         rng == rng2
     end
-
-    @check function set_seed(seed=Data.Integers{Int64}())
-        rng = Cubiomes.JavaRandom(1)
-        rng2 = Cubiomes.JavaRandom(seed)
-        Cubiomes.set_seed!(rng, seed)
-        rng == rng2
-    end
 end
 
 @testset "Xoroshiro128PlusPlus" begin
@@ -85,6 +85,13 @@ end
         Cubiomes.JavaXoroshiro128PlusPlus,
         Data.Integers{Int64}()
     )
+
+    @check function set_seed(seed=Data.Integers{Int64}())
+        rng = Cubiomes.JavaXoroshiro128PlusPlus(0x0, 0x0)
+        rng2 = Cubiomes.JavaXoroshiro128PlusPlus(seed)
+        Cubiomes.set_seed🎲(rng, seed)
+        rng == rng2
+    end
 
     @check function next_int_stop(rng=rng_gen, start_stop=start_stop_int32_gen)
         start, stop = start_stop
@@ -114,13 +121,6 @@ end
         for _ in 1:nb
             Cubiomes.next🎲(rng2, UInt64)
         end
-        rng == rng2
-    end
-
-    @check function set_seed(seed=Data.Integers{Int64}())
-        rng = Cubiomes.JavaXoroshiro128PlusPlus(1)
-        rng2 = Cubiomes.JavaXoroshiro128PlusPlus(seed)
-        Cubiomes.set_seed!(rng, seed)
         rng == rng2
     end
 end

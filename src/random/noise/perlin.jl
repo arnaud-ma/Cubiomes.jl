@@ -55,10 +55,11 @@ Perms(::UndefInitializer) = OffsetVector(MVector{257, UInt8}(undef), 0:256)
 end
 
 """
-    Perlin
+    Perlin <: Noise
+
 The type for the perlin noise. See https://en.wikipedia.org/Perlin_Noise to know how it works.
 
-See also: [`Noise`](@ref), [`sample_noise`](@ref), [`sample_simplex`](@ref), [`OctaveNoise`](@ref)
+See also: [`Noise`](@ref), [`sample_noise`](@ref), [`sample_simplex`](@ref)
 """
 mutable struct Perlin <: Noise
     permutations::PermsType
@@ -103,7 +104,7 @@ function set_rng!🎲(perlin::Perlin, rng::AbstractJavaRNG)
 
     permutations = perlin.permutations
     init_perlin_noise_perm!(permutations)
-    fill_permutations!🎲(rng, permutations)
+    shuffle_permutations!🎲(rng, permutations)
     perlin.const_y, perlin.const_index_y, perlin.const_smooth_y = init_coord_values(y)
     perlin.amplitude = one(Float64)
     perlin.lacunarity = one(Float64)
@@ -111,13 +112,15 @@ function set_rng!🎲(perlin::Perlin, rng::AbstractJavaRNG)
     return nothing
 end
 
-"""
-    fill_permutations!🎲(rng::AbstractRNG_MC, perms::PermsType)
+eachindex
+Base.axes1
 
-Fill the permutations vector with the values [|0, 255|] in a random order.
 """
-function fill_permutations!🎲(rng::AbstractJavaRNG, perms::PermsType)
-    # shuffle the values
+    shuffle_permutations!🎲(rng::AbstractRNG_MC, perms::PermsType)
+
+Shuffle the permutations array using the given random number generator.
+"""
+function shuffle_permutations!🎲(rng::AbstractJavaRNG, perms::PermsType)
     @inbounds for i in 0:255
         j = next_perlin🎲(rng, Int32, i:255)
         perms[i], perms[j] = perms[j], perms[i]
@@ -146,7 +149,7 @@ Initialize one coordinate for the Perlin noise sampling.
 - the integer part of `coord`, modulo UInt8
 - the smoothstep value of the fractional part of `coord`
 
-See also: [`smoothstep_perlin_unsafe`](@ref)
+See also: [`smoothstep_perlin_unsafe`](@ref), [`sample_noise`](@ref), [`Perlin`](@ref)
 """
 function init_coord_values(coord)
     # We can't use `modf` because use `trunc` instead of `floor`
@@ -194,7 +197,12 @@ function indexed_lerp(idx::Integer, x, y, z)
 end
 
 """
-    interpolate_perlin(idx::PermsType, d1, d2, d3, h1, h2, h3, t1, t2, t3) -> Real
+    interpolate_perlin(
+                idx::PermsType,
+                d1, d2, d3,
+                h1, h2, h3,
+                t1, t2, t3
+            ) -> Real
 
 Interpolate the Perlin noise at the given coordinates.
 
@@ -208,7 +216,7 @@ coordinates.
 - The `t1`, `t2`, and `t3` parameters are the smoothstep values of the fractional parts
 of the `x`, `y`, and `z` coordinates.
 
-See also: [`init_coord_values`](@ref)
+See also: [`init_coord_values`](@ref), [`sample_noise`](@ref), [`Perlin`](@ref)
 """
 function interpolate_perlin(idx::PermsType, d1, d2, d3, h1, h2, h3, t1, t2, t3)
     # TODO: "@inbounds begin" once we are sure that the code is correct
@@ -258,7 +266,6 @@ function adjust_y(y, yamp, ymin)
             # fld(x, y) = floor(x/y), but with floating point numbers, so maybe less accurate
             # see the doc of fld for more details
             y -= fld(yclamp, yamp) * yamp
-            # y -= floor(yclamp / yamp) * yamp
         end
         # if yclamp < yamp, then yclamp/yamp < 1 so fld(yclamp, yamp) = 0
         # therefore y -= 0 * yamp = 0, i.e. no change
@@ -294,6 +301,11 @@ sample_noise(noise::Perlin, x, y, z, ::Missing, ::Missing) = sample_noise(noise,
 
 Compute the gradient of the simplex noise at the given coordinates.
 
+# Arguments
+- `idx`: Index used for interpolation.
+- `x`, `y`, `z`: Coordinates in the simplex grid.
+- `d`: Constant used to determine the influence of the point in the grid.
+
 See also: [`sample_simplex`](@ref)
 """
 function simplex_gradient(idx, x, y, z, d)
@@ -312,12 +324,12 @@ const UNSKEW::Float64 = (3 - √3) / 6
 """
     sample_simplex(noise::Perlin, x, y)
 
-Sample the given noise at the given 2D coordinate using the simplex noise
+Sample the given noise at the given coordinate using the simplex noise
 algorithm instead of the perlin one. See https://en.wikipedia.org/wiki/Simplex_noise
 
 See also: [`sample_noise`](@ref), [`Perlin`](@ref)
 """
-function sample_simplex(noise::Perlin, x, y)
+function sample_simplex(noise::Perlin, x, y, z=0.0, scaling=70, d=0.5)
     hf = (x + y) * SKEW
     hx = floor(Int, x + hf)
     hz = floor(Int, y + hf)
@@ -347,10 +359,10 @@ function sample_simplex(noise::Perlin, x, y)
         gi2 = p[(mask & (gi2 + hx + 1))]
     end
     t =
-        simplex_gradient(gi0 % 12, x0, y0, 0.0, 0.5) +
-        simplex_gradient(gi1 % 12, x1, y1, 0.0, 0.5) +
-        simplex_gradient(gi2 % 12, x2, y2, 0.0, 0.5)
+        simplex_gradient(gi0 % 12, x0, y0, z, d) +
+        simplex_gradient(gi1 % 12, x1, y1, z, d) +
+        simplex_gradient(gi2 % 12, x2, y2, z, d)
 
-    return 70t
+    return scaling * t
 end
 #endregion
