@@ -1,4 +1,5 @@
 using MD5: md5
+using StaticArrays: MVector
 
 """
     bytes2uint64(itr)
@@ -68,12 +69,12 @@ const SHA256_INITIAL_VALUES::NTuple{8, UInt32} = (
 split_u64(x::UInt64) = UInt32(x & typemax(UInt32)), UInt32(x >> 32)
 concat_u32(x::UInt32, y::UInt32) = UInt64(x) << 32 | y
 
-sha256_from_seed(seed::UInt64) = sha256_from_seed!(Array{UInt32}(undef, 64), seed)
-function sha256_from_seed!(w, seed::UInt64)
+sha256_from_seed(seed::UInt64) = sha256_from_seed!(MVector{64, UInt32}(undef), seed)
+@inline function sha256_from_seed!(w, seed::UInt64)
     w[1], w[2] = bswap.(split_u64(seed))
-    w[3] = 1 << 31
-    w[4:15] .= 0
-    w[16] = 0x40
+    w[3] = 0x80000000 # 2^31
+    w[4:15] .= zero(UInt32)
+    w[16] = 0x00000040 # 2^6
 
     for i in 17:64
         x = w[i - 15]

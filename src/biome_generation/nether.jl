@@ -5,6 +5,12 @@ include("interface.jl")
 #                 Noise Struct Definition and Noise Generation                 #
 # ---------------------------------------------------------------------------- #
 
+mutable struct SomeSha
+    x::Union{Nothing, UInt64}
+end
+Base.getindex(s::SomeSha) = s.x
+Base.setindex!(s::SomeSha, value) = s.x = value
+
 """
     Nether{S<:Union{Nothing,UInt64}}
     Nether{seed::Integer; with_sha::Bool=true}
@@ -37,12 +43,16 @@ julia> Nether(1234; with_sha=false)
 Nether{Nothing}(DoublePerlin{2}(1.1111111111111112, PerlinNoise[..., nothing)
 ```
 """
-struct Nether{S <: Union{Nothing, UInt64}} <: Dimension
+struct Nether <: Dimension
     temperature::DoublePerlin{2}
     humidity::DoublePerlin{2}
-    sha::S
+    sha::SomeSha
 end
 Nether(seed, sha=Val(true)) = Dimension(Nether, seed, sha)
+
+function Nether(::UndefInitializer)
+    return Nether(DoublePerlin{2}(undef, -7), DoublePerlin{2}(undef, -7), SomeSha(nothing))
+end
 
 function _set_temp_humid!(seed, temperature, humidity)
     rng_temp = JavaRandom(seed)
@@ -52,28 +62,15 @@ function _set_temp_humid!(seed, temperature, humidity)
     return nothing
 end
 
-function Nether(::UndefInitializer)
-    return Nether{Nothing}(DoublePerlin{2}(undef, -7), DoublePerlin{2}(undef, -7), nothing)
+@generated function set_seed!(nn::Nether, seed::UInt64, sha::Val{S}=Val(true)) where {S}
+    expr = :(_set_temp_humid!(seed, nn.temperature, nn.humidity))
+    sha_expr = S ? :(sha256_from_seed(seed)) : :nothing
+    return quote
+        $expr
+        nn.sha[] = $sha_expr
+        return nothing
+    end
 end
-
-function set_seed!(nn::Nether{UInt64}, seed::UInt64, sha::Val{false})
-    temp, hum = nn.temperature, nn.humidity
-    _set_temp_humid!(seed, temp, hum)
-    return Nether{UInt64}(temp, hum, nothing)
-end
-
-function set_seed!(nn::Nether{Nothing}, seed::UInt64, sha::Val{false})
-    _set_temp_humid!(seed, nn.temperature, nn.humidity)
-    return nn
-end
-
-function set_seed!(nn::Nether, seed::UInt64, sha::Val{true})
-    temp, hum = nn.temperature, nn.humidity
-    _set_temp_humid!(seed, temp, hum)
-    sha = sha256_from_seed(seed)
-    return Nether{UInt64}(temp, hum, sha)
-end
-set_seed!(gen::Nether, seed::UInt64) = set_seed!(gen, seed, Val(true))
 
 # TODO: Add detailed docstrings for these functions
 
@@ -87,14 +84,9 @@ function gen_biomes_unsafe! end
 #                   Nether Biome Point Access (Scale 4 and 1)                  #
 # ---------------------------------------------------------------------------- #
 
-function get_biome(nn::Nether, x, z, y, scale::Scale{S}, version, sha=nothing) where {S}
+function get_biome(nn::Nether, x, z, y, scale::Scale{S}, version) where {S}
     (version <= MC_1_15 && version != MC_UNDEF) && return nether_wastes
-    if S == 1
-        if isnothing(sha)
-            sha = sha256_from_seed(nn.seed)
-        end
-    end
-    S == 1 && return get_biome_unsafe(nn, x, z, y, scale, sha)
+    S == 1 && return get_biome_unsafe(nn, x, z, y, scale)
     return get_biome_unsafe(nn, x, z, scale)
 end
 
@@ -105,8 +97,8 @@ end
 # and then take the biome with this new coordinates.
 # The source_x and source_z DEPENDS on x, z AND on y.
 # i.e., if y is modified, source_x and source_z could be modified too.
-function get_biome_unsafe(nn::Nether, x, z, y, scale::Scale{1}, sha)
-    source_x, source_z, _ = voronoi_access_3d(sha, x, z, y)
+function get_biome_unsafe(nn::Nether, x::Real, z::Real, y::Real, ::Scale{1})
+    source_x, source_z, _ = voronoi_access_3d(nn.sha[], x, z, y)
     return get_biome_unsafe(nn, source_x, source_z, Scale(4))
 end
 
@@ -267,12 +259,12 @@ end
 # See the comment on get_biome_unsafe for the explanation of the main idea
 
 function gen_biomes_unsafe!(
-    nn::Nether{UInt64},
+    nn::Nether,
     map3D::MCMap{3},
-    ::Scale{scale},
+    ::Scale{1},
     confidence=1,
     version::MCVersion=MC_UNDEF,
-) where {scale}
+)
 
     # If there is only one value, simple wrapper around get_biome_unsafe
     if length(map3D) == 1
@@ -282,11 +274,12 @@ function gen_biomes_unsafe!(
     end
 
     # The minimal map where we are sure we can find the source coordinates at scale 4
+    # TODO: remove garbage collection here
     biome_parents = get_voronoi_src_map2D(map3D)
     gen_biomes!(nn, biome_parents, Scale(4), confidence, version)
 
     # Generate the biomes at scale 4
-    sha = nn.sha
+    sha = nn.sha[]
     x_is, z_is, y_is = axes(map3D)
     for y_i in y_is, z_i in z_is, x_i in x_is
         # See the comment on get_biome_unsafe for the explanation
@@ -307,7 +300,7 @@ function gen_biomes!(
 end
 
 function gen_biomes!(
-    nn::Nether{UInt64},
+    nn::Nether,
     map2D::MCMap{2},
     ::Scale{1},
     confidence=1,

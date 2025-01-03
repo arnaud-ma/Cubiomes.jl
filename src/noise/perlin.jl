@@ -122,7 +122,7 @@ Shuffle the permutations array using the given random number generator.
 """
 function shuffle_permutations!🎲(rng::AbstractJavaRNG, perms::PermsType)
     @inbounds for i in 0:255
-        j = next_perlin🎲(rng, Int32, i:255)
+        j = next_perlin🎲(rng, Int32, Int32(i), Int32(255))
         perms[i], perms[j] = perms[j], perms[i]
     end
     perms[256] = perms[0]
@@ -218,7 +218,12 @@ of the `x`, `y`, and `z` coordinates.
 
 See also: [`init_coord_values`](@ref), [`sample_noise`](@ref), [`Perlin`](@ref)
 """
-function interpolate_perlin(idx::PermsType, d1, d2, d3, h1, h2, h3, t1, t2, t3)
+Base.@propagate_inbounds function interpolate_perlin(
+    idx::PermsType,
+    d1, d2, d3,
+    h1, h2, h3,
+    t1, t2, t3,
+)
     # TODO: "@inbounds begin" once we are sure that the code is correct
     a1 = idx[h1] + h2
     b1 = idx[h1 + 1] + h2
@@ -279,6 +284,8 @@ function sample_noise(noise::Perlin, x, y, z, yamp=0, ymin=0)
     z, index_z, smooth_z = init_coord_values(z + noise.z)
     y = adjust_y(y, yamp, ymin)
 
+    # TODO: check if we can safely add @inbounds here just before the return
+    # to save something like 10% of the time
     return interpolate_perlin(
         noise.permutations,
         x, y, z,

@@ -1,4 +1,5 @@
 include("../noise/noise.jl")
+include("../mc_seed_utils.jl")
 include("biomes.jl")
 using OffsetArrays
 
@@ -32,10 +33,10 @@ The args are specific to the dimension. See the documentation of the dimension f
 
 See also: [`Nether`](@ref), [`End`](@ref), [`Overworld`](@ref)
 """
-function set_seed!(dim::Dimension, seed, arg...) end
+set_seed!(dim::Dimension, seed, args...) = set_seed!(dim, u64_seed(seed), args...)
 
 function set_rng!🎲(noise::Dimension, rng::AbstractJavaRNG, args...)
-    msg = lazy"Dimension type does not support set_rng!🎲. Use set_seed!🎲 to initialize one"
+    msg = lazy"Dimension type does not support set_rng!🎲. Use set_seed! to initialize one"
     throw(ArgumentError(msg))
 end
 
@@ -61,12 +62,12 @@ end
 #                             MCMap infrastructure                             #
 # ---------------------------------------------------------------------------- #
 
-MCMap{N} = OffsetArray{BiomeID, N, Array{BiomeID, N}}
-MCMap(A::AbstractArray, args...) = OffsetArray(A, args...)
+MCMap{N} = AbstractArray{BiomeID, N}
 function MCMap(range::Vararg{UnitRange, N}) where {N}
     N != 2 && N != 3 && throw(ArgumentError("Only 2D and 3D maps are supported"))
     return fill(BIOME_NONE, range...)
 end
+
 
 function MCMap{2}(array::MCMap{3})
     size_x, size_z, size_y = size(array)
@@ -80,6 +81,8 @@ end
 function MCMap{3}(array::MCMap{2}, y_index=1)
     return MCMap(reshape(array, size(array)..., 1), axes(array)..., y_index:y_index)
 end
+
+MCMap(x, z, y::Number) = MCMap(x, z, y:y)
 
 origin_coords(arr::OffsetArray) = first.(axes(arr))
 
@@ -244,7 +247,7 @@ function voronoi_access_3d(sha::UInt64, x::Integer, z::Integer, y::Integer)
     offset_z = (z & 3) * 10240
 
     # Initialize variables to track the closest cell
-    closest_x, closest_y, closest_z = 0, 0, 0
+    closest_x, closest_y, closest_z = zero(UInt64), zero(UInt64), zero(UInt64)
     min_distance_squared = typemax(UInt64)
 
     # Iterate over the 8 neighboring cells

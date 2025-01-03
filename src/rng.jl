@@ -108,7 +108,7 @@ function next🎲(rng::JavaRandom, ::Type{Int32}, stop::Integer)::Int32
     while true
         bits = next🎲(rng, 31)
         val = bits % stop
-        (bits - val + m < 0) || break
+        (bits - val + m < zero(Int32)) || break
     end
     return val
 end
