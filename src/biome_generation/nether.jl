@@ -1,4 +1,6 @@
-include("interface.jl")
+# include("interface.jl")
+using ..Noises
+using ..JavaRNG: JavaRandom
 
 #region struct definition
 # ---------------------------------------------------------------------------- #

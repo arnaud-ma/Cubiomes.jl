@@ -1,4 +1,4 @@
-using Cubiomes
+using Cubiomes: JavaRNG
 using Supposition: @check, @composed, Data
 using Test: @testset, @test_throws
 using JavaCall: @jimport, jcall, jlong, jint, jfloat, jdouble, JString
@@ -34,18 +34,18 @@ start_stop_int32_gen = @composed function ordered_int32(
 end
 
 @testset "Interface" begin
-    struct TestRNG <: Cubiomes.AbstractJavaRNG end
-    @test_throws MethodError Cubiomes.next🎲(TestRNG(), Int32)
-    @test_throws MethodError Cubiomes.randjump🎲(TestRNG(), Int32, 1)
+    struct TestRNG <: JavaRNG.AbstractJavaRNG end
+    @test_throws MethodError JavaRNG.next🎲(TestRNG(), Int32)
+    @test_throws MethodError JavaRNG.randjump🎲(TestRNG(), Int32, 1)
 end
 
 @testset "Random" begin
-    rng_gen = @rng_gen("Random", Cubiomes.JavaRandom, Data.Integers{Int64}())
+    rng_gen = @rng_gen("Random", JavaRNG.JavaRandom, Data.Integers{Int64}())
 
     @check function set_seed(seed=Data.Integers{Int64}())
-        rng = Cubiomes.JavaRandom(1)
-        rng2 = Cubiomes.JavaRandom(seed)
-        Cubiomes.set_seed🎲(rng, seed)
+        rng = JavaRNG.JavaRandom(1)
+        rng2 = JavaRNG.JavaRandom(seed)
+        JavaRNG.set_seed🎲(rng, seed)
         rng == rng2
     end
 
@@ -53,27 +53,27 @@ end
         start, stop = start_stop
         java_value =
             jcall(rng.java, "nextInt", jint, (jint,), (stop + 1) - start) + start
-        java_value == Cubiomes.next🎲(rng.jl, Int32, start:stop)
+        java_value == JavaRNG.next🎲(rng.jl, Int32, start:stop)
     end
 
     @check function next_float(rng=rng_gen)
-        jcall(rng.java, "nextFloat", jfloat, ()) == Cubiomes.next🎲(rng.jl, Float32)
+        jcall(rng.java, "nextFloat", jfloat, ()) == JavaRNG.next🎲(rng.jl, Float32)
     end
 
     @check function next_double(rng=rng_gen)
-        jcall(rng.java, "nextDouble", jdouble, ()) == Cubiomes.next🎲(rng.jl, Float64)
+        jcall(rng.java, "nextDouble", jdouble, ()) == JavaRNG.next🎲(rng.jl, Float64)
     end
 
     @check function next_long(rng=rng_gen)
-        jcall(rng.java, "nextLong", jlong, ()) == Cubiomes.next🎲(rng.jl, Int64)
+        jcall(rng.java, "nextLong", jlong, ()) == JavaRNG.next🎲(rng.jl, Int64)
     end
 
     @check function randjump_int(seed=Data.Integers{Int64}(), nb=Data.Integers(0, 1000))
-        rng = Cubiomes.JavaRandom(seed)
+        rng = JavaRNG.JavaRandom(seed)
         rng2 = copy(rng)
-        Cubiomes.randjump🎲(rng2, Int32, nb)
+        JavaRNG.randjump🎲(rng2, Int32, nb)
         for _ in 1:nb
-            Cubiomes.next🎲(rng, 31)
+            JavaRNG.next🎲(rng, 31)
         end
         rng == rng2
     end
@@ -82,14 +82,14 @@ end
 @testset "Xoroshiro128PlusPlus" begin
     rng_gen = @rng_gen(
         "Xoroshiro128PlusPlus",
-        Cubiomes.JavaXoroshiro128PlusPlus,
+        JavaRNG.JavaXoroshiro128PlusPlus,
         Data.Integers{Int64}()
     )
 
     @check function set_seed(seed=Data.Integers{Int64}())
-        rng = Cubiomes.JavaXoroshiro128PlusPlus(0x0, 0x0)
-        rng2 = Cubiomes.JavaXoroshiro128PlusPlus(seed)
-        Cubiomes.set_seed🎲(rng, seed)
+        rng = JavaRNG.JavaXoroshiro128PlusPlus(0x0, 0x0)
+        rng2 = JavaRNG.JavaXoroshiro128PlusPlus(seed)
+        JavaRNG.set_seed🎲(rng, seed)
         rng == rng2
     end
 
@@ -97,29 +97,29 @@ end
         start, stop = start_stop
         java_value =
             jcall(rng.java, "nextInt", jint, (jint,), (stop + 1) - start) + start
-        java_value == Cubiomes.next🎲(rng.jl, Int32, start:stop)
+        java_value == JavaRNG.next🎲(rng.jl, Int32, start:stop)
     end
 
     @check function next_float(rng=rng_gen)
-        jcall(rng.java, "nextFloat", jfloat, ()) == Cubiomes.next🎲(rng.jl, Float32)
+        jcall(rng.java, "nextFloat", jfloat, ()) == JavaRNG.next🎲(rng.jl, Float32)
     end
 
     @check function next_double(rng=rng_gen)
-        jcall(rng.java, "nextDouble", jdouble, ()) == Cubiomes.next🎲(rng.jl, Float64)
+        jcall(rng.java, "nextDouble", jdouble, ()) == JavaRNG.next🎲(rng.jl, Float64)
     end
 
     @check function next_long(rng=rng_gen)
-        jcall(rng.java, "nextLong", jlong, ()) == Cubiomes.next🎲(rng.jl, Int64)
+        jcall(rng.java, "nextLong", jlong, ()) == JavaRNG.next🎲(rng.jl, Int64)
     end
 
     @check function randjump_long(
         seed=Data.Integers{Int64}(), nb=Data.Integers(0, 1000),
     )
-        rng = Cubiomes.JavaXoroshiro128PlusPlus(seed)
+        rng = JavaRNG.JavaXoroshiro128PlusPlus(seed)
         rng2 = copy(rng)
-        Cubiomes.randjump🎲(rng, UInt64, nb)
+        JavaRNG.randjump🎲(rng, UInt64, nb)
         for _ in 1:nb
-            Cubiomes.next🎲(rng2, UInt64)
+            JavaRNG.next🎲(rng2, UInt64)
         end
         rng == rng2
     end

@@ -1,7 +1,10 @@
-include("interface.jl")
+# include("../rng.jl")
+# include("../utils.jl")
 
 using OffsetArrays: OffsetVector
 using StaticArrays: MVector
+using ..JavaRNG: next🎲, AbstractJavaRNG, JavaRandom, JavaXoroshiro128PlusPlus
+using ..Utils: lerp
 #region RNG
 # ---------------------------------------------------------------------------- #
 #                            Specific rng for Perlin                           #
@@ -207,14 +210,13 @@ end
 Interpolate the Perlin noise at the given coordinates.
 
 # Arguments
-- The `idx` parameter is the permutations
-array.
+- The `idx` parameter is the permutations array.
 - The `d1`, `d2`, and `d3` parameters are the fractional parts of the `x`, `y`, and `z`
-coordinates.
+ coordinates.
 - The `h1`, `h2`, and `h3` parameters are the integer parts of the `x`, `y`, and `z`
-coordinates.
+ coordinates.
 - The `t1`, `t2`, and `t3` parameters are the smoothstep values of the fractional parts
-of the `x`, `y`, and `z` coordinates.
+ of the `x`, `y`, and `z` coordinates.
 
 See also: [`init_coord_values`](@ref), [`sample_noise`](@ref), [`Perlin`](@ref)
 """

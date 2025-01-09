@@ -1,7 +1,14 @@
-include("../noise/noise.jl")
-include("../mc_seed_utils.jl")
-include("biomes.jl")
+# include("../rng.jl")
+# include("../noises/Noises.jl")
+# include("../mc_seed_utils.jl")
+# include("biomes.jl")
+
 using OffsetArrays
+
+using ..Noises
+using ..JavaRNG: AbstractJavaRNG
+using ..Utils: Utils
+using ..SeedUtils: mc_step_seed
 
 #region Noise
 # ---------------------------------------------------------------------------- #
@@ -9,7 +16,7 @@ using OffsetArrays
 # ---------------------------------------------------------------------------- #
 
 """
-    Dimension
+    Dimension <: Noises.Noise
 
 An abstract type that represents a dimension in Minecraft. It is used to generate
 the noise for the biomes in that dimension.
@@ -31,11 +38,11 @@ but use UInt64 if performance is a concern.
 
 The args are specific to the dimension. See the documentation of the dimension for more information.
 
-See also: [`Nether`](@ref), [`End`](@ref), [`Overworld`](@ref)
+See also: [`Nether`](@ref)
 """
-set_seed!(dim::Dimension, seed, args...) = set_seed!(dim, u64_seed(seed), args...)
+set_seed!(dim::Dimension, seed, args...) = set_seed!(dim, Utils.u64_seed(seed), args...)
 
-function set_rng!🎲(noise::Dimension, rng::AbstractJavaRNG, args...)
+function Noises.set_rng!🎲(noise::Dimension, rng::AbstractJavaRNG, args...)
     msg = lazy"Dimension type does not support set_rng!🎲. Use set_seed! to initialize one"
     throw(ArgumentError(msg))
 end

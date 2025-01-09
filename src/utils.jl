@@ -1,3 +1,15 @@
+
+"""
+Some utility functions and types that are used in various places in the codebase. It should
+not be used directly by the user and could be nice if this module does not exist at all.
+"""
+module Utils
+
+public md5_to_uint64, u64_seed, sha256_from_seed, sha256_from_seed!
+public lerp, lerp2, lerp3, lerp4, clamped_lerp
+public length_of_trimmed, length_filter
+public @only_float32
+
 using MD5: md5
 using StaticArrays: MVector
 
@@ -12,6 +24,7 @@ Converts an iterator of bytes to an iterator of UInt64.
 2-element Vector{UInt64}:
 0x0102030405060708
 0x090a0b0c0d0e0f10
+```
 """
 function bytes2uint64(itr)
     hex = bytes2hex(itr)
@@ -30,11 +43,28 @@ end
 
 java_hashcode(x::Char) = Int32(x)
 
+"""
+    u64_seed(x)
+
+Converts `x` to `UInt64` for use as a seed, exactly as the Minecraft Java Edition does. It
+can be any integer or a string.
+
+# Example
+```julia
+julia> u64_seed(1234)
+0x00000000000004d2
+
+julia> u64_seed("hello world")
+0x000000006aefe2c4
+```
+"""
+function u64_seed end
+
 u64_seed(x::UInt64) = x
 u64_seed(x::Unsigned) = u64_seed(UInt64(x))
 u64_seed(x::Integer) = u64_seed(unsigned(x))
 u64_seed(x::Real) = u64_seed(Integer(x))
-u64_seed(x::Union{String, Char}) = java_hashcode(x)
+u64_seed(x::Union{String, Char}) = u64_seed(java_hashcode(x))
 
 #region SHA
 # ---------------------------------------------------------------------------- #
@@ -215,3 +245,4 @@ macro only_float32(expr)
     end
     return transform(expr)
 end
+end # module

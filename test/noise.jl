@@ -1,15 +1,17 @@
-using Cubiomes:
-    Noise,
-    Noise🎲,
-    Perlin,
-    JavaRandom,
-    JavaXoroshiro128PlusPlus,
-    set_rng!🎲,
-    sample_noise,
-    sample_simplex,
-    Octaves,
-    DoublePerlin,
-    is_undef
+# using Cubiomes:
+#     Noise,
+#     Noise🎲,
+#     Perlin,
+#     JavaRandom,
+#     JavaXoroshiro128PlusPlus,
+#     set_rng!🎲,
+#     sample_noise,
+#     sample_simplex,
+#     Octaves,
+#     DoublePerlin,
+#     is_undef
+using Cubiomes.Noises
+using Cubiomes.JavaRNG: JavaRandom, JavaXoroshiro128PlusPlus
 
 using Test: @test, @testset, @test_throws
 include("data.jl")

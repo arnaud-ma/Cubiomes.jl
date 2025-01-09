@@ -1,4 +1,4 @@
-include("octaves.jl")
+import ..Utils
 
 const MAX_AMPLITUDE = 9
 
@@ -31,13 +31,13 @@ end
 
 function DoublePerlin{N}(x::UndefInitializer, amplitudes) where {N}
     # Xoroshiro128PlusPlus implementation
-    len = length_of_trimmed(iszero, amplitudes)
+    len = Utils.length_of_trimmed(iszero, amplitudes)
     return DoublePerlin{N}(x, AMPLITUDE_INI[len])
 end
 
 function DoublePerlin(x::UndefInitializer, amplitudes)
     # Xoroshiro128PlusPlus implementation
-    N = length_filter(!iszero, amplitudes)
+    N = Utils.length_filter(!iszero, amplitudes)
     return DoublePerlin{N}(x, amplitudes)
 end
 

@@ -1,5 +1,7 @@
 using CEnum
-include("../mc_versions.jl")
+# include("../mc_versions.jl")
+
+using ..Cubiomes: MCVersion
 
 #region Biome def
 # ---------------------------------------------------------------------------- #

@@ -1,7 +1,7 @@
 using Aqua: Aqua
 using Cubiomes: Cubiomes
+using Test
 
-# Test ambiguities separately with only the Cubiomes ones
-# Ref: https://github.com/JuliaTesting/Aqua.jl/issues/77
-Aqua.test_all(Cubiomes; ambiguities=false)
-Aqua.test_ambiguities(Cubiomes)
+# deactivate unbound_args until
+# https://github.com/JuliaTesting/Aqua.jl/pull/316 is merged
+Aqua.test_all(Cubiomes; unbound_args=false)

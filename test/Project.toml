@@ -4,3 +4,6 @@ JavaCall = "494afd89-becb-516b-aafa-70d2670c0337"
 Supposition = "5a0628fe-1738-4658-9b6d-0b7605a9755b"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 TestItems = "1c621080-faea-4a02-84b6-bbd5e436b8fe"
+
+[compat]
+Aqua = ">=0.8.9"

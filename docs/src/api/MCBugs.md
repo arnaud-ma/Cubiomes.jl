@@ -1,0 +1,27 @@
+# MCBugs
+
+```@docs
+Cubiomes.MCBugs
+```
+
+## Index
+
+```@index
+Modules = [Cubiomes.MCBugs]
+```
+
+## API
+
+```@autodocs
+Modules = [Cubiomes.MCBugs]
+Order =  [:constant, :type, :function, :macro]
+Private = false
+```
+
+## Private API
+
+```@autodocs
+Modules = [Cubiomes.MCBugs]
+Order =  [:constant, :type, :function, :macro]
+Public = false
+```

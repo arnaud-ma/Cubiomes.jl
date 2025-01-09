@@ -1,9 +1,23 @@
-include("utils.jl")
 
-# ---------------------------------------------------------------------------- #
-#                            Interface for Java RNGs                           #
-# ---------------------------------------------------------------------------- #
+"""
+A module that mimics the behavior of Java's random number generators in Julia. Only
+the functionalities needed by the Minecraft Java Edition are implemented.
 
+The rngs implemented are:
+- [`JavaRandom`](@ref) for the [`java.util.Random`](https://docs.oracle.com/javase/7/docs/api/java/util/Random.html) class.
+- [`JavaXoroshiro128PlusPlus`](@ref) for the [`Xoroshiro128PlusPlus`](http://prng.di.unimi.it/xoshiro128plusplus.c) PRNG.
+
+Only the [`next🎲`] function is used to get random numbers. Instead of `nextDouble` or `nextInt`
+in Java, use `next🎲(rng, Float64)` or `next🎲(rng, Int32)` respectively.
+"""
+module JavaRNG
+export next🎲, randjump🎲, set_seed🎲
+export AbstractJavaRNG, JavaRandom, JavaXoroshiro128PlusPlus
+
+using ..Utils: u64_seed
+# ---------------------------------------------------------------------------- #
+#                              Interface                                       #
+# ---------------------------------------------------------------------------- #
 abstract type AbstractJavaRNG end
 
 """
@@ -61,7 +75,7 @@ A pseudorandom number generator that mimics the behavior of Java's
 
 # Examples
 
-```jldoctest
+```julia
 julia> rng = JavaRandom(1234);
 JavaRandom(0x00000005deece2bf)
 
@@ -253,3 +267,4 @@ function randjump🎲(
     end
     return nothing
 end
+end # module

@@ -1,23 +1,15 @@
-using cubiomes
 using Documenter
+using Cubiomes
 
-DocMeta.setdocmeta!(cubiomes, :DocTestSetup, :(using cubiomes); recursive=true)
-
-makedocs(;
-    modules=[cubiomes],
-    authors="arnaud-ma <arnaudma.code@gmail.com> and contributors",
-    sitename="cubiomes.jl",
-    format=Documenter.HTML(;
-        canonical="https://arnaud-ma.github.io/cubiomes.jl",
-        edit_link="main",
-        assets=String[],
-    ),
-    pages=[
-        "Home" => "index.md",
-    ],
+makedocs(
+    sitename = "Cubiomes",
+    format = Documenter.HTML(),
+    modules = [Cubiomes]
 )
 
-deploydocs(;
-    repo="github.com/arnaud-ma/cubiomes.jl",
-    devbranch="main",
-)
+# Documenter can also automatically deploy documentation to gh-pages.
+# See "Hosting Documentation" and deploydocs() in the Documenter manual
+# for more information.
+#=deploydocs(
+    repo = "<repository url>"
+)=#

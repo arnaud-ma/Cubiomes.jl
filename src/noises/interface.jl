@@ -1,4 +1,4 @@
-include("../rng.jl")
+using ..JavaRNG: AbstractJavaRNG
 
 """
     Noise
@@ -42,7 +42,7 @@ function sample_noise end
     set_rng!🎲(noise::Octaves{N}, rng::JavaXoroshiro128PlusPlus, amplitudes, octave_min) where N
     set_rng!🎲(noise::DoublePerlin{N}, rng, octave_min) where N
     set_rng!🎲(noise::DoublePerlin{N}, rng, amplitudes, octave_min) where N
-
+`
 Initialize the noise in place with the given random number generator (of type AbstractJavaRNG).
 
 `N` represents the number of octaves, each associated with a non-zero amplitude. Therefore,
@@ -57,11 +57,22 @@ See also: [`unsafe_set_rng!🎲`](@ref), [`Noise`](@ref), [`Noise🎲`](@ref)
 function set_rng!🎲 end
 
 """
+    unsafe_set_rng!🎲(noise, rng::JavaXoroshiro128PlusPlus, amplitudes, octave_min)
+
+Same as [`set_rng!🎲`](@ref) but allows to skip some octaves for performance reasons, i.e.
+`N` can be less than the number of non-zero values in `amplitudes`, and the last octaves are
+completely ignored.
+
+See also: [`set_rng!🎲`](@ref), [`Noise`](@ref), [`Noise🎲`](@ref)
+"""
+function unsafe_set_rng!🎲 end
+
+"""
     Noise(::Type{T}, ::UndefInitializer) where {T<:Noise}
-    Noise(::Type{DoublePerlin}; ::UndefInitialize, amplitudes)
+    Noise(::Type{DoublePerlin}; ::UndefInitializer, amplitudes)
 
 Create a noise of type `T` with an undefined state, i.e., it is not initialized yet. Use
-[`set_rng!`](@ref) or [`unsafe_set_rng!🎲`](@ref) to initialize it.
+[`set_rng!🎲`](@ref) or [`unsafe_set_rng!🎲`](@ref) to initialize it.
 
 See also: [`Noise🎲`](@ref), [`set_rng!🎲`](@ref), [`unsafe_set_rng!🎲`](@ref)
 """
@@ -73,7 +84,7 @@ Noise(::Type{T}, ::UndefInitializer, args::Vararg{Any, N}) where {T <: Noise, N}
 
 Create a noise of type `T` and initialize it with the given random number generator `rng`.
 Other arguments are used to initialize the noise. They depend on the noise type and they are
-the same as the arguments of the [`set_rng!`](@ref) function.
+the same as the arguments of the [`set_rng!🎲`](@ref) function.
 
 Strictly equivalent to
 ```julia
@@ -89,3 +100,10 @@ function Noise🎲(::Type{T}, rng::AbstractJavaRNG, args::Vararg{Any, N}) where 
     set_rng!🎲(noise, rng, args...)
     return noise
 end
+
+"""
+    is_undef(noise::Noise)
+
+Check if the noise is undefined, i.e., it has not been initialized yet.
+"""
+function is_undef end

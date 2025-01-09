@@ -1,11 +1,19 @@
-include("../biome_generation/interface.jl")
+# include("../biome_generation/interface.jl")
+# include("../noises/Noises.jl")
+# include("../rng.jl")
+# include("../utils.jl")
+
+using StaticArrays: SVector
+using InteractiveUtils: subtypes
+
+using ..Utils: Utils, @only_float32, md5_to_uint64
+using ..JavaRNG: JavaXoroshiro128PlusPlus, next🎲
+using ..Noises
 
 #region Noise Parameters
 # ---------------------------------------------------------------------------- #
 #                               Noise Parameters                               #
 # ---------------------------------------------------------------------------- #
-using StaticArrays: SVector
-using InteractiveUtils: subtypes
 
 abstract type NoiseParameter end
 
@@ -91,7 +99,7 @@ function BiomeNoise(::UndefInitializer)
         Tuple(
         Noise(
         DoublePerlin{nb_octaves(np)},
-        undef, length_of_trimmed(iszero, amplitudes(np)),
+        undef, Utils.length_of_trimmed(iszero, amplitudes(np)),
     ) for np in NOISE_PARAMETERS
     ),
     )
@@ -207,7 +215,7 @@ end
         spline_type,
         (-1, 0, 1),
         (0, slope, slope),
-        Spline{0}(max(offset_neg1, 0.2), lerp(0.5, offset_neg1, offset_pos1), offset_pos1),
+        Spline{0}(max(offset_neg1, 0.2), Utils.lerp(0.5, offset_neg1, offset_pos1), offset_pos1),
     )
 end
 
@@ -218,30 +226,30 @@ end
         spline_type,
         (-1, 1),
         (slope, slope),
-        Spline{0}(max(offset_neg1, 0.2), lerp(0.5, offset_neg1, offset_pos1)),
+        Spline{0}(max(offset_neg1, 0.2), Utils.lerp(0.5, offset_neg1, offset_pos1)),
     )
 end
 
-@only_float32 function flat_offset_spline(x₁, x₂, x₃, x₄, x₅, x₆)
+@only_float32 function flat_offset_spline(x1, x2, x3, x4, x5, x6)
     spline_type = SP_RIDGES
-    x₇ = max(0.5 * (x₂ - x₁), x₆)
-    x₈ = 5 * (x₃ - x₂)
+    x₇ = max(0.5 * (x2 - x1), x6)
+    x₈ = 5 * (x3 - x2)
     return Spline(
         spline_type,
         (-1, -0.4, 0, 0.4, 1),
-        (x₇, min(x₇, x₈), x₈, 2 * (x₄ - x₃), 0.7 * (x₅ - x₄)),
-        Spline{0}(x₁, x₂, x₃, x₄, x₅),
+        (x₇, min(x₇, x₈), x₈, 2 * (x4 - x3), 0.7 * (x5 - x4)),
+        Spline{0}(x1, x2, x3, x4, x5),
     )
 end
 
-@only_float32 function additional_values_land_spline(x₁, x₂, x₃, x₅, spline_6, ::Val{true})
+@only_float32 function additional_values_land_spline(x1, x2, x3, x5, spline_6, ::Val{true})
     # add additional splines if bl is true
-    spline_7 = flat_offset_spline(x₁, x₅, x₅, x₂, x₃, 0.5)
+    spline_7 = flat_offset_spline(x1, x5, x5, x2, x3, 0.5)
     spline_8 = Spline(
         SP_RIDGES,
         (-1.0, -0.4, 0),
         (0, 0, 0),
-        (Spline{0}(x₁), spline_6, Spline{0}(x₃ + 0.07)),
+        (Spline{0}(x1), spline_6, Spline{0}(x3 + 0.07)),
     )
 
     locations = (0.4, 0.45, 0.55, 0.58)
@@ -250,31 +258,35 @@ end
     return locations, child_splines
 end
 
-additional_values_land_spline(x₁, x₂, x₃, x₅, spline_6, ::Val{false}) = (), ()
+additional_values_land_spline(x1, x2, x3, x5, spline_6, ::Val{false}) = (), ()
 
+#! This produce a false positive with Aqua.jl. See https://github.com/JuliaTesting/Aqua.jl/issues/86
+# upstream julia issue: https://github.com/JuliaLang/julia/issues/28086
 zeros_like(::NTuple{N, T}) where {N, T} = ntuple(i -> zero(T), Val{N}())
+zeros_like(x::Tuple{}) = x
 
-@only_float32 function land_spline(x₁, x₂, x₃, x₄, x₅, x₆, bl::Val{BL}) where {BL}
+
+@only_float32 function land_spline(x1, x2, x3, x4, x5, x6, bl::Val{BL}) where {BL}
     # create initial splines with different linear interpolation values
-    lerp_4_15 = lerp(x₄, 0.6, 1.5)
-    lerp_4_1 = lerp(x₄, 0.6, 1.0)
+    lerp_4_15 = Utils.lerp(x4, 0.6, 1.5)
+    lerp_4_1 = Utils.lerp(x4, 0.6, 1.0)
     spline_1 = spline_38219(lerp_4_15, bl)
     spline_2 = spline_38219(lerp_4_1, bl)
-    spline_3 = spline_38219(x₄, bl)
+    spline_3 = spline_38219(x4, bl)
 
     # create flat offset splines
-    half_i = 0.5 * x₄
-    spline_4 = flat_offset_spline(x₁ - 0.15, half_i, half_i, half_i, x₄ * 0.6, 0.5)
-    spline_5 = flat_offset_spline(x₁, x₅ * x₄, x₂ * x₄, half_i, x₄ * 0.6, 0.5)
-    spline_6 = flat_offset_spline(x₁, x₅, x₅, x₂, x₃, 0.5)
+    half_i = 0.5 * x4
+    spline_4 = flat_offset_spline(x1 - 0.15, half_i, half_i, half_i, x4 * 0.6, 0.5)
+    spline_5 = flat_offset_spline(x1, x5 * x4, x2 * x4, half_i, x4 * 0.6, 0.5)
+    spline_6 = flat_offset_spline(x1, x5, x5, x2, x3, 0.5)
 
     # Initialize locations and associated splines
     locations = (-0.85f0, -0.7f0, -0.4f0, -0.35f0, -0.1f0, 0.2f0)
     child_splines = (spline_1, spline_2, spline_3, spline_4, spline_5, spline_6)
 
-    mid_loc, mid_splines = additional_values_land_spline(x₁, x₂, x₃, x₅, spline_6, bl)
+    mid_loc, mid_splines = additional_values_land_spline(x1, x2, x3, x5, spline_6, bl)
     end_loc = 0.7
-    end_spline = flat_offset_spline(-0.02, x₆, x₆, x₂, x₃, 0)
+    end_spline = flat_offset_spline(-0.02, x6, x6, x2, x3, 0)
 
     locations = (locations..., mid_loc..., end_loc)
     child_splines = (child_splines..., mid_splines..., end_spline)
@@ -293,12 +305,12 @@ function findfirst_default(predicate::Function, A, default)
     return default
 end
 
-function get_spline(spline::Spline{0}, vals::NTuple{N2, T}) where {N2, T}
+function get_spline(spline::Spline{0}, vals::NTuple{N2}) where {N2}
     Float32(Int(spline.spline_type))
 end
 
 # TODO: transform the recursive to an iterate one, since Julia is very bad with recursion :(
-function get_spline(spline::Spline{N}, vals::NTuple{N2, T}) where {N, N2, T}
+function _get_spline(spline::Spline{N}, vals::NTuple{N2}) where {N, N2}
     if !((1 <= Int(spline.spline_type) <= 4) && (1 <= N <= 11))
         throw(
             ArgumentError(
@@ -332,6 +344,6 @@ function get_spline(spline::Spline{N}, vals::NTuple{N2, T}) where {N, N2, T}
     p = l * (h - g) - (o - n)
     q = -m * (h - g) + (o - n)
 
-    r = lerp(k, n, o) + k * (1.0 - k) * lerp(k, p, q)
+    r = Utils.lerp(k, n, o) + k * (1.0 - k) * Utils.lerp(k, p, q)
     return r
 end
