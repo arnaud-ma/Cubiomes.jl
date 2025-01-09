@@ -256,31 +256,40 @@ Base.@propagate_inbounds function interpolate_perlin(
     return lerp(t3, l1, l5)
 end
 
-function get_y_coord_values(noise, y)
-    if iszero(y)
-        return noise.const_y, noise.const_index_y, noise.const_smooth_y
-    end
-    return init_coord_values(y + noise.y)
+get_y_coord_values(noise, y) = init_coord_values(y + noise.y)
+function get_y_coord_values(noise, y::Missing)
+    noise.const_y, noise.const_index_y, noise.const_smooth_y
 end
 
 function adjust_y(y, yamp, ymin)
+    if iszero(yamp)
+        return adjust_y(y, missing, ymin)
+    end
     # assuming that everything is positive
     # for y it's ok because it's a fractional part
     # for yamp and ymin, this is a TODO to check if it is always the case
-    if !iszero(yamp)
-        yclamp = min(ymin, y)
-        if yclamp > yamp
-            # fld(x, y) = floor(x/y), but with floating point numbers, so maybe less accurate
-            # see the doc of fld for more details
-            y -= fld(yclamp, yamp) * yamp
-        end
-        # if yclamp < yamp, then yclamp/yamp < 1 so fld(yclamp, yamp) = 0
-        # therefore y -= 0 * yamp = 0, i.e. no change
+    yclamp = min(ymin, y)
+    if yclamp > yamp
+        # fld(x, y) = floor(x/y), but with floating point numbers, so maybe less accurate
+        # see the doc of fld for more details
+        y -= fld(yclamp, yamp) * yamp
     end
+    # if yclamp < yamp, then yclamp/yamp < 1 so fld(yclamp, yamp) = 0
+    # therefore y -= 0 * yamp = 0, i.e. no change
     return y
 end
+adjust_y(y, ::Missing, ::Missing) = y
+adjust_y(y, yamp, ::Missing) = adjust_y(y, missing, missing) # same as adjust_y(y, yamp, 0) because min(ymin, 0) == 0
+adjust_y(y, ::Missing, ymin) = adjust_y(y, missing, missing)
 
-function sample_noise(noise::Perlin, x, y, z, yamp=0, ymin=0)
+# new function instead of overload iszero(::Missing) to avoid type piracy
+_iszero(x) = iszero(x)
+_iszero(::Missing) = false
+
+function sample_noise(noise::Perlin, x, z, y=missing, yamp=missing, ymin=missing)
+    if _iszero(y)
+        return sample_noise(noise, x, z, missing, yamp, ymin)
+    end
     x, index_x, smooth_x = init_coord_values(x + noise.x)
     y, index_y, smooth_y = get_y_coord_values(noise, y)
     z, index_z, smooth_z = init_coord_values(z + noise.z)
@@ -295,8 +304,6 @@ function sample_noise(noise::Perlin, x, y, z, yamp=0, ymin=0)
         smooth_x, smooth_y, smooth_z,
     )
 end
-
-sample_noise(noise::Perlin, x, y, z, ::Missing, ::Missing) = sample_noise(noise, x, y, z)
 
 # TODO: sample_perlin_beta17_terrain(noise::Perlin, v, d1, d2, d3, yLacAmp)
 

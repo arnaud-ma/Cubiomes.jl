@@ -84,7 +84,7 @@ function set_rng!🎲(
 ) where {N}
     if N != Utils.length_filter(!iszero, amplitudes)
         throw(ArgumentError(lazy"the number of octaves must be equal to length_filter(!iszero, amplitudes). \
-                                 Got $N != $length_filter(!iszero, amplitudes)."))
+                                 Got $N != $Utils.length_filter(!iszero, amplitudes)."))
     end
     return unsafe_set_rng!🎲(octaves_type, rng, amplitudes, octave_min)
 end
@@ -137,21 +137,21 @@ end
 
 # TODO: OctaveNoiseBeta
 
-get_ay(y::Nothing, perlin, lf) = -perlin.y
 get_ay(y, perlin, lf) = y * lf
+get_ay(y::Missing, perlin, lf) = -perlin.y
 
-function sample_octave_noise(octave::Perlin, x, y, z, yamp=missing, ymin=missing)
+function sample_octave_noise(octave::Perlin, x, z, y=missing, yamp=missing, ymin=missing)
     lf = octave.lacunarity
     ax = x * lf
     ay = get_ay(y, octave, lf)
     az = z * lf
-    return sample_noise(octave, ax, ay, az, yamp * lf, ymin * lf) * octave.amplitude
+    return sample_noise(octave, ax, az, ay, yamp * lf, ymin * lf) * octave.amplitude
 end
 
-function sample_noise(octaves::Octaves{N}, x, y, z, yamp=missing, ymin=missing) where {N}
+function sample_noise(octaves::Octaves{N}, x, z, y=missing, yamp=missing, ymin=missing) where {N}
     v = zero(Float64)
     for octave in octaves.octaves
-        v += sample_octave_noise(octave, x, y, z, yamp, ymin)
+        v += sample_octave_noise(octave, x, z, y, yamp, ymin)
     end
     return v
 end

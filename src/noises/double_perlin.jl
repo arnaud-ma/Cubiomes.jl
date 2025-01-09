@@ -6,7 +6,6 @@ const MAX_AMPLITUDE = 9
 # but with use rational numbers to avoid floating point errors
 const AMPLITUDE_INI = float.(Tuple(5 // 3 * x // (x + 1) for x in 1:MAX_AMPLITUDE))
 
-
 """
     DoublePerlin{N} <: Noise
 
@@ -66,10 +65,10 @@ function Noise🎲(
     return dp
 end
 
-function sample_noise(noise::DoublePerlin, x, y, z, move_factor=337 / 331)
+function sample_noise(noise::DoublePerlin, x, z, y=missing, move_factor=337 / 331)
     f = move_factor
     v =
-        sample_noise(noise.octave_A, x, y, z) +
-        sample_noise(noise.octave_B, x * f, y * f, z * f)
+        sample_noise(noise.octave_A, x, z, y) +
+        sample_noise(noise.octave_B, x * f, z * f, y * f)
     return v * noise.amplitude
 end

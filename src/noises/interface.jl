@@ -17,7 +17,7 @@ See also:  [`Perlin`](@ref), [`Octaves`](@ref), [`DoublePerlin`](@ref)
 abstract type Noise end
 
 # to allow broadcasting over noise objects
-# for example with the dot syntax sample_noise.(noise, X, Y, Z) where X, Y and Z are arrays
+# for example with the dot syntax sample_noise.(noise, X, Z, Y) where X, Z and Y are arrays
 Base.broadcastable(noise::Noise) = Ref(noise)
 
 function Base.:(==)(n1::Noise, n2::Noise)
@@ -25,10 +25,9 @@ function Base.:(==)(n1::Noise, n2::Noise)
 end
 
 """
-    sample_noise(noise::Perlin, x, y, z, yamp=0, ymin=0)
-    sample_noise(noise::Octaves, x, y, z, yamp=missing, ymin=missing)
-    sample_noise(noise::Octaves, x, y::Nothing, z, yamp, ymin)
-    sample_noise(noise::DoublePerlin, x, y, z, [move_factor,])
+    sample_noise(noise::Perlin, x, z, y=missing, yamp=0, ymin=0)
+    sample_noise(noise::Octaves, x, z, y=missing, yamp=missing, ymin=missing)
+    sample_noise(noise::DoublePerlin, x, z, y=missing, [move_factor,])
 
 Sample the given noise at the specified coordinates.
 
