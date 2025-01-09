@@ -65,10 +65,9 @@ function _set_temp_humid!(seed, temperature, humidity)
 end
 
 @generated function set_seed!(nn::Nether, seed::UInt64, sha::Val{S}=Val(true)) where {S}
-    expr = :(_set_temp_humid!(seed, nn.temperature, nn.humidity))
     sha_expr = S ? :(sha256_from_seed(seed)) : :nothing
     return quote
-        $expr
+        _set_temp_humid!(seed, nn.temperature, nn.humidity)
         nn.sha[] = $sha_expr
         return nothing
     end
