@@ -1,6 +1,8 @@
 # include("interface.jl")
 using ..Noises
 using ..JavaRNG: JavaRandom
+using ..Utils: sha256_from_seed
+using ..Cubiomes: MC_UNDEF, MC_1_15
 
 #region struct definition
 # ---------------------------------------------------------------------------- #
@@ -210,19 +212,26 @@ function gen_biomes_unsafe!(nn::Nether, map2D::MCMap{2}, ::Scale{S}, confidence=
     # cell that will have the same biome.
     inv_grad = 1.0 / (confidence * 0.05 * 2) / scale
 
-    x_is, z_is = axes(map2D)
-    for z_i in z_is, x_i in x_is
-        if !isnone(map2D[x_i, z_i])
+    # TODO: use of @threads
+    #! not thread-safe because fill_radius! modifies the map in place,
+    # including areas that are not in the current thread
+    # possible solution:
+    # - divide the map into chunks and fill each chunk in parallel
+    # - use a lock to prevent multiple threads from writing to the same cell
+
+    for coord in CartesianIndices(map2D)
+        x, z = coord.I
+        if !isnone(map2D[x, z])
             continue  # Already filled with a specific biome
         end
 
-        x_real_mc, z_real_mc = x_i * scale, z_i * scale
+        x_real_mc, z_real_mc = x * scale, z * scale
         biome, Δnoise = get_biome_and_delta(nn, x_real_mc, z_real_mc)
-        map2D[x_i, z_i] = biome
+        map2D[x, z] = biome
 
         # radius around the sample cell that will have the same biome
         cell_radius = Δnoise * inv_grad
-        fill_radius!(map2D, x_i, z_i, biome, cell_radius)
+        fill_radius!(map2D, x, z, biome, cell_radius)
     end
     return nothing
 end
@@ -257,7 +266,31 @@ end
 #                Biome Generation for 2D and 3D, with scale == 1               #
 # ---------------------------------------------------------------------------- #
 
-# See the comment on get_biome_unsafe for the explanation of the main idea
+const _FIRST_SIZE_CACHE_GEN_BIOME_NETHER = 1000
+const _CACHE_GEN_BIOME_NETHER =
+    [fill(BIOME_NONE, _FIRST_SIZE_CACHE_GEN_BIOME_NETHER) for _ in 1:Threads.nthreads()]
+
+"""
+    view_reshape_cache_like(axes)
+
+Create a view of the cache with the same shape as the axes. It is thread-safe because
+it uses a cache per thread. If the cache is too small, it will be automatically resized.
+"""
+function view_reshape_cache_like(axes)
+    size_axes = length.(axes)
+    required_size = prod(size_axes)
+    cache_vector = _CACHE_GEN_BIOME_NETHER[Threads.threadid()]
+    if length(cache_vector) < required_size
+        append!(
+            cache_vector,
+            fill(BIOME_NONE, required_size - length(cache_vector)),
+        )
+    end
+    buffer_view = @view cache_vector[1:required_size]
+    reshaped_view = reshape(buffer_view, size_axes...)
+    offset_view = OffsetArray(reshaped_view, axes...)
+    return offset_view
+end
 
 function gen_biomes_unsafe!(
     nn::Nether,
@@ -275,18 +308,17 @@ function gen_biomes_unsafe!(
     end
 
     # The minimal map where we are sure we can find the source coordinates at scale 4
-    # TODO: remove garbage collection here
-    biome_parents = get_voronoi_src_map2D(map3D)
+    biome_parent_axes = get_voronoi_src_axes2D(map3D)
+    biome_parents = view_reshape_cache_like(biome_parent_axes)
     gen_biomes!(nn, biome_parents, Scale(4), confidence, version)
 
-    # Generate the biomes at scale 4
     sha = nn.sha[]
-    x_is, z_is, y_is = axes(map3D)
-    for y_i in y_is, z_i in z_is, x_i in x_is
+    for coord in CartesianIndices(map3D)
+        x, z, y = coord.I
         # See the comment on get_biome_unsafe for the explanation
-        source_x, source_z, _ = voronoi_access_3d(sha, x_i, z_i, y_i)
+        source_x, source_z, _ = voronoi_access_3d(sha, x, z, y)
         result = biome_parents[source_x, source_z]
-        @inbounds map3D[x_i, z_i, y_i] = result
+        @inbounds map3D[x, z, y] = result
     end
     return nothing
 end

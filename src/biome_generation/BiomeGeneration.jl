@@ -5,6 +5,7 @@ module BiomeGeneration
 
     export Dimension, set_seed!
     export MCMap, similar_expand
+    export Nether
     export Scale, @📏_str
 
     public origin_coords

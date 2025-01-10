@@ -162,11 +162,11 @@ const var"@📏_str" = var"@scale_str"
 # ---------------------------------- Voronoi --------------------------------- #
 
 """
-    get_voronoi_src_map3D(map3D::MCMap{3})::MCMap{3}
+    get_voronoi_src_map3D(map3D::MCMap{3})
 
-Get the 3D map of the 1:1 scale that corresponds to the 1:4 scale map.
+Get the 3D axes of the 1:1 scale that corresponds to the 1:4 scale map.
 """
-function get_voronoi_src_map3D(map3D::MCMap{3})::MCMap{3}
+function get_voronoi_src_axes3D(map3D::MCMap{3})
     cx, cy, cz = origin_coords(map3D)
     size_x, size_z, size_y = size(map3D)
     # The >> 2 is equivalent to ÷ 4 but could be faster
@@ -185,11 +185,10 @@ function get_voronoi_src_map3D(map3D::MCMap{3})::MCMap{3}
         y = ty >> 2
         sy = ((ty + size_y) >> 2) - y + 2
     end
-
-    return MCMap(x:(x + sx - 1), y:(y + sy - 1), z:(z + sz - 1))
+    return x:(x + sx - 1), z:(z + sz - 1), y:(y + sy - 1)
 end
 
-function get_voronoi_src_map2D(mc_map::MCMap)::MCMap{2}
+function get_voronoi_src_axes2D(mc_map::MCMap)
     sx, sz = size(mc_map)[1:2]
     origin_x, origin_z = origin_coords(mc_map)[1:2]
     temp_x = origin_x - 2
@@ -198,12 +197,12 @@ function get_voronoi_src_map2D(mc_map::MCMap)::MCMap{2}
     z = temp_z >> 2
     sx = ((temp_x + sx) >> 2) - x + 2
     sz = ((temp_z + sz) >> 2) - z + 2
-    return MCMap(x:(x + sx - 1), z:(z + sz - 1))
+    return x:(x + sx - 1), z:(z + sz - 1)
 end
 
 function get_voronoi_cell(
     sha::UInt64, x::UInt64, z::UInt64, y::UInt64,
-)::Tuple{Int32, Int32, Int32}
+)
     s = sha
 
     s = mc_step_seed(s, x)
@@ -254,7 +253,7 @@ function voronoi_access_3d(sha::UInt64, x::Integer, z::Integer, y::Integer)
     offset_z = (z & 3) * 10240
 
     # Initialize variables to track the closest cell
-    closest_x, closest_y, closest_z = zero(UInt64), zero(UInt64), zero(UInt64)
+    closest_x, closest_y, closest_z = zero(x), zero(y), zero(z)
     min_distance_squared = typemax(UInt64)
 
     # Iterate over the 8 neighboring cells
