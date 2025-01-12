@@ -9,6 +9,7 @@ public md5_to_uint64, u64_seed, sha256_from_seed, sha256_from_seed!
 public lerp, lerp2, lerp3, lerp4, clamped_lerp
 public length_of_trimmed, length_filter
 public @only_float32
+public iter_chunks_threads
 
 using MD5: md5
 using StaticArrays: MVector
@@ -214,7 +215,6 @@ function length_filter(predicate, x)
     return count
 end
 #endregion
-
 #region types
 # ---------------------------------------------------------------------------- #
 #                                     Types                                    #
@@ -244,5 +244,17 @@ macro only_float32(expr)
         return Expr(x.head, map(transform, x.args)...)
     end
     return transform(expr)
+end
+#endregion
+#region Iteration
+# ---------------------------------------------------------------------------- #
+#                                  Iteration                                   #
+# ---------------------------------------------------------------------------- #
+
+function iter_chunks_threads(collection)
+    len = length(collection)
+    nb_threads = Threads.nthreads()
+    nb_chunks = len <= nb_threads ? 1 : len ÷ nb_threads
+    return Iterators.partition(collection, nb_chunks)
 end
 end # module

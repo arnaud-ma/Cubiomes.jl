@@ -15,114 +15,113 @@ using ..Noises
 #                               Noise Parameters                               #
 # ---------------------------------------------------------------------------- #
 
-abstract type NoiseParameter end
-
-struct NP_SHIFT <: NoiseParameter end
-struct NP_TEMPERATURE <: NoiseParameter end
-struct NP_HUMIDITY <: NoiseParameter end
-struct NP_CONTINENTALNESS <: NoiseParameter end
-struct NP_EROSION <: NoiseParameter end
-struct NP_WEIRDNESS <: NoiseParameter end
-
-const NOISE_PARAMETERS = Tuple(subtypes(NoiseParameter))
-const NB_NOISE_PARAMETERS = length(NOISE_PARAMETERS)
-
-# only here for documentation purposes
-# functions are created "dynamically" in the next block, using the _DATA dictionary
-function amplitudes(noise_param::Type{NoiseParameter}) end
-function octave_min(noise_param::Type{NoiseParameter}, large::Val) end
-function id(noise_param::Type{NoiseParameter}, large::Val) end
-function magic_xlo(noise_param::Type{NoiseParameter}, large::Val) end
-function magic_xhi(noise_param::Type{NoiseParameter}, large::Val) end
-
 const _DATA_NOISE_PARAM = Dict(
-    NP_SHIFT => (amp=(1, 1, 1, 0), oct=-3, id="minecraft:offset", large=nothing),
-    NP_TEMPERATURE => (
+    :shift => (amp=(1, 1, 1, 0), oct=-3, id="minecraft:offset", large=nothing),
+    :temperature => (
         amp=(1.5, 0.0, 1.0, 0.0, 0.0, 0.0),
         oct=-10,
         id="minecraft:temperature",
         large=-12,
     ),
-    NP_HUMIDITY =>
+    :humidity =>
         (amp=(1, 1, 0, 0, 0, 0), oct=-8, id="minecraft:vegetation", large=-10),
-    NP_CONTINENTALNESS => (
+    :CONTINENTALNESS_continentalness => (
         amp=(1, 1, 2, 2, 2, 1, 1, 1, 1),
         oct=-9,
         id="minecraft:continentalness",
         large=-11,
     ),
-    NP_EROSION => (amp=(1, 1, 0, 1, 1), oct=-9, id="minecraft:erosion", large=-11),
-    NP_WEIRDNESS =>
+    :NP_EROSION => (amp=(1, 1, 0, 1, 1), oct=-9, id="minecraft:erosion", large=-11),
+    :NP_WEIRDNESS =>
         (amp=(1, 2, 1, 0, 0, 0), oct=-7, id="minecraft:ridge", large=nothing),
 )
 
-@assert Set(keys(_DATA_NOISE_PARAM)) == Set(NOISE_PARAMETERS)
-
-for (noise_param, (amp, oct, id_str, oct_large)) in _DATA_NOISE_PARAM
-    @eval amplitudes(noise_param::Type{$noise_param}) = $amp
-    @eval octave_min(noise_param::Type{$noise_param}, large::Val{false}) = $oct
-    @eval id(noise_param::Type{$noise_param}, large::Val{false}) = $id_str
+function create_noise_param(amp, oct, id_str, oct_large)
+    filtered_amp = filter(!iszero, amp)
+    nb_octaves = length(filtered_amp)
+    nb_trimmed = Utils.length_of_trimmed(iszero, amp)
 
     if isnothing(oct_large)
-        @eval octave_min(noise_param::Type{$noise_param}, large::Val{true}) = $oct
-        @eval id(noise_param::Type{$noise_param}, large::Val{true}) = $id_str
+        oct_large = oct
+        id_str_large = id_str
     else
-        @eval octave_min(noise_param::Type{$noise_param}, large::Val{true}) = $oct_large
-        @eval id(noise_param::Type{$noise_param}, large::Val{true}) = $(id_str * "_large")
+        oct_large = oct_large
+        id_str_large = "$(id_str)_large"
     end
 
-    filtered_amp = filter(!iszero, amp)
-    nb_octaves_ = length(filtered_amp)
-    @eval filtered_amplitudes(noise_param::Type{$noise_param}) = $filtered_amp
-    @eval nb_octaves(noise_param::Type{$noise_param}) = $nb_octaves_
-    @eval function create_octaves(noise_param::Type{$noise_param}, nb::Val{N}) where {N}
-        return ntuple(i -> Octaves{$nb_octaves_}(undef), Val(N))
-    end
-    xlo, xhi = md5_to_uint64(id(noise_param, Val(false)))
-    xlo_large, xh_large = md5_to_uint64(id(noise_param, Val(true)))
-    @eval magic_xlo(noise_param::Type{$noise_param}, large::Val{true}) = $xlo_large
-    @eval magic_xhi(noise_param::Type{$noise_param}, large::Val{true}) = $xh_large
-    @eval magic_xlo(noise_param::Type{$noise_param}, large::Val{false}) = $xlo
-    @eval magic_xhi(noise_param::Type{$noise_param}, large::Val{false}) = $xhi
+    create_octaves(nb::Val{N}) where {N} = ntuple(i -> Octaves{nb}(undef), Val(N))
+    xlo, xhi = md5_to_uint64(id_str)
+    xlo_large, xh_large = md5_to_uint64(id_str_large)
+
+    return (
+        amplitudes=float.(amp),
+        octave_min=float(oct),
+        octave_min_large=float(oct_large),
+        id=id_str,
+        id_large=id_str_large,
+        filtered_amplitudes=float.(filtered_amp),
+        nb_octaves=float(nb_octaves),
+        nb_trimmed=float(nb_trimmed),
+        create_octaves=create_octaves,
+        magic_xlo=xlo,
+        magic_xhi=xhi,
+        magic_xlo_large=xlo_large,
+        magic_xhi_large=xh_large,
+    )
 end
 
-@eval TupleClimate = Tuple{
-    $((:(DoublePerlin{nb_octaves($i)}) for i in NOISE_PARAMETERS)...)
-}
+const RAW_NOISE_PARAMETERS = (
+    (shift=((1, 1, 1, 0), -3, "minecraft:offset", nothing),
+    temperature=((1.5, 0, 1, 0, 0, 0), -10, "minecraft:temperature", -12),
+    humidity=((1, 1, 0, 0, 0, 0), -8, "minecraft:vegetation", -10),
+    continentalness=(
+        (1, 1, 2, 2, 2, 1, 1, 1, 1),
+        -9,
+        "minecraft:continentalness",
+        -11,
+    ),
+    erosion=((1, 1, 0, 1, 1), -9, "minecraft:erosion", -11),
+    weirdness=((1, 2, 1, 0, 0, 0), -7, "minecraft:ridge", nothing),
+)
+)
+const NOISE_PARAMETERS = map(x -> create_noise_param(x...), RAW_NOISE_PARAMETERS)
+
+@eval TupleClimate = Tuple{$((:(DoublePerlin{$i.nb_octaves}) for i in NOISE_PARAMETERS)...)}
 
 struct BiomeNoise <: Dimension
     climate::TupleClimate
 end
 
 function BiomeNoise(::UndefInitializer)
-    return BiomeNoise(
-        Tuple(
-        Noise(
-        DoublePerlin{nb_octaves(np)},
-        undef, Utils.length_of_trimmed(iszero, amplitudes(np)),
-    ) for np in NOISE_PARAMETERS
-    ),
-    )
+    BiomeNoise(Tuple(Noise(
+        DoublePerlin{np.nb_octaves},
+        undef,
+        np.nb_trimmed,
+    ) for np in NOISE_PARAMETERS))
+end
+
+for func in (:magic_xlo, :magic_xhi, :octave_min)
+    @eval $func(x, ::Val{true}) = x.$(func)_large
+    @eval $func(x, ::Val{false}) = x.$func
 end
 
 function set_seed!(
     dp::DoublePerlin, xlo, xhi, noise_param, large=Val(true),
 )
-    xlo ⊻= magic_xlo(noise_param, large)
+    xlo ⊻= magic_xhi(noise_param, large)
     xhi ⊻= magic_xhi(noise_param, large)
     rng = JavaXoroshiro128PlusPlus(xlo, xhi)
-    set_rng!🎲(dp, rng, filtered_amplitudes(noise_param), octave_min(noise_param, large))
+    set_rng!🎲(dp, rng, noise_param.filtered_amplitudes, octave_min(noise_param, large))
     return nothing
 end
 
 function set_seed!(noise::BiomeNoise, seed::UInt64, large=Val(true))
-    climate = noise.climate
     rng = JavaXoroshiro128PlusPlus(seed)
     xlo = next🎲(rng, UInt64)
     xhi = next🎲(rng, UInt64)
 
-    for i in 1:NB_NOISE_PARAMETERS
-        set_seed!(climate[i], xlo, xhi, NOISE_PARAMETERS[i], large)
+    for (clim, noise_param) in zip(noise.climate, NOISE_PARAMETERS)
+        set_seed!(clim, xlo, xhi, noise_param, large)
     end
     return noise
 end
@@ -215,7 +214,11 @@ end
         spline_type,
         (-1, 0, 1),
         (0, slope, slope),
-        Spline{0}(max(offset_neg1, 0.2), Utils.lerp(0.5, offset_neg1, offset_pos1), offset_pos1),
+        Spline{0}(
+            max(offset_neg1, 0.2),
+            Utils.lerp(0.5, offset_neg1, offset_pos1),
+            offset_pos1,
+        ),
     )
 end
 
@@ -264,7 +267,6 @@ additional_values_land_spline(x1, x2, x3, x5, spline_6, ::Val{false}) = (), ()
 # upstream julia issue: https://github.com/JuliaLang/julia/issues/28086
 zeros_like(::NTuple{N, T}) where {N, T} = ntuple(i -> zero(T), Val{N}())
 zeros_like(x::Tuple{}) = x
-
 
 @only_float32 function land_spline(x1, x2, x3, x4, x5, x6, bl::Val{BL}) where {BL}
     # create initial splines with different linear interpolation values

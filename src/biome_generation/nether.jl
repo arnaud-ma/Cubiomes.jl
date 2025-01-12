@@ -1,7 +1,7 @@
 # include("interface.jl")
 using ..Noises
 using ..JavaRNG: JavaRandom
-using ..Utils: sha256_from_seed
+using ..Utils: Utils
 using ..Cubiomes: MC_UNDEF, MC_1_15
 
 using Base.Iterators
@@ -69,7 +69,7 @@ function _set_temp_humid!(seed, temperature, humidity)
 end
 
 @generated function set_seed!(nn::Nether, seed::UInt64, sha::Val{S}=Val(true)) where {S}
-    sha_expr = S ? :(sha256_from_seed(seed)) : :nothing
+    sha_expr = S ? :(Utils.sha256_from_seed(seed)) : :nothing
     return quote
         _set_temp_humid!(seed, nn.temperature, nn.humidity)
         nn.sha[] = $sha_expr
@@ -124,20 +124,18 @@ end
 # and then take the biome with this new coordinates.
 # The source_x and source_z DEPENDS on x, z AND on y.
 # i.e., if y is modified, source_x and source_z could be modified too.
-function get_biome_unsafe(nn::Nether, x::Real, z::Real, y::Real, scale::T📏"1:1")
+function get_biome_unsafe(nn::Nether, x::Real, z::Real, y::Real, ::T📏"1:1")
     source_x, source_z, _ = voronoi_access(nn.sha[], x, z, y)
-    return get_biome_unsafe(nn, source_x, source_z, scale)
+    return get_biome_unsafe(nn, source_x, source_z, 📏"1:4")
 end
 
 function get_biome_unsafe(nn::Nether, x, z, ::T📏"1:4")
     temperature = sample_noise(nn.temperature, x, z)
     humidity = sample_noise(nn.humidity, x, z)
-    return find_closest_biome(temperature, humidity)[1]
+    return find_closest_biome(temperature, humidity)
 end
 
-function get_biome_unsafe(nn::Nether, x, z, y, scale::T📏"1:4") where {N}
-    get_biome_unsafe(nn, x, z, scale)
-end
+get_biome_unsafe(nn::Nether, x, z, y, scale::T📏"1:4") = get_biome_unsafe(nn, x, z, scale)
 
 # TODO: get_biome for scale != (1, 4)
 
@@ -230,15 +228,15 @@ function fill_radius!(
     id::BiomeID,
     radius,
 )
-    r_square = floor(r)^2
-    # optimization: we do not need to fill the whole map
-    # we can just fill the square around the point
+    r = floor(Int, radius)
+    r_square = r^2
+    # optimization: we do not need to check the whole map
+    # we can just check the square around the point
     # x_min, x_max, z_min, z_max are the bounds of the square
     x_min = max(first(axes(out, 1)), center[1] - r)
     x_max = min(last(axes(out, 1)), center[1] + r)
     z_min = max(first(axes(out, 2)), center[2] - r)
     z_max = min(last(axes(out, 2)), center[2] + r)
-
     for coord in CartesianIndices((x_min:x_max, z_min:z_max))
         if distance_square(coord, center) <= r_square
             @inbounds out[coord] = id
@@ -366,9 +364,7 @@ function gen_biomes_unsafe!(
     gen_biomes!(nn, biome_parents, 📏"1:4", confidence, version)
 
     sha = nn.sha[]
-    # TODO: use of @threads
-    # right now, it looks like it is slower because it uses some garbage collection if
-    # threads are used ??? Investigate this
+    # TODO: we could use @threads but overhead if the size is small (1-10ms overhead)
     for coord in coords
         # See the comment on get_biome_unsafe for the explanation
         source_x, source_z, _ = voronoi_access(sha, coord)
