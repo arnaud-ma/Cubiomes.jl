@@ -103,7 +103,7 @@ end
 #                   Nether Biome Point Access (Scale 4 and 1)                  #
 # ---------------------------------------------------------------------------- #
 
-@generated function get_biome(
+function get_biome(
     nn::Nether,
     x::Real,
     z::Real,
@@ -222,7 +222,7 @@ end
     fill_radius!(out::AbstractMatrix{BiomeID}, x, z, id::BiomeID, radius)
 
 Fills a circular area around the point `(x, z)` in `out` with the biome `id`,
-within a given `radius`.
+within a given `radius`. Assuming `radius`>=0.
 """
 function fill_radius!(
     out::AbstractMatrix{BiomeID},
@@ -230,10 +230,7 @@ function fill_radius!(
     id::BiomeID,
     radius,
 )
-    if (r = trunc(Int, radius)) <= 0
-        return nothing
-    end
-    r_square = r^2
+    r_square = floor(r)^2
     # optimization: we do not need to fill the whole map
     # we can just fill the square around the point
     # x_min, x_max, z_min, z_max are the bounds of the square
