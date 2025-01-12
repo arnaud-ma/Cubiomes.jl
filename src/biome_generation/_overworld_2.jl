@@ -15,28 +15,30 @@ using ..Noises
 #                               Noise Parameters                               #
 # ---------------------------------------------------------------------------- #
 
-const _DATA_NOISE_PARAM = Dict(
-    :shift => (amp=(1, 1, 1, 0), oct=-3, id="minecraft:offset", large=nothing),
-    :temperature => (
-        amp=(1.5, 0.0, 1.0, 0.0, 0.0, 0.0),
-        oct=-10,
-        id="minecraft:temperature",
-        large=-12,
-    ),
-    :humidity =>
-        (amp=(1, 1, 0, 0, 0, 0), oct=-8, id="minecraft:vegetation", large=-10),
-    :CONTINENTALNESS_continentalness => (
-        amp=(1, 1, 2, 2, 2, 1, 1, 1, 1),
-        oct=-9,
-        id="minecraft:continentalness",
-        large=-11,
-    ),
-    :NP_EROSION => (amp=(1, 1, 0, 1, 1), oct=-9, id="minecraft:erosion", large=-11),
-    :NP_WEIRDNESS =>
-        (amp=(1, 2, 1, 0, 0, 0), oct=-7, id="minecraft:ridge", large=nothing),
-)
+abstract type NoiseParameter end
 
-function create_noise_param(amp, oct, id_str, oct_large)
+# only here to help the editor, poor baby :(
+amplitudes(::NoiseParameter) = throw(MethodError(amplitudes, (NoiseParameter,)))
+function octave_min(::NoiseParameter, large)
+    throw(MethodError(octave_min, (NoiseParameter, typeof(large))))
+end
+id(::NoiseParameter, large) = throw(MethodError(id, (NoiseParameter, typeof(large))))
+function filtered_amplitudes(::NoiseParameter)
+    throw(MethodError(filtered_amplitudes, (NoiseParameter,)))
+end
+nb_octaves(::NoiseParameter) = throw(MethodError(nb_octaves, (NoiseParameter,)))
+nb_trimmed(::NoiseParameter) = throw(MethodError(nb_trimmed, (NoiseParameter,)))
+function create_octaves(::NoiseParameter, Val{N}) where {N}
+    throw(MethodError(create_octaves, (NoiseParameter, Val{N})))
+end
+function magic_xlo(::NoiseParameter, large)
+    throw(MethodError(magic_xlo, (NoiseParameter, typeof(large))))
+end
+function magic_xhi(::NoiseParameter, large)
+    throw(MethodError(magic_xhi, (NoiseParameter, typeof(large))))
+end
+
+macro create_noise_param(noise_param, amp, oct, id_str, oct_large)
     filtered_amp = filter(!iszero, amp)
     nb_octaves = length(filtered_amp)
     nb_trimmed = Utils.length_of_trimmed(iszero, amp)
@@ -49,47 +51,55 @@ function create_noise_param(amp, oct, id_str, oct_large)
         id_str_large = "$(id_str)_large"
     end
 
-    create_octaves(nb::Val{N}) where {N} = ntuple(i -> Octaves{nb}(undef), Val(N))
-    xlo, xhi = md5_to_uint64(id_str)
-    xlo_large, xh_large = md5_to_uint64(id_str_large)
+    xlo, xhi = Utils.md5_to_uint64(id_str)
+    xlo_large, xh_large = Utils.md5_to_uint64(id_str_large)
 
-    return (
-        amplitudes=float.(amp),
-        octave_min=float(oct),
-        octave_min_large=float(oct_large),
-        id=id_str,
-        id_large=id_str_large,
-        filtered_amplitudes=float.(filtered_amp),
-        nb_octaves=float(nb_octaves),
-        nb_trimmed=float(nb_trimmed),
-        create_octaves=create_octaves,
-        magic_xlo=xlo,
-        magic_xhi=xhi,
-        magic_xlo_large=xlo_large,
-        magic_xhi_large=xh_large,
-    )
+    return quote
+        amplitudes(::Type{noise_param}) = $(float.(amp))
+        octave_min(::Type{noise_param}, ::Val{false}) = $(float(oct))
+        octave_min(::Type{noise_param}, ::Val{true}) = $(float(oct_large))
+        id(::Type{noise_param}::Val{false}) = $id_str
+        id(::Type{noise_param}, ::Val{true}) = $id_str_large
+        filtered_amplitudes(::Type{noise_param}) = $(float.(filtered_amp))
+        nb_octaves(::Type{noise_param}) = $(float(nb_octaves))
+        nb_trimmed(::Type{noise_param}) = $(float(nb_trimmed))
+        magic_xlo(::Type{noise_param}, ::Val{false}) = $xlo
+        magic_xhi(::Type{noise_param}, ::Val{false}) = $xhi
+        magic_xlo(::Type{noise_param}, ::Val{true}) = $xlo_large
+        magic_xhi(::Type{noise_param}, ::Val{true}) = $xh_large
+
+        function create_octaves(::Type{noise_param}, Val{N}) where {N}
+            ntuple(i -> Octaves{nb}(undef), Val(N))
+        end
+    end
 end
 
-const RAW_NOISE_PARAMETERS = (
-    (shift=((1, 1, 1, 0), -3, "minecraft:offset", nothing),
-    temperature=((1.5, 0, 1, 0, 0, 0), -10, "minecraft:temperature", -12),
-    humidity=((1, 1, 0, 0, 0, 0), -8, "minecraft:vegetation", -10),
-    continentalness=(
-        (1, 1, 2, 2, 2, 1, 1, 1, 1),
-        -9,
-        "minecraft:continentalness",
-        -11,
-    ),
-    erosion=((1, 1, 0, 1, 1), -9, "minecraft:erosion", -11),
-    weirdness=((1, 2, 1, 0, 0, 0), -7, "minecraft:ridge", nothing),
-)
-)
-const NOISE_PARAMETERS = map(x -> create_noise_param(x...), RAW_NOISE_PARAMETERS)
+struct Shift <: NoiseParameter end
+@create_noise_param(Shift, (1, 1, 1, 0), 0, "minecraft:offset", nothing)
 
-@eval TupleClimate = Tuple{$((:(DoublePerlin{$i.nb_octaves}) for i in NOISE_PARAMETERS)...)}
+struct Temperature <: NoiseParameter end
+@create_noise_param(Temperature, (1.5, 0, 1, 0, 0, 0), -10, "minecraft:temperature", -12)
 
+struct Humidity <: NoiseParameter end
+@create_noise_param(Humidity, (1, 1, 0, 0, 0, 0), -8, "minecraft:vegetation", -10)
+
+#! format: off
+struct Continentalness <: NoiseParameter end
+@create_noise_param(Continentalness, (1, 1, 2, 2, 2, 1, 1, 1, 1), -9, "minecraft:continentalness", -11)
+#! format: on
+
+struct Erosion <: NoiseParameter end
+@create_noise_param(Erosion, (1, 1, 0, 1, 1), -9, "minecraft:erosion", -11)
+
+struct Weirdness <: NoiseParameter end
+@create_noise_param(Weirdness, (1, 2, 1, 0, 0, 0), -7, "minecraft:ridge", nothing)
+
+const NOISE_PARAMETERS = Tuple(subtypes(NoiseParameter))
+
+@eval const TypeTupleClimate =
+    Tuple{$((:(DoublePerlin{$(nb_octaves(np))}) for np in NOISE_PARAMETERS)...)}
 struct BiomeNoise <: Dimension
-    climate::TupleClimate
+    climate::TypeTupleClimate
 end
 
 function BiomeNoise(::UndefInitializer)
@@ -100,6 +110,7 @@ function BiomeNoise(::UndefInitializer)
     ) for np in NOISE_PARAMETERS))
 end
 
+# we need some methods to be able to dispatch at compile time wether large is true or false
 for func in (:magic_xlo, :magic_xhi, :octave_min)
     @eval $func(x, ::Val{true}) = x.$(func)_large
     @eval $func(x, ::Val{false}) = x.$func
@@ -263,8 +274,6 @@ end
 
 additional_values_land_spline(x1, x2, x3, x5, spline_6, ::Val{false}) = (), ()
 
-#! This produce a false positive with Aqua.jl. See https://github.com/JuliaTesting/Aqua.jl/issues/86
-# upstream julia issue: https://github.com/JuliaLang/julia/issues/28086
 zeros_like(::NTuple{N, T}) where {N, T} = ntuple(i -> zero(T), Val{N}())
 zeros_like(x::Tuple{}) = x
 
@@ -286,11 +295,10 @@ zeros_like(x::Tuple{}) = x
     locations = (-0.85f0, -0.7f0, -0.4f0, -0.35f0, -0.1f0, 0.2f0)
     child_splines = (spline_1, spline_2, spline_3, spline_4, spline_5, spline_6)
 
-    mid_loc, mid_splines = additional_values_land_spline(x1, x2, x3, x5, spline_6, bl)
-    end_loc = 0.7
-    end_spline = flat_offset_spline(-0.02, x6, x6, x2, x3, 0)
+    mid_locs, mid_splines = additional_values_land_spline(x1, x2, x3, x5, spline_6, bl)
+    end_loc, end_spline = 0.7, flat_offset_spline(-0.02, x6, x6, x2, x3, 0)
 
-    locations = (locations..., mid_loc..., end_loc)
+    locations = (locations..., mid_locs..., end_loc)
     child_splines = (child_splines..., mid_splines..., end_spline)
     derivatives = zeros_like(locations)
 
@@ -312,7 +320,7 @@ function get_spline(spline::Spline{0}, vals::NTuple{N2}) where {N2}
 end
 
 # TODO: transform the recursive to an iterate one, since Julia is very bad with recursion :(
-function _get_spline(spline::Spline{N}, vals::NTuple{N2}) where {N, N2}
+function get_spline(spline::Spline{N}, vals::NTuple{N2}) where {N, N2}
     if !((1 <= Int(spline.spline_type) <= 4) && (1 <= N <= 11))
         throw(
             ArgumentError(
@@ -349,3 +357,108 @@ function _get_spline(spline::Spline{N}, vals::NTuple{N2}) where {N, N2}
     r = Utils.lerp(k, n, o) + k * (1.0 - k) * Utils.lerp(k, p, q)
     return r
 end
+
+# void initBiomeNoise(BiomeNoise *bn, int mc)
+# {
+#     SplineStack *ss = &bn->ss;
+#     memset(ss, 0, sizeof(*ss));
+#     Spline *sp = &ss->stack[ss->len++];
+#     sp->typ = SP_CONTINENTALNESS;
+
+#     Spline *sp1 = createLandSpline(ss, -0.15F, 0.00F, 0.0F, 0.1F, 0.00F, -0.03F, 0);
+#     Spline *sp2 = createLandSpline(ss, -0.10F, 0.03F, 0.1F, 0.1F, 0.01F, -0.03F, 0);
+#     Spline *sp3 = createLandSpline(ss, -0.10F, 0.03F, 0.1F, 0.7F, 0.01F, -0.03F, 1);
+#     Spline *sp4 = createLandSpline(ss, -0.05F, 0.03F, 0.1F, 1.0F, 0.01F,  0.01F, 1);
+
+#     addSplineVal(sp, -1.10F, createFixSpline(ss,  0.044F), 0.0F);
+#     addSplineVal(sp, -1.02F, createFixSpline(ss, -0.2222F), 0.0F);
+#     addSplineVal(sp, -0.51F, createFixSpline(ss, -0.2222F), 0.0F);
+#     addSplineVal(sp, -0.44F, createFixSpline(ss, -0.12F), 0.0F);
+#     addSplineVal(sp, -0.18F, createFixSpline(ss, -0.12F), 0.0F);
+#     addSplineVal(sp, -0.16F, sp1, 0.0F);
+#     addSplineVal(sp, -0.15F, sp1, 0.0F);
+#     addSplineVal(sp, -0.10F, sp2, 0.0F);
+#     addSplineVal(sp,  0.25F, sp3, 0.0F);
+#     addSplineVal(sp,  1.00F, sp4, 0.0F);
+
+#     bn->sp = sp;
+#     bn->mc = mc;
+# }
+
+@only_float32 function initBiomeNoise(bn::BiomeNoise)
+    spline1 = land_spline(-0.15, 0, 0, 0.1, 0, -0.03, Val(false))
+    spline2 = land_spline(-0.10, 0.03, 0.1, 0.1, 0.01, -0.03, Val(false))
+    spline3 = land_spline(-0.10, 0.03, 0.1, 0.7, 0.01, -0.03, Val(true))
+    spline4 = land_spline(-0.05, 0.03, 0.1, 1.0, 0.01, 0.01, Val(true))
+
+    locations = (-1.10, -1.02, -0.51, -0.44, -0.18, -0.16, -0.15, -0.10, 0.25, 1.00)
+    child_splines = (
+        Spline{0}(0.044),
+        Spline{0}(-0.2222),
+        Spline{0}(-0.2222),
+        Spline{0}(-0.12),
+        Spline{0}(-0.12),
+        spline1,
+        spline1,
+        spline2,
+        spline3,
+        spline4,
+    )
+    derivatives = zeros_like(locations)
+
+    return Spline(Continentalness, locations, derivatives, child_splines)
+end
+
+# int sampleBiomeNoise(const BiomeNoise *bn, int64_t *np, int x, int y, int z,
+#     uint64_t *dat, uint32_t sample_flags)
+# {
+#     if (bn->nptype >= 0)
+#     {   // initialized for a specific climate parameter
+#         if (np)
+#             memset(np, 0, NP_MAX*sizeof(*np));
+#         int64_t id = (int64_t) (10000.0 * sampleClimatePara(bn, np, x, z));
+#         return (int) id;
+#     }
+
+#     float t = 0, h = 0, c = 0, e = 0, d = 0, w = 0;
+#     double px = x, pz = z;
+#     if (!(sample_flags & SAMPLE_NO_SHIFT))
+#     {
+#         px += sampleDoublePerlin(&bn->climate[NP_SHIFT], x, 0, z) * 4.0;
+#         pz += sampleDoublePerlin(&bn->climate[NP_SHIFT], z, x, 0) * 4.0;
+#     }
+
+#     c = sampleDoublePerlin(&bn->climate[NP_CONTINENTALNESS], px, 0, pz);
+#     e = sampleDoublePerlin(&bn->climate[NP_EROSION], px, 0, pz);
+#     w = sampleDoublePerlin(&bn->climate[NP_WEIRDNESS], px, 0, pz);
+
+#     if (!(sample_flags & SAMPLE_NO_DEPTH))
+#     {
+#         float np_param[] = {
+#             c, e, -3.0F * ( fabsf( fabsf(w) - 0.6666667F ) - 0.33333334F ), w,
+#         };
+#         double off = getSpline(bn->sp, np_param) + 0.015F;
+
+#         //double py = y + sampleDoublePerlin(&bn->shift, y, z, x) * 4.0;
+#         d = 1.0 - (y * 4) / 128.0 - 83.0/160.0 + off;
+#     }
+
+#     t = sampleDoublePerlin(&bn->climate[NP_TEMPERATURE], px, 0, pz);
+#     h = sampleDoublePerlin(&bn->climate[NP_HUMIDITY], px, 0, pz);
+
+#     int64_t l_np[6];
+#     int64_t *p_np = np ? np : l_np;
+#     p_np[0] = (int64_t)(10000.0F*t);
+#     p_np[1] = (int64_t)(10000.0F*h);
+#     p_np[2] = (int64_t)(10000.0F*c);
+#     p_np[3] = (int64_t)(10000.0F*e);
+#     p_np[4] = (int64_t)(10000.0F*d);
+#     p_np[5] = (int64_t)(10000.0F*w);
+
+#     int id = none;
+#     if (!(sample_flags & SAMPLE_NO_BIOME))
+#         id = climateToBiome(bn->mc, (const uint64_t*)p_np, dat);
+#     return id;
+# }
+
+# function sample_biome(bn::BiomeNoise, )
