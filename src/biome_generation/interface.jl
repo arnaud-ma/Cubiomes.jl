@@ -144,7 +144,7 @@ that uses it. Read the documentation of the function that uses it to know the su
 struct Scale{N} end
 Scale(N::Integer) = Scale{N}()
 
-macro scale_str(str)
+macro 📏_str(str)
     splitted = split(str, ':')
     if length(splitted) != 2
         throw(ArgumentError("Bad scale format."))
@@ -156,7 +156,9 @@ macro scale_str(str)
     end
     return Scale(denominator(scale))
 end
-const var"@📏_str" = var"@scale_str"
+const var"@T📏_str" = typeof ∘ var"@📏_str"
+
+Base.broadcastable(o::Scale) = Ref(o)
 
 #region voronoi
 # ---------------------------------- Voronoi --------------------------------- #
@@ -226,9 +228,11 @@ function get_voronoi_cell(sha::UInt64, x::Int64, z::Int64, y::Int64)
     get_voronoi_cell(sha, unsigned(x), unsigned(z), unsigned(y))
 end
 
+voronoi_access(sha::UInt64, coord::CartesianIndex) = voronoi_access(sha, coord.I...)
 # TODO: change this following docstring
 """
-    voronoi_access_3d(sha::UInt64, x, y, z)
+    voronoi_access(sha::UInt64, x, y, z)
+    voronoi_access(sha::UInt64, coord::CartesianIndex)
 
 With 1.15, voronoi changed in preparation for 3D biome generation.
 Biome generation now stops at scale 1:4 OceanMix and voronoi is just
@@ -237,7 +241,7 @@ It is seeded by the first 8-bytes of the SHA-256 hash of the world seed.
 
 Don't ask how it works, it just does.
 """
-function voronoi_access_3d(sha::UInt64, x::Integer, z::Integer, y::Integer)
+function voronoi_access(sha::UInt64, x::Integer, z::Integer, y::Integer)
     x -= 2
     y -= 2
     z -= 2
@@ -293,5 +297,6 @@ function voronoi_access_3d(sha::UInt64, x::Integer, z::Integer, y::Integer)
 
     return closest_x, closest_z, closest_y
 end
+
 #endregion
 #endregion

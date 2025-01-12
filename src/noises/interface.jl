@@ -35,6 +35,10 @@ See also: [`sample_simplex`](@ref), [`Noise`](@ref), [`Noise🎲`](@ref)
 """
 function sample_noise end
 
+function sample_noise(noise::Noise, coord::CartesianIndex, args::Vararg{Any, N}) where {N}
+    return sample_noise(noise, coord.I..., args...)
+end
+
 """
     set_rng!🎲(noise::Perlin, rng)
     set_rng!🎲(noise::Octaves{N}, rng::JavaRandom, octave_min) where N

@@ -4,6 +4,8 @@ using ..JavaRNG: JavaRandom
 using ..Utils: sha256_from_seed
 using ..Cubiomes: MC_UNDEF, MC_1_15
 
+using Base.Iterators
+
 #region struct definition
 # ---------------------------------------------------------------------------- #
 #                 Noise Struct Definition and Noise Generation                 #
@@ -82,73 +84,114 @@ function gen_biomes end
 function gen_biomes_unsafe! end
 #endregion
 
+for get_func in (:get_biome, :get_biome_unsafe)
+    @eval function $get_func(
+        nn::Nether,
+        coords::CartesianIndex{CN},
+        args::Vararg{Any, N},
+    ) where {CN, N}
+        return $get_func(nn, coords.I..., args...)
+    end
+end
+
+function distance_square(coord1::CartesianIndex{N}, coord2::CartesianIndex{N}) where {N}
+    sum((coord1.I .- coord2.I) .^ 2)
+end
+
 #region point 4 and 1
 # ---------------------------------------------------------------------------- #
 #                   Nether Biome Point Access (Scale 4 and 1)                  #
 # ---------------------------------------------------------------------------- #
 
-function get_biome(nn::Nether, x, z, y, scale::Scale{S}, version) where {S}
-    (version <= MC_1_15 && version != MC_UNDEF) && return nether_wastes
-    S == 1 && return get_biome_unsafe(nn, x, z, y, scale)
-    return get_biome_unsafe(nn, x, z, scale)
+@generated function get_biome(
+    nn::Nether,
+    x::Real,
+    z::Real,
+    y::Real,
+    scale::Scale{S},
+    version::MCVersion=MC_UNDEF,
+) where {S}
+    if (version <= MC_1_15 && version != MC_UNDEF)
+        return nether_wastes
+    end
+    return get_biome_unsafe(nn, x, z, y, scale)
 end
 
 # To zoom from the scale 4 to the scale 1, each coordinate at scale 1 is associated with
-# a random (taken fro the sha of the seed) source coordinate at scale 4
+# a random (taken from the sha of the seed) source coordinate at scale 4
 # where the biome is the same (with a voronoi diagram).
 # So we only need to take this source coordinates, with the voronoi_access_3d function,
 # and then take the biome with this new coordinates.
 # The source_x and source_z DEPENDS on x, z AND on y.
 # i.e., if y is modified, source_x and source_z could be modified too.
-function get_biome_unsafe(nn::Nether, x::Real, z::Real, y::Real, ::Scale{1})
-    source_x, source_z, _ = voronoi_access_3d(nn.sha[], x, z, y)
-    return get_biome_unsafe(nn, source_x, source_z, Scale(4))
+function get_biome_unsafe(nn::Nether, x::Real, z::Real, y::Real, scale::T📏"1:1")
+    source_x, source_z, _ = voronoi_access(nn.sha[], x, z, y)
+    return get_biome_unsafe(nn, source_x, source_z, scale)
 end
 
-function get_biome_unsafe(nn::Nether, x, z, scale::Scale{4})
+function get_biome_unsafe(nn::Nether, x, z, ::T📏"1:4")
     temperature = sample_noise(nn.temperature, x, z)
     humidity = sample_noise(nn.humidity, x, z)
-    return find_closest_biomes(temperature, humidity)[1]
+    return find_closest_biome(temperature, humidity)[1]
+end
+
+function get_biome_unsafe(nn::Nether, x, z, y, scale::T📏"1:4") where {N}
+    get_biome_unsafe(nn, x, z, scale)
 end
 
 # TODO: get_biome for scale != (1, 4)
 
-function get_biome_and_delta(nn::Nether, x, z)
-    temperature = sample_noise(nn.temperature, x, z)
-    humidity = sample_noise(nn.humidity, x, z)
-    biome, dist1, dist2 = find_closest_biomes(temperature, humidity)
+function get_biome_and_delta(nn::Nether, coord::CartesianIndex)
+    temperature = sample_noise(nn.temperature, coord)
+    humidity = sample_noise(nn.humidity, coord)
+    biome, dist1, dist2 = find_closest_biome_with_dists(temperature, humidity)
     return biome, √dist1 - √dist2
 end
 
-function find_closest_biomes(temperature, humidity)
-    id = zero(UInt8)
+function calculate_distance_squared(nether_point, temperature, humidity)
+    return (nether_point.x - temperature)^2 + (nether_point.y - humidity)^2 +
+           nether_point.z_square
+end
+
+function find_closest_biome_with_dists(temperature, humidity)
+    id = 0
     min_distance1, min_distance2 = Inf, Inf
     for i in 1:5
-        nether_point = NETHER_POINTS[i]
-        distance_square = calculate_distance_squared(nether_point, temperature, humidity)
-        if distance_square < min_distance1
+        @inbounds nether_point = NETHER_POINTS[i]
+        dist = calculate_distance_squared(nether_point, temperature, humidity)
+        if dist < min_distance1
             min_distance2 = min_distance1
-            min_distance1 = distance_square
+            min_distance1 = dist
             id = i
-        elseif distance_square < min_distance2
-            min_distance2 = distance_square
+        elseif dist < min_distance2
+            min_distance2 = dist
         end
     end
     @inbounds return NETHER_POINTS[id].biome, min_distance1, min_distance2
 end
 
-function calculate_distance_squared(nether_point, temperature, humidity)
-    Δx = nether_point.x - temperature
-    Δy = nether_point.y - humidity
-    return Δx^2 + Δy^2 + nether_point.z
+function find_closest_biome(temperature, humidity)
+    # equivalent to argmin(np -> calculate_distance_squared(np, temperature, humidity), NETHER_POINTS).biome
+    # but faster if we write it manually
+    id = 0
+    min_dist = Inf
+    for i in 1:5
+        @inbounds nether_point = NETHER_POINTS[i]
+        dist = calculate_distance_squared(nether_point, temperature, humidity)
+        if dist < min_dist
+            min_dist = dist
+            id = i
+        end
+    end
+    @inbounds return NETHER_POINTS[id].biome
 end
 
 const NETHER_POINTS = (
-    (x=0.0, y=0.0, z=0.0, biome=nether_wastes),
-    (x=0.0, y=-0.5, z=0.0, biome=soul_sand_valley),
-    (x=0.4, y=0.0, z=0.0, biome=crimson_forest),
-    (x=0.0, y=0.5, z=0.375^2, biome=warped_forest),
-    (x=-0.5, y=0.0, z=0.175^2, biome=basalt_deltas),
+    (x=0.0, y=0.0, z_square=0.0, biome=nether_wastes),
+    (x=0.0, y=-0.5, z_square=0.0, biome=soul_sand_valley),
+    (x=0.4, y=0.0, z_square=0.0, biome=crimson_forest),
+    (x=0.0, y=0.5, z_square=0.375^2, biome=warped_forest),
+    (x=-0.5, y=0.0, z_square=0.175^2, biome=basalt_deltas),
 )
 #endregion
 
@@ -181,21 +224,27 @@ end
 Fills a circular area around the point `(x, z)` in `out` with the biome `id`,
 within a given `radius`.
 """
-function fill_radius!(out::AbstractMatrix{BiomeID}, x, z, id::BiomeID, radius)
-    (r = trunc(Int, radius)) <= 0 && return nothing
-    r_square = trunc(Int, radius^2)
-
+function fill_radius!(
+    out::AbstractMatrix{BiomeID},
+    center::CartesianIndex{2},
+    id::BiomeID,
+    radius,
+)
+    if (r = trunc(Int, radius)) <= 0
+        return nothing
+    end
+    r_square = r^2
     # optimization: we do not need to fill the whole map
     # we can just fill the square around the point
     # x_min, x_max, z_min, z_max are the bounds of the square
-    x_min = max(first(axes(out, 1)), x - r)
-    x_max = min(last(axes(out, 1)), x + r)
-    z_min = max(first(axes(out, 2)), z - r)
-    z_max = min(last(axes(out, 2)), z + r)
+    x_min = max(first(axes(out, 1)), center[1] - r)
+    x_max = min(last(axes(out, 1)), center[1] + r)
+    z_min = max(first(axes(out, 2)), center[2] - r)
+    z_max = min(last(axes(out, 2)), center[2] + r)
 
-    for x_i in x_min:x_max, z_i in z_min:z_max
-        if (x - x_i)^2 + (z - z_i)^2 <= r_square
-            out[x_i, z_i] = id
+    for coord in CartesianIndices((x_min:x_max, z_min:z_max))
+        if distance_square(coord, center) <= r_square
+            @inbounds out[coord] = id
         end
     end
     return nothing
@@ -203,7 +252,9 @@ end
 
 # Assume out is filled with BIOME_NONE
 function gen_biomes_unsafe!(nn::Nether, map2D::MCMap{2}, ::Scale{S}, confidence=1) where {S}
-    S <= 3 && throw(ArgumentError(lazy"Scale must be >= 4"))
+    if S <= 3
+        throw(ArgumentError(lazy"Scale must be >= 4"))
+    end
     scale = S ÷ 4
 
     # The Δnoise is the distance between the first and second closest
@@ -215,23 +266,22 @@ function gen_biomes_unsafe!(nn::Nether, map2D::MCMap{2}, ::Scale{S}, confidence=
     # TODO: use of @threads
     #! not thread-safe because fill_radius! modifies the map in place,
     # including areas that are not in the current thread
-    # possible solution:
+    # possible solutions:
     # - divide the map into chunks and fill each chunk in parallel
     # - use a lock to prevent multiple threads from writing to the same cell
 
     for coord in CartesianIndices(map2D)
-        x, z = coord.I
-        if !isnone(map2D[x, z])
+        if !isnone(map2D[coord])
             continue  # Already filled with a specific biome
         end
 
-        x_real_mc, z_real_mc = x * scale, z * scale
-        biome, Δnoise = get_biome_and_delta(nn, x_real_mc, z_real_mc)
-        map2D[x, z] = biome
+        coord_scale4 = coord * scale
+        biome, Δnoise = get_biome_and_delta(nn, coord_scale4)
+        @inbounds map2D[coord] = biome
 
         # radius around the sample cell that will have the same biome
         cell_radius = Δnoise * inv_grad
-        fill_radius!(map2D, x, z, biome, cell_radius)
+        fill_radius!(map2D, coord, biome, cell_radius)
     end
     return nothing
 end
@@ -241,23 +291,29 @@ function gen_biomes_unsafe!(
 ) where {S}
     # At scale != 1, the biome does not change with the y coordinate
     # So we simply take the first y coordinate and fill the other ones with the same biome
-    y_is = axes(map3d, 3)
-    first_yi = first(y_is)
-    first_square_y = @view map3d[:, :, first_yi]
+    ys = axes(map3d, 3)
+    first_square_y = @view map3d[:, :, first(ys)]
     gen_biomes_unsafe!(nn, first_square_y, scale, confidence)
-    for y_i in y_is
-        y_i != first_yi && copyto!(map3d[:, :, y_i], first_square_y)
+
+    for y in Iterators.drop(ys, 1) # skip the first y coordinate
+        copyto!(map3d[:, :, y], first_square_y)
     end
     return nothing
 end
 
-function gen_biomes!(
+@generated function gen_biomes!(
     nn::Nether, mc_map::MCMap, scale::Scale{S}, confidence=1, version::MCVersion=MC_UNDEF,
 ) where {S}
-    fill!(mc_map, BIOME_NONE)
-    _manage_less_1_15!(mc_map, version) && return nothing
-    gen_biomes_unsafe!(nn, mc_map, scale, confidence)
-    return nothing
+    expr = quote
+        _manage_less_1_15!(mc_map, version) && return nothing
+        gen_biomes_unsafe!(nn, mc_map, scale, confidence)
+        return nothing
+    end
+    # if S != 1, we need to fill the map with BIOME_NONE
+    if S != 1
+        expr = :(fill!(mc_map, BIOME_NONE); $expr)
+    end
+    return expr
 end
 #endregion
 
@@ -266,9 +322,9 @@ end
 #                Biome Generation for 2D and 3D, with scale == 1               #
 # ---------------------------------------------------------------------------- #
 
-const _FIRST_SIZE_CACHE_GEN_BIOME_NETHER = 1000
+const _FIRST_SIZE_CACHE_GEN_BIOME_NETHER = 1_000
 const _CACHE_GEN_BIOME_NETHER =
-    [fill(BIOME_NONE, _FIRST_SIZE_CACHE_GEN_BIOME_NETHER) for _ in 1:Threads.nthreads()]
+    Tuple(fill(BIOME_NONE, _FIRST_SIZE_CACHE_GEN_BIOME_NETHER) for _ in 1:Threads.nthreads())
 
 """
     view_reshape_cache_like(axes)
@@ -299,48 +355,41 @@ function gen_biomes_unsafe!(
     confidence=1,
     version::MCVersion=MC_UNDEF,
 )
+    coords = CartesianIndices(map3D)
 
     # If there is only one value, simple wrapper around get_biome_unsafe
-    if length(map3D) == 1
-        x, z, y = origin_coords(map3D)
-        map3D[1] = get_biome_unsafe(nn, x, z, y, Scale(4))
+    if isone(length(coords))
+        map3D[1] = get_biome_unsafe(nn, first(coords), 📏"1:4")
         return nothing
     end
 
     # The minimal map where we are sure we can find the source coordinates at scale 4
     biome_parent_axes = get_voronoi_src_axes2D(map3D)
     biome_parents = view_reshape_cache_like(biome_parent_axes)
-    gen_biomes!(nn, biome_parents, Scale(4), confidence, version)
+    gen_biomes!(nn, biome_parents, 📏"1:4", confidence, version)
 
     sha = nn.sha[]
-    for coord in CartesianIndices(map3D)
-        x, z, y = coord.I
+    # TODO: use of @threads
+    # right now, it looks like it is slower because it uses some garbage collection if
+    # threads are used ??? Investigate this
+    for coord in coords
         # See the comment on get_biome_unsafe for the explanation
-        source_x, source_z, _ = voronoi_access_3d(sha, x, z, y)
+        source_x, source_z, _ = voronoi_access(sha, coord)
         result = biome_parents[source_x, source_z]
-        @inbounds map3D[x, z, y] = result
+        @inbounds map3D[coord] = result
     end
-    return nothing
-end
-
-function gen_biomes!(
-    nn::Nether, map3D::MCMap{3}, ::Scale{1}, confidence=1, version::MCVersion=MC_UNDEF,
-)
-    _manage_less_1_15!(map3D, version) && return nothing
-    # we do not need to fill with BIOME_NONE in this case
-    gen_biomes_unsafe!(nn, map3D, Scale(1), confidence, version)
     return nothing
 end
 
 function gen_biomes!(
     nn::Nether,
     map2D::MCMap{2},
-    ::Scale{1},
+    ::T📏"1:1",
     confidence=1,
     version::MCVersion=MC_UNDEF,
 )
     msg = "generate the nether biomes at scale 1 requires a 3D map because \
             the biomes depend on the y coordinate. You can create a 3D map with \
-            a single y coordinate from a 2D map with `MCMap{3}(map, y)`."
+            a single y coordinate with `MCMap(x_coords, z_coords, y)`"
     throw(ArgumentError(msg))
 end
