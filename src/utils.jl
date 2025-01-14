@@ -1,4 +1,3 @@
-
 """
 Some utility functions and types that are used in various places in the codebase. It should
 not be used directly by the user and could be nice if this module does not exist at all.
@@ -115,23 +114,23 @@ sha256_from_seed(seed::UInt64) = sha256_from_seed!(MVector{64, UInt32}(undef), s
         w[i] = w[i - 7] + s0 + w[i - 16] + s1
     end
 
-    x₁, x₂, x₃, x₄, x₅, x₆, x₇, x₈ = SHA256_INITIAL_VALUES
+    x1, x2, x3, x4, x5, x6, x7, x8 = SHA256_INITIAL_VALUES
     for i in 1:64
-        Σ₁ = bitrotate(x₅, -6) ⊻ bitrotate(x₅, -11) ⊻ bitrotate(x₅, -25)
-        ch = (x₅ & x₆) ⊻ (~x₅ & x₇)
-        temp1 = x₈ + Σ₁ + ch + SHA256_ROUND_CONSTANTS[i] + w[i]
+        Σ1 = bitrotate(x5, -6) ⊻ bitrotate(x5, -11) ⊻ bitrotate(x5, -25)
+        ch = (x5 & x6) ⊻ (~x5 & x7)
+        temp1 = x8 + Σ1 + ch + SHA256_ROUND_CONSTANTS[i] + w[i]
 
-        Σ₀ = bitrotate(x₁, -2) ⊻ bitrotate(x₁, -13) ⊻ bitrotate(x₁, -22)
-        maj = (x₁ & x₂) ⊻ (x₁ & x₃) ⊻ (x₂ & x₃)
-        temp2 = Σ₀ + maj
+        Σ0 = bitrotate(x1, -2) ⊻ bitrotate(x1, -13) ⊻ bitrotate(x1, -22)
+        maj = (x1 & x2) ⊻ (x1 & x3) ⊻ (x2 & x3)
+        temp2 = Σ0 + maj
 
-        x₁, x₂, x₃, x₄, x₅, x₆, x₇, x₈ = temp1 + temp2, x₁, x₂, x₃, x₄ + temp1, x₅, x₆, x₇
+        x1, x2, x3, x4, x5, x6, x7, x8 = temp1 + temp2, x1, x2, x3, x4 + temp1, x5, x6, x7
     end
 
-    x₁ += SHA256_INITIAL_VALUES[1]
-    x₂ += SHA256_INITIAL_VALUES[2]
+    x1 += SHA256_INITIAL_VALUES[1]
+    x2 += SHA256_INITIAL_VALUES[2]
 
-    return concat_u32(bswap(x₂), bswap(x₁))
+    return concat_u32(bswap(x2), bswap(x1))
 end
 #endregion
 

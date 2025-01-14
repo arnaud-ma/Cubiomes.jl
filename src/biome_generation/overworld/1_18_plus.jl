@@ -1,8 +1,3 @@
-# include("../biome_generation/interface.jl")
-# include("../noises/Noises.jl")
-# include("../rng.jl")
-# include("../utils.jl")
-
 using StaticArrays: SVector
 using InteractiveUtils: subtypes
 
@@ -274,8 +269,8 @@ end
 
 additional_values_land_spline(x1, x2, x3, x5, spline_6, ::Val{false}) = (), ()
 
-zeros_like(::NTuple{N, T}) where {N, T} = ntuple(i -> zero(T), Val{N}())
-zeros_like(x::Tuple{}) = x
+zero(::NTuple{N, T}) where {N, T} = ntuple(i -> zero(T), Val{N}())
+zero(x::Tuple{}) = x
 
 @only_float32 function land_spline(x1, x2, x3, x4, x5, x6, bl::Val{BL}) where {BL}
     # create initial splines with different linear interpolation values
@@ -300,7 +295,7 @@ zeros_like(x::Tuple{}) = x
 
     locations = (locations..., mid_locs..., end_loc)
     child_splines = (child_splines..., mid_splines..., end_spline)
-    derivatives = zeros_like(locations)
+    derivatives = zero(locations)
 
     # Create and return the final spline
     return Spline(SP_EROSION, locations, derivatives, child_splines)
@@ -358,33 +353,6 @@ function get_spline(spline::Spline{N}, vals::NTuple{N2}) where {N, N2}
     return r
 end
 
-# void initBiomeNoise(BiomeNoise *bn, int mc)
-# {
-#     SplineStack *ss = &bn->ss;
-#     memset(ss, 0, sizeof(*ss));
-#     Spline *sp = &ss->stack[ss->len++];
-#     sp->typ = SP_CONTINENTALNESS;
-
-#     Spline *sp1 = createLandSpline(ss, -0.15F, 0.00F, 0.0F, 0.1F, 0.00F, -0.03F, 0);
-#     Spline *sp2 = createLandSpline(ss, -0.10F, 0.03F, 0.1F, 0.1F, 0.01F, -0.03F, 0);
-#     Spline *sp3 = createLandSpline(ss, -0.10F, 0.03F, 0.1F, 0.7F, 0.01F, -0.03F, 1);
-#     Spline *sp4 = createLandSpline(ss, -0.05F, 0.03F, 0.1F, 1.0F, 0.01F,  0.01F, 1);
-
-#     addSplineVal(sp, -1.10F, createFixSpline(ss,  0.044F), 0.0F);
-#     addSplineVal(sp, -1.02F, createFixSpline(ss, -0.2222F), 0.0F);
-#     addSplineVal(sp, -0.51F, createFixSpline(ss, -0.2222F), 0.0F);
-#     addSplineVal(sp, -0.44F, createFixSpline(ss, -0.12F), 0.0F);
-#     addSplineVal(sp, -0.18F, createFixSpline(ss, -0.12F), 0.0F);
-#     addSplineVal(sp, -0.16F, sp1, 0.0F);
-#     addSplineVal(sp, -0.15F, sp1, 0.0F);
-#     addSplineVal(sp, -0.10F, sp2, 0.0F);
-#     addSplineVal(sp,  0.25F, sp3, 0.0F);
-#     addSplineVal(sp,  1.00F, sp4, 0.0F);
-
-#     bn->sp = sp;
-#     bn->mc = mc;
-# }
-
 @only_float32 function initBiomeNoise(bn::BiomeNoise)
     spline1 = land_spline(-0.15, 0, 0, 0.1, 0, -0.03, Val(false))
     spline2 = land_spline(-0.10, 0.03, 0.1, 0.1, 0.01, -0.03, Val(false))
@@ -404,61 +372,7 @@ end
         spline3,
         spline4,
     )
-    derivatives = zeros_like(locations)
+    derivatives = zero(locations)
 
     return Spline(Continentalness, locations, derivatives, child_splines)
 end
-
-# int sampleBiomeNoise(const BiomeNoise *bn, int64_t *np, int x, int y, int z,
-#     uint64_t *dat, uint32_t sample_flags)
-# {
-#     if (bn->nptype >= 0)
-#     {   // initialized for a specific climate parameter
-#         if (np)
-#             memset(np, 0, NP_MAX*sizeof(*np));
-#         int64_t id = (int64_t) (10000.0 * sampleClimatePara(bn, np, x, z));
-#         return (int) id;
-#     }
-
-#     float t = 0, h = 0, c = 0, e = 0, d = 0, w = 0;
-#     double px = x, pz = z;
-#     if (!(sample_flags & SAMPLE_NO_SHIFT))
-#     {
-#         px += sampleDoublePerlin(&bn->climate[NP_SHIFT], x, 0, z) * 4.0;
-#         pz += sampleDoublePerlin(&bn->climate[NP_SHIFT], z, x, 0) * 4.0;
-#     }
-
-#     c = sampleDoublePerlin(&bn->climate[NP_CONTINENTALNESS], px, 0, pz);
-#     e = sampleDoublePerlin(&bn->climate[NP_EROSION], px, 0, pz);
-#     w = sampleDoublePerlin(&bn->climate[NP_WEIRDNESS], px, 0, pz);
-
-#     if (!(sample_flags & SAMPLE_NO_DEPTH))
-#     {
-#         float np_param[] = {
-#             c, e, -3.0F * ( fabsf( fabsf(w) - 0.6666667F ) - 0.33333334F ), w,
-#         };
-#         double off = getSpline(bn->sp, np_param) + 0.015F;
-
-#         //double py = y + sampleDoublePerlin(&bn->shift, y, z, x) * 4.0;
-#         d = 1.0 - (y * 4) / 128.0 - 83.0/160.0 + off;
-#     }
-
-#     t = sampleDoublePerlin(&bn->climate[NP_TEMPERATURE], px, 0, pz);
-#     h = sampleDoublePerlin(&bn->climate[NP_HUMIDITY], px, 0, pz);
-
-#     int64_t l_np[6];
-#     int64_t *p_np = np ? np : l_np;
-#     p_np[0] = (int64_t)(10000.0F*t);
-#     p_np[1] = (int64_t)(10000.0F*h);
-#     p_np[2] = (int64_t)(10000.0F*c);
-#     p_np[3] = (int64_t)(10000.0F*e);
-#     p_np[4] = (int64_t)(10000.0F*d);
-#     p_np[5] = (int64_t)(10000.0F*w);
-
-#     int id = none;
-#     if (!(sample_flags & SAMPLE_NO_BIOME))
-#         id = climateToBiome(bn->mc, (const uint64_t*)p_np, dat);
-#     return id;
-# }
-
-# function sample_biome(bn::BiomeNoise, )

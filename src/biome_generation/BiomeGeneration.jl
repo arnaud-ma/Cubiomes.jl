@@ -14,7 +14,7 @@ module BiomeGeneration
     include("interface.jl")
 
     include("nether.jl")
-    include("_overworld_2.jl")
+    include("overworld/1_18_plus.jl")
     # include("end.jl")
 
 end # module
