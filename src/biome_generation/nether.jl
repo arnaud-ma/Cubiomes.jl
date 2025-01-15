@@ -68,14 +68,15 @@ function _set_temp_humid!(seed, temperature, humidity)
     return nothing
 end
 
-@generated function set_seed!(nn::Nether, seed::UInt64, sha::Val{S}=Val(true)) where {S}
-    sha_expr = S ? :(Utils.sha256_from_seed(seed)) : :nothing
-    return quote
-        _set_temp_humid!(seed, nn.temperature, nn.humidity)
-        nn.sha[] = $sha_expr
-        return nothing
-    end
+function set_seed!(nn::Nether, seed::UInt64, ::Val{true})
+    _set_temp_humid!(seed, nn.temperature, nn.humidity)
+    nn.sha[] = Utils.sha256_from_seed(seed)
 end
+function set_seed!(nn::Nether, seed::UInt64, ::Val{false})
+    _set_temp_humid!(seed, nn.temperature, nn.humidity)
+    nn.sha[] = nothing
+end
+set_seed!(nn::Nether, seed::UInt64) = set_seed!(nn, seed, Val(true))
 
 # TODO: Add detailed docstrings for these functions
 
@@ -296,20 +297,22 @@ function gen_biomes_unsafe!(
     return nothing
 end
 
-@generated function gen_biomes!(
-    nn::Nether, mc_map::MCMap, scale::Scale{S}, confidence=1, version::MCVersion=MC_UNDEF,
-) where {S}
-    expr = quote
-        _manage_less_1_15!(mc_map, version) && return nothing
-        gen_biomes_unsafe!(nn, mc_map, scale, confidence)
-        return nothing
-    end
-    # if S != 1, we need to fill the map with BIOME_NONE
-    if S != 1
-        expr = :(fill!(mc_map, BIOME_NONE); $expr)
-    end
-    return expr
+function _gen_biomes!(nn, mc_map, scale, confidence, version)
+    _manage_less_1_15!(mc_map, version) && return nothing
+    gen_biomes_unsafe!(nn, mc_map, scale, confidence)
 end
+
+function gen_biomes!(
+    nn::Nether,
+    mc_map::MCMap,
+    scale::Scale,
+    confidence=1,
+    version::MCVersion=MC_UNDEF,
+)
+    fill!(mc_map, BIOME_NONE)
+    _gen_biomes!(nn, mc_map, scale, confidence, version)
+end
+
 #endregion
 
 #region generation == 1
@@ -346,7 +349,7 @@ end
 function gen_biomes_unsafe!(
     nn::Nether,
     map3D::MCMap{3},
-    ::Scale{1},
+    ::T📏"1:1",
     confidence=1,
     version::MCVersion=MC_UNDEF,
 )
@@ -372,6 +375,12 @@ function gen_biomes_unsafe!(
         @inbounds map3D[coord] = result
     end
     return nothing
+end
+
+function gen_biomes!(
+    nn::Nether, mc_map::MCMap, scale::T📏"1:1", confidence=1, version::MCVersion=MC_UNDEF,
+)
+    _gen_biomes!(nn, mc_map, scale, confidence, version)
 end
 
 function gen_biomes!(

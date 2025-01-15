@@ -7,6 +7,7 @@ module BiomeGeneration
     export MCMap, similar_expand
     export Nether
     export Scale, @📏_str
+    export BiomeTrees
 
     public origin_coords
 
@@ -14,6 +15,8 @@ module BiomeGeneration
     include("interface.jl")
 
     include("nether.jl")
+
+    include("overworld/biome_trees/BiomeTrees.jl")
     include("overworld/1_18_plus.jl")
     # include("end.jl")
 

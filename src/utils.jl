@@ -242,7 +242,7 @@ macro only_float32(expr)
         x.head == :curly && return x
         return Expr(x.head, map(transform, x.args)...)
     end
-    return transform(expr)
+    return transform(esc(expr))
 end
 #endregion
 #region Iteration

@@ -4,6 +4,7 @@ using InteractiveUtils: subtypes
 using ..Utils: Utils, @only_float32, md5_to_uint64
 using ..JavaRNG: JavaXoroshiro128PlusPlus, next🎲
 using ..Noises
+using .BiomeTrees
 
 #region Noise Parameters
 # ---------------------------------------------------------------------------- #
@@ -23,7 +24,7 @@ function filtered_amplitudes(::NoiseParameter)
 end
 nb_octaves(::NoiseParameter) = throw(MethodError(nb_octaves, (NoiseParameter,)))
 nb_trimmed(::NoiseParameter) = throw(MethodError(nb_trimmed, (NoiseParameter,)))
-function create_octaves(::NoiseParameter, Val{N}) where {N}
+function create_octaves(::NoiseParameter, ::Val{N}) where {N}
     throw(MethodError(create_octaves, (NoiseParameter, Val{N})))
 end
 function magic_xlo(::NoiseParameter, large)
@@ -33,10 +34,11 @@ function magic_xhi(::NoiseParameter, large)
     throw(MethodError(magic_xhi, (NoiseParameter, typeof(large))))
 end
 
-macro create_noise_param(noise_param, amp, oct, id_str, oct_large)
+function create_noise_param(noise_param, amp, oct, id_str, oct_large)
+    noise_param, amp, oct, id_str, oct_large = eval.((noise_param, amp, oct, id_str, oct_large))
     filtered_amp = filter(!iszero, amp)
-    nb_octaves = length(filtered_amp)
-    nb_trimmed = Utils.length_of_trimmed(iszero, amp)
+    nb_octaves_ = length(filtered_amp)
+    nb_trimmed_ = Utils.length_of_trimmed(iszero, amp)
 
     if isnothing(oct_large)
         oct_large = oct
@@ -49,50 +51,50 @@ macro create_noise_param(noise_param, amp, oct, id_str, oct_large)
     xlo, xhi = Utils.md5_to_uint64(id_str)
     xlo_large, xh_large = Utils.md5_to_uint64(id_str_large)
 
-    return quote
-        amplitudes(::Type{noise_param}) = $(float.(amp))
-        octave_min(::Type{noise_param}, ::Val{false}) = $(float(oct))
-        octave_min(::Type{noise_param}, ::Val{true}) = $(float(oct_large))
-        id(::Type{noise_param}::Val{false}) = $id_str
-        id(::Type{noise_param}, ::Val{true}) = $id_str_large
-        filtered_amplitudes(::Type{noise_param}) = $(float.(filtered_amp))
-        nb_octaves(::Type{noise_param}) = $(float(nb_octaves))
-        nb_trimmed(::Type{noise_param}) = $(float(nb_trimmed))
-        magic_xlo(::Type{noise_param}, ::Val{false}) = $xlo
-        magic_xhi(::Type{noise_param}, ::Val{false}) = $xhi
-        magic_xlo(::Type{noise_param}, ::Val{true}) = $xlo_large
-        magic_xhi(::Type{noise_param}, ::Val{true}) = $xh_large
+    T = Type{noise_param}
+    @eval begin
+        amplitudes(::$T) = $(float.(amp))
+        octave_min(::$T, ::Val{false}) = $oct
+        octave_min(::$T, ::Val{true}) = $oct_large
+        id(::$T, ::Val{false}) = $id_str
+        id(::$T, ::Val{true}) = $id_str_large
+        filtered_amplitudes(::$T) = $(float.(filtered_amp))
+        nb_octaves(::$T) = $nb_octaves_
+        nb_trimmed(::$T) = $nb_trimmed_
+        magic_xlo(::$T, ::Val{false}) = $xlo
+        magic_xhi(::$T, ::Val{false}) = $xhi
+        magic_xlo(::$T, ::Val{true}) = $xlo_large
+        magic_xhi(::$T, ::Val{true}) = $xh_large
 
-        function create_octaves(::Type{noise_param}, Val{N}) where {N}
-            ntuple(i -> Octaves{nb}(undef), Val(N))
+        function create_octaves(::$T, ::Val{N}) where {N}
+            ntuple(i -> Octaves{$nb_octaves_}(undef), Val(N))
         end
     end
 end
 
 struct Shift <: NoiseParameter end
-@create_noise_param(Shift, (1, 1, 1, 0), 0, "minecraft:offset", nothing)
+create_noise_param(Shift, (1, 1, 1, 0), 0, "minecraft:offset", nothing)
 
 struct Temperature <: NoiseParameter end
-@create_noise_param(Temperature, (1.5, 0, 1, 0, 0, 0), -10, "minecraft:temperature", -12)
+create_noise_param(Temperature, (1.5, 0, 1, 0, 0, 0), -10, "minecraft:temperature", -12)
 
 struct Humidity <: NoiseParameter end
-@create_noise_param(Humidity, (1, 1, 0, 0, 0, 0), -8, "minecraft:vegetation", -10)
+create_noise_param(Humidity, (1, 1, 0, 0, 0, 0), -8, "minecraft:vegetation", -10)
 
 #! format: off
 struct Continentalness <: NoiseParameter end
-@create_noise_param(Continentalness, (1, 1, 2, 2, 2, 1, 1, 1, 1), -9, "minecraft:continentalness", -11)
+create_noise_param(Continentalness, (1, 1, 2, 2, 2, 1, 1, 1, 1), -9, "minecraft:continentalness", -11)
 #! format: on
 
 struct Erosion <: NoiseParameter end
-@create_noise_param(Erosion, (1, 1, 0, 1, 1), -9, "minecraft:erosion", -11)
+create_noise_param(Erosion, (1, 1, 0, 1, 1), -9, "minecraft:erosion", -11)
 
 struct Weirdness <: NoiseParameter end
-@create_noise_param(Weirdness, (1, 2, 1, 0, 0, 0), -7, "minecraft:ridge", nothing)
+create_noise_param(Weirdness, (1, 2, 1, 0, 0, 0), -7, "minecraft:ridge", nothing)
 
 const NOISE_PARAMETERS = Tuple(subtypes(NoiseParameter))
 
-@eval const TypeTupleClimate =
-    Tuple{$((:(DoublePerlin{$(nb_octaves(np))}) for np in NOISE_PARAMETERS)...)}
+const TypeTupleClimate = Tuple{(DoublePerlin{nb_octaves(np)} for np in NOISE_PARAMETERS)...}
 struct BiomeNoise <: Dimension
     climate::TypeTupleClimate
 end
