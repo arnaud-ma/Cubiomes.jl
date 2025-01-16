@@ -1,6 +1,7 @@
 using StaticArrays: SVector
 using InteractiveUtils: subtypes
 
+import ..Cubiomes
 using ..Utils: Utils, @only_float32, md5_to_uint64
 using ..JavaRNG: JavaXoroshiro128PlusPlus, next🎲
 using ..Noises
@@ -371,4 +372,106 @@ end
     derivatives = zero_like(locations)
 
     return Spline(Continentalness, locations, derivatives, child_splines)
+end
+
+
+function climate_to_biome(
+    noise_parameters::NTuple{6},
+    biome_tree::BiomeTree,
+    dat::Ref{UInt64},
+)
+    alt = dat[] % Int32
+    dist = -1
+    dist = noise_params_distance(noise_parameters, biome_tree, alt)
+    idx = get_resulting_node(noise_parameters, biome_tree, 0, alt, dist, 0)
+    dat[] = idx % UInt64
+    return (biome_tree.nodes[idx] >> 48) & 0xFF
+end
+
+function climate_to_biome(noise_parameters::NTuple{6}, biome_tree::BiomeTree)
+    idx = get_resulting_node(noise_parameters, biome_tree, 0, 0, -1, 0)
+    return (biome_tree.nodes[idx] >> 48) & 0xFF
+end
+
+function climate_to_biome(
+    noise_parameters::NTuple{6},
+    version::Val,
+    ::Nothing,
+)
+    return climate_to_biome(noise_parameters, get_biome_tree(version))
+end
+
+function climate_to_biome(
+    noise_parameters::NTuple{6},
+    version::Val,
+    dat::Union{Nothing, Ref{UInt64}}=nothing,
+)
+    return climate_to_biome(noise_parameters, get_biome_tree(version), dat)
+end
+
+function calculate_distance(noise_param, param1, param2)
+    a = noise_param - param1
+    signed(a) > 0 && return a * a
+
+    b = param2 - noise_param
+    signed(b) > 0 && return b * b
+
+    return zero(a)
+end
+
+function noise_params_distance(noise_params::NTuple{6}, biome_tree::BiomeTree, idx)
+    dist_square = 0
+    node, param = biome_tree.nodes[idx], biome_tree.param
+    for i in 1:6
+        # idx is the index of the biome in the biome tree
+        # we iterate over the 6 noise parameters
+        # each noise_param is associated with 2 bytes in the biome tree
+        # see the comments of the biome tree for more information
+        idx = (node >> 8 * (i - 1)) & 0xFF
+        dist_square += calculate_distance(noise_params[i], param[idx][2], param[idx][1])
+    end
+    return dist_square
+end
+
+function get_resulting_node(
+    noise_params::NTuple{6},
+    biome_tree::BiomeTree{N},
+    idx,
+    alt,
+    dist,
+    depth,
+) where {N}
+    iszero(biome_tree.steps[depth]) && return idx
+    # in all the code, dist refers to the square of the distance
+
+    while true
+        step = biome_tree.steps[depth]
+        depth += 1
+        idx + step >= N || break
+    end
+
+    node = biome_tree.nodes[idx]
+    inner = node >> 48
+
+    leaf = alt
+    for _ in 1:(biome_tree.order)
+        dist_inner = noise_params_distance(noise_params, biome_tree, inner)
+        if dist_inner < dist
+            leaf2 = get_resulting_node(noise_params, biome_tree, inner, leaf, dist, depth)
+            dist_leaf2 = if inner == leaf2
+                dist_inner
+            else
+                noise_params_distance(noise_params, biome_tree, leaf2)
+            end
+            if dist_leaf2 < dist
+                dist = dist_leaf2
+                leaf = leaf2
+            end
+        end
+
+        inner += step
+        inner >= N && break
+    end
+
+    return leaf
 end
