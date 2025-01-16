@@ -1,5 +1,4 @@
 using CEnum
-# include("../mc_versions.jl")
 
 using ..Cubiomes: MCVersion
 

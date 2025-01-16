@@ -12,6 +12,6 @@ include("rng.jl")
 include("noises/Noises.jl")
 include("biome_generation/BiomeGeneration.jl")
 
-# include("display.jl")
+include("display.jl")
 
 end

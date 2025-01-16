@@ -6,6 +6,8 @@ module BiomeGeneration
     export Dimension, set_seed!
     export MCMap, similar_expand
     export Nether
+    export gen_biomes, gen_biomes!, gen_biomes_unsafe!
+    export get_biome, get_biome_unsafe
     export Scale, @📏_str
     export BiomeTrees
 
