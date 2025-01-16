@@ -1,10 +1,10 @@
 using Documenter
 using Cubiomes
 
-makedocs(
-    sitename = "Cubiomes",
-    format = Documenter.HTML(),
-    modules = [Cubiomes]
+makedocs(;
+    sitename="Cubiomes",
+    format=Documenter.HTML(),
+    modules=[Cubiomes],
 )
 
 # Documenter can also automatically deploy documentation to gh-pages.

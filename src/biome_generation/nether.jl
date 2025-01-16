@@ -20,33 +20,7 @@ Base.setindex!(s::SomeSha, value) = s.x = value
     Nether{S<:Union{Nothing,UInt64}}
     Nether{seed::Integer; with_sha::Bool=true}
 
-The noise type for the nether.
-
-# Arguments
-
-  - seed::Integer: the Minecraft seed (view as UInt64)
-
-# Keywords
-
-  - with_sha::Bool: If true, compute the `sha` field from the seed. The `sha` is only used
-    for the generation with scale 1. It can save some computation time (less than 1ms)
-    if not needed.
-
-# Fields
-
-  - `temperature::DoublePerlin{2}`: store the noise for the temperature
-  - `humidity::DoublePerlin{2}`: store the noise for the humidity
-  - `sha::Union{UInt64, Nothing}`: Optional sha computed from the seed with [`sha256_from_seed`].
-
-# Example
-
-```julia
-julia> Nether(1234)
-Nether{UInt64}(DoublePerlin{2}(1.1111111111111112, PerlinNoise[..., 0x618d5b164c44f21a)
-
-julia> Nether(1234; with_sha=false)
-Nether{Nothing}(DoublePerlin{2}(1.1111111111111112, PerlinNoise[..., nothing)
-```
+The nether dimension biome generator.
 """
 struct Nether <: Dimension
     temperature::DoublePerlin{2}
@@ -95,7 +69,7 @@ for get_func in (:get_biome, :get_biome_unsafe)
 end
 
 function distance_square(coord1::CartesianIndex{N}, coord2::CartesianIndex{N}) where {N}
-    sum((coord1.I .- coord2.I) .^ 2)
+    sum(i -> i^2, (coord1 - coord2).I)
 end
 
 #region point 4 and 1
@@ -135,7 +109,9 @@ function get_biome_unsafe(nn::Nether, x::Real, z::Real, ::T📏"1:4")
     return find_closest_biome(temperature, humidity)
 end
 
-get_biome_unsafe(nn::Nether, x::Real, z::Real, y::Real, scale::T📏"1:4") = get_biome_unsafe(nn, x, z, scale)
+function get_biome_unsafe(nn::Nether, x::Real, z::Real, y::Real, scale::T📏"1:4")
+    get_biome_unsafe(nn, x, z, scale)
+end
 
 # TODO: get_biome for scale != (1, 4)
 
@@ -215,7 +191,7 @@ function _manage_less_1_15!(out::AbstractArray{BiomeID}, version::MCVersion)
     end
     return false
 end
-
+clamp
 """
     fill_radius!(out::AbstractMatrix{BiomeID}, x, z, id::BiomeID, radius)
 
@@ -223,22 +199,26 @@ Fills a circular area around the point `(x, z)` in `out` with the biome `id`,
 within a given `radius`. Assuming `radius`>=0.
 """
 function fill_radius!(
-    out::AbstractMatrix{BiomeID},
-    center::CartesianIndex{2},
+    out::AbstractArray{BiomeID, N},
+    center::CartesianIndex{N},
     id::BiomeID,
     radius,
-)
+) where {N}
     r = floor(Int, radius)
     r_square = r^2
-    # optimization: we do not need to check the whole map
-    # we can just check the square around the point
-    # x_min, x_max, z_min, z_max are the bounds of the square
-    x_min = max(first(axes(out, 1)), center[1] - r)
-    x_max = min(last(axes(out, 1)), center[1] + r)
-    z_min = max(first(axes(out, 2)), center[2] - r)
-    z_max = min(last(axes(out, 2)), center[2] + r)
-    for coord in CartesianIndices((x_min:x_max, z_min:z_max))
-        if distance_square(coord, center) <= r_square
+
+    # optimizations:
+    # we know that u is a coord to be filled implies:
+    # - u is in the array axes (coordinates)
+    # - u is in the n dimension cube of center `center` and edges of the same size `r`
+    # so we can simply iterate over the intersection coordinates.
+    coords = CartesianIndices(ntuple(
+        dim -> (center[dim] - r: center[dim] + r) ∩ axes(out, dim),
+        Val(N)
+    ))
+
+    Threads.@threads for coord in coords
+        if distance_square(coord, coords) <= r_square
             @inbounds out[coord] = id
         end
     end
@@ -247,9 +227,7 @@ end
 
 # Assume out is filled with BIOME_NONE
 function gen_biomes_unsafe!(nn::Nether, map2D::MCMap{2}, ::Scale{S}, confidence=1) where {S}
-    if S <= 3
-        throw(ArgumentError(lazy"Scale must be >= 4"))
-    end
+    S <= 3 && throw(ArgumentError(lazy"Scale must be >= 4"))
     scale = S ÷ 4
 
     # The Δnoise is the distance between the first and second closest

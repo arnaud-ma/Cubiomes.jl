@@ -145,7 +145,14 @@ function sample_octave_noise(octave::Perlin, x, z, y=missing, yamp=missing, ymin
     return sample_noise(octave, ax, az, ay, yamp * lf, ymin * lf) * octave.amplitude
 end
 
-function sample_noise(octaves::Octaves{N}, x::Real, z::Real, y=missing, yamp=missing, ymin=missing) where {N}
+function sample_noise(
+    octaves::Octaves{N},
+    x::Real,
+    z::Real,
+    y=missing,
+    yamp=missing,
+    ymin=missing,
+) where {N}
     v = zero(Float64)
     for octave in octaves.octaves
         v += sample_octave_noise(octave, x, z, y, yamp, ymin)

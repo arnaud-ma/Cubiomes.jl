@@ -70,7 +70,6 @@ function MCMap(range::Vararg{UnitRange, N}) where {N}
     return fill(BIOME_NONE, range...)
 end
 
-
 function MCMap{2}(array::MCMap{3})
     size_x, size_z, size_y = size(array)
     if size_y != 1

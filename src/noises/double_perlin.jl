@@ -65,7 +65,13 @@ function Noise🎲(
     return dp
 end
 
-function sample_noise(noise::DoublePerlin, x::Real, z::Real, y=missing, move_factor=337 / 331)
+function sample_noise(
+    noise::DoublePerlin,
+    x::Real,
+    z::Real,
+    y=missing,
+    move_factor=337 / 331,
+)
     f = move_factor
     v =
         sample_noise(noise.octave_A, x, z, y) +
