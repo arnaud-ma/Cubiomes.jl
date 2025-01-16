@@ -4,6 +4,7 @@ using InteractiveUtils: subtypes
 using ..Utils: Utils, @only_float32, md5_to_uint64
 using ..JavaRNG: JavaXoroshiro128PlusPlus, next🎲
 using ..Noises
+
 using .BiomeTrees
 
 #region Noise Parameters
@@ -35,7 +36,6 @@ function magic_xhi(::NoiseParameter, large)
 end
 
 function create_noise_param(noise_param, amp, oct, id_str, oct_large)
-    noise_param, amp, oct, id_str, oct_large = eval.((noise_param, amp, oct, id_str, oct_large))
     filtered_amp = filter(!iszero, amp)
     nb_octaves_ = length(filtered_amp)
     nb_trimmed_ = Utils.length_of_trimmed(iszero, amp)
@@ -105,12 +105,6 @@ function BiomeNoise(::UndefInitializer)
         undef,
         np.nb_trimmed,
     ) for np in NOISE_PARAMETERS))
-end
-
-# we need some methods to be able to dispatch at compile time wether large is true or false
-for func in (:magic_xlo, :magic_xhi, :octave_min)
-    @eval $func(x, ::Val{true}) = x.$(func)_large
-    @eval $func(x, ::Val{false}) = x.$func
 end
 
 function set_seed!(
@@ -271,8 +265,8 @@ end
 
 additional_values_land_spline(x1, x2, x3, x5, spline_6, ::Val{false}) = (), ()
 
-zero(::NTuple{N, T}) where {N, T} = ntuple(i -> zero(T), Val{N}())
-zero(x::Tuple{}) = x
+zero_like(::NTuple{N, T}) where {N, T} = ntuple(i -> zero_like(T), Val{N}())
+zero_like(x::Tuple{}) = x
 
 @only_float32 function land_spline(x1, x2, x3, x4, x5, x6, bl::Val{BL}) where {BL}
     # create initial splines with different linear interpolation values
@@ -297,7 +291,7 @@ zero(x::Tuple{}) = x
 
     locations = (locations..., mid_locs..., end_loc)
     child_splines = (child_splines..., mid_splines..., end_spline)
-    derivatives = zero(locations)
+    derivatives = zero_like(locations)
 
     # Create and return the final spline
     return Spline(SP_EROSION, locations, derivatives, child_splines)
@@ -374,7 +368,7 @@ end
         spline3,
         spline4,
     )
-    derivatives = zero(locations)
+    derivatives = zero_like(locations)
 
     return Spline(Continentalness, locations, derivatives, child_splines)
 end

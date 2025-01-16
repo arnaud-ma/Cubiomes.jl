@@ -1,8 +1,6 @@
-# include("../rng.jl")
-# include("../utils.jl")
-
 using OffsetArrays: OffsetVector
 using StaticArrays: MVector
+
 using ..JavaRNG: next🎲, AbstractJavaRNG, JavaRandom, JavaXoroshiro128PlusPlus
 using ..Utils: lerp
 #region RNG
@@ -23,13 +21,25 @@ function next_perlin🎲 end
 
 next_perlin🎲(rng::JavaRandom, ::Type{Int32}, stop::Real) = next🎲(rng, Int32, stop)
 
-function next_perlin🎲(rng::JavaXoroshiro128PlusPlus, ::Type{Int32}, stop::Real)::Int32
-    stop += 1
+function _next_perlin🎲(rng::JavaXoroshiro128PlusPlus, ::Type{Int32}, n::UInt32)
     mask = typemax(UInt32)
-    r = (next🎲(rng, UInt64) & mask) * stop
-    # trunc_int is the unsafe function for converting to Int32
-    return Base.trunc_int(Int32, r >> 32)
-    #TODO: see https://github.com/Cubitect/cubiomes/issues/134
+    r = ((next🎲(rng, UInt64) & mask) * n)
+    (r % UInt32) >= n && return (r >> 32) % Int32
+
+    # it is very rare to be in this case
+    # about 1 / 230 000 for each perlin noise initialization for example
+    while (r % UInt32) < ((~n + one(n)) % n)
+        r = (next🎲(rng, UInt64) & mask) * n
+    end
+    return (r >> 32) % Int32
+end
+
+function next_perlin🎲(rng::JavaXoroshiro128PlusPlus, ::Type{Int32}, stop::Integer)
+    return _next_perlin🎲(rng, Int32, UInt32(stop + one(stop)))
+end
+
+function next_perlin🎲(rng::JavaXoroshiro128PlusPlus, ::Type{Int32}, stop::Signed)
+    return next_perlin🎲(rng, Int32, unsigned(stop))
 end
 
 function next_perlin🎲(rng::AbstractJavaRNG, ::Type{T}, start::Real, stop::Real) where {T}
@@ -107,7 +117,7 @@ function set_rng!🎲(perlin::Perlin, rng::AbstractJavaRNG)
 
     permutations = perlin.permutations
     init_perlin_noise_perm!(permutations)
-    shuffle_permutations!🎲(rng, permutations)
+    shuffle!🎲(rng, permutations)
     perlin.const_y, perlin.const_index_y, perlin.const_smooth_y = init_coord_values(y)
     perlin.amplitude = one(Float64)
     perlin.lacunarity = one(Float64)
@@ -119,11 +129,11 @@ eachindex
 Base.axes1
 
 """
-    shuffle_permutations!🎲(rng::AbstractRNG_MC, perms::PermsType)
+    shuffle!🎲(rng::AbstractRNG_MC, perms::PermsType)
 
 Shuffle the permutations array using the given random number generator.
 """
-function shuffle_permutations!🎲(rng::AbstractJavaRNG, perms::PermsType)
+function shuffle!🎲(rng::AbstractJavaRNG, perms::PermsType)
     @inbounds for i in 0:255
         j = next_perlin🎲(rng, Int32, Int32(i), Int32(255))
         perms[i], perms[j] = perms[j], perms[i]
@@ -286,7 +296,14 @@ adjust_y(y, ::Missing, ymin) = adjust_y(y, missing, missing)
 _iszero(x) = iszero(x)
 _iszero(::Missing) = false
 
-function sample_noise(noise::Perlin, x, z, y=missing, yamp=missing, ymin=missing)
+function sample_noise(
+    noise::Perlin,
+    x::Real,
+    z::Real,
+    y=missing,
+    yamp=missing,
+    ymin=missing,
+)
     if _iszero(y)
         return sample_noise(noise, x, z, missing, yamp, ymin)
     end

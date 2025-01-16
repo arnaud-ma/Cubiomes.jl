@@ -1,8 +1,3 @@
-# include("../rng.jl")
-# include("../noises/Noises.jl")
-# include("../mc_seed_utils.jl")
-# include("biomes.jl")
-
 using OffsetArrays
 
 using ..Noises

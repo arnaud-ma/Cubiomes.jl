@@ -1,4 +1,3 @@
-# include("interface.jl")
 using ..Noises
 using ..JavaRNG: JavaRandom
 using ..Utils: Utils
@@ -130,13 +129,13 @@ function get_biome_unsafe(nn::Nether, x::Real, z::Real, y::Real, ::T📏"1:1")
     return get_biome_unsafe(nn, source_x, source_z, 📏"1:4")
 end
 
-function get_biome_unsafe(nn::Nether, x, z, ::T📏"1:4")
+function get_biome_unsafe(nn::Nether, x::Real, z::Real, ::T📏"1:4")
     temperature = sample_noise(nn.temperature, x, z)
     humidity = sample_noise(nn.humidity, x, z)
     return find_closest_biome(temperature, humidity)
 end
 
-get_biome_unsafe(nn::Nether, x, z, y, scale::T📏"1:4") = get_biome_unsafe(nn, x, z, scale)
+get_biome_unsafe(nn::Nether, x::Real, z::Real, y::Real, scale::T📏"1:4") = get_biome_unsafe(nn, x, z, scale)
 
 # TODO: get_biome for scale != (1, 4)
 
