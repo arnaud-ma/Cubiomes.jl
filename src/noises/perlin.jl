@@ -1,6 +1,8 @@
 using OffsetArrays: OffsetVector
 using StaticArrays: MVector
 
+using Base: unsafe_trunc
+
 using ..JavaRNG: next🎲, AbstractJavaRNG, JavaRandom, JavaXoroshiro128PlusPlus
 using ..Utils: lerp
 #region RNG
@@ -169,16 +171,7 @@ function init_coord_values(coord)
     # but it's the same idea
     index = floor(coord)
     frac_coord = coord - index
-
-    #! the following line is the most critical
-    # because it is used a lot, and conversion from Int then to UInt8 is not instantaneous
-    # TODO: find a way to optimize this
-    # We can't simply use `UInt8(index % 256)` which is faster because
-    # if index is negative, an error will be thrown. We need to be sure that
-    # it will have the same behavior as the original Java/C code when a float
-    # is casted to an uint8
-    index = Int(index) % UInt8
-    return frac_coord, index, smoothstep_perlin_unsafe(frac_coord)
+    return frac_coord, unsafe_trunc(UInt8, index), smoothstep_perlin_unsafe(frac_coord)
 end
 
 """
