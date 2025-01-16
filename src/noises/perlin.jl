@@ -30,6 +30,7 @@ function _next_perlin🎲(rng::JavaXoroshiro128PlusPlus, ::Type{Int32}, n::UInt3
 
     # it is very rare to be in this case
     # about 1 / 230 000 for each perlin noise initialization for example
+    # TODO: add unit tests for this case, as it's not tested at the moment
     while (r % UInt32) < ((~n + one(n)) % n)
         r = (next🎲(rng, UInt64) & mask) * n
     end

@@ -6,6 +6,7 @@ using ..Cubiomes: MCVersion
 # ---------------------------------------------------------------------------- #
 #                                    BIOMES                                    #
 # ---------------------------------------------------------------------------- #
+# TODO: a module for the biomes instead of a raw file
 
 #! format: off
 @cenum(
