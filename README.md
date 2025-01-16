@@ -4,15 +4,14 @@
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://arnaud-ma.github.io/cubiomes.jl/dev/)
 [![Build Status](https://github.com/arnaud-ma/cubiomes.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/arnaud-ma/cubiomes.jl/actions/workflows/CI.yml?query=branch%3Amain)
 
-Cubiomes.jl is the faster and easy-to-use Minecraft biome and feature generation library, written in Julia—the best programming language for this specific task! By harnessing Julia’s modern features, this library delivers exceptional performance and ease of use, making it the ideal choice for custom seed-finding tools and large-scale map generation. As a complete rewrite of the original [Cubiomes](https://github.com/Cubitect/cubiomes) library in C, Cubiomes.jl combines the same powerful functionality with the added benefits of Julia’s performance and simplicity.
+A rewrite of [Cubiomes](https://github.com/Cubitect/cubiomes) but in [Julia](https://julialang.org/), intended to be (much) easier to use and to contribute to, and faster.
 
-## ⚠️⚠️⚠️ WARNING ⚠️⚠️⚠️
-
-The code is still in early development, and everything can change at any time. This repo should be seen as a proof of concept and nothing else.
+> [!WARNING]
+> The code is still in early development, and everything can change at any time. This repo should be seen as a proof of concept and nothing else.
 
 ## Why Cubiomes.jl?
 
-- **Readability and ease of use**: Julia is a high-level language, which makes the code easier to read and understand. It is garbage-collected, so nothing to worry about memory management.
+- **Readability and ease of use**: Julia is a high-level language, which makes the code easier to read and understand. Of course to be fast, it is sometimes necessary to write more complex code, but if it is simply to use an API (like the one of Cubiomes), it a very easy Python-like language.
 
 - **Performance**: Julia is almost as fast as C. For this case, it is in fact faster because is it very easy to parallelize the code or to easily know where the bottlenecks are with the built-in profiler.
 
