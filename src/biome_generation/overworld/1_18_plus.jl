@@ -73,9 +73,6 @@ function create_noise_param(noise_param, amp, oct, id_str, oct_large)
     end
 end
 
-struct Shift <: NoiseParameter end
-create_noise_param(Shift, (1, 1, 1, 0), 0, "minecraft:offset", nothing)
-
 struct Temperature <: NoiseParameter end
 create_noise_param(Temperature, (1.5, 0, 1, 0, 0, 0), -10, "minecraft:temperature", -12)
 
@@ -87,15 +84,25 @@ struct Continentalness <: NoiseParameter end
 create_noise_param(Continentalness, (1, 1, 2, 2, 2, 1, 1, 1, 1), -9, "minecraft:continentalness", -11)
 #! format: on
 
-struct Erosion <: NoiseParameter end
-create_noise_param(Erosion, (1, 1, 0, 1, 1), -9, "minecraft:erosion", -11)
+struct Shift <: NoiseParameter end
+create_noise_param(Shift, (1, 1, 1, 0), 0, "minecraft:offset", nothing)
 
 struct Weirdness <: NoiseParameter end
 create_noise_param(Weirdness, (1, 2, 1, 0, 0, 0), -7, "minecraft:ridge", nothing)
 
-const NOISE_PARAMETERS = Tuple(subtypes(NoiseParameter))
+struct Erosion <: NoiseParameter end
+create_noise_param(Erosion, (1, 1, 0, 1, 1), -9, "minecraft:erosion", -11)
+
+const NOISE_PARAMETERS = (Temperature, Humidity, Continentalness, Shift, Weirdness, Erosion)
+
+for (i, np) in enumerate(NOISE_PARAMETERS)
+    @eval Base.Int(::Type{$np}) = $Int(i)
+end
 
 const TypeTupleClimate = Tuple{(DoublePerlin{nb_octaves(np)} for np in NOISE_PARAMETERS)...}
+
+Base.getindex(tc::TypeTupleClimate, np::NoiseParameter) = @inbounds tc[Int(np)]
+
 struct BiomeNoise <: Dimension
     climate::TypeTupleClimate
 end
@@ -129,25 +136,15 @@ function set_seed!(noise::BiomeNoise, seed::UInt64, large=Val(true))
     return noise
 end
 #endregion
-#region Splines
+#region Spline creation
 
 # ---------------------------------------------------------------------------- #
-#                                    Splines                                   #
+#                              Splines Creation                                #
 # ---------------------------------------------------------------------------- #
+#! The entire goal of this part is to get this SPLINE_STACK constant
+# (at the end of the part)
 
-@only_float32 function get_offset_value(weirdness, continentalness)
-    f1 = (continentalness - 1) * 0.5
-    f0 = 1 + f1
-    f2 = (weirdness + 1.17) * 0.46082947
-    off = muladd(f0, f2, f1)
-    weirdness < -0.7 && return max(off, -0.2222)
-    return max(off, zero(off))
-end
-
-#! We do not use abstract type SplineType instead of enums
-# because we store different types of splines in the same array (Spline.val)
-# and storing different types in the same array abuses the type system
-# and makes it harder for the compiler to optimize the code.
+# I think it's better here to use enums instead of types
 @enum SplineType begin
     SP_CONTINENTALNESS
     SP_EROSION
@@ -266,7 +263,7 @@ end
 
 additional_values_land_spline(x1, x2, x3, x5, spline_6, ::Val{false}) = (), ()
 
-zero_like(::NTuple{N, T}) where {N, T} = ntuple(i -> zero_like(T), Val{N}())
+zero_like(::NTuple{N, T}) where {N, T} = ntuple(i -> zero(T), Val{N}())
 zero_like(x::Tuple{}) = x
 
 @only_float32 function land_spline(x1, x2, x3, x4, x5, x6, bl::Val{BL}) where {BL}
@@ -298,14 +295,36 @@ zero_like(x::Tuple{}) = x
     return Spline(SP_EROSION, locations, derivatives, child_splines)
 end
 
-function findfirst_default(predicate::Function, A, default)
-    for (i, a) in pairs(A)
-        if predicate(a)
-            return i
-        end
-    end
-    return default
+@only_float32 function world_spline()
+    spline1 = land_spline(-0.15, 0, 0, 0.1, 0, -0.03, Val(false))
+    spline2 = land_spline(-0.10, 0.03, 0.1, 0.1, 0.01, -0.03, Val(false))
+    spline3 = land_spline(-0.10, 0.03, 0.1, 0.7, 0.01, -0.03, Val(true))
+    spline4 = land_spline(-0.05, 0.03, 0.1, 1.0, 0.01, 0.01, Val(true))
+
+    locations = (-1.10, -1.02, -0.51, -0.44, -0.18, -0.16, -0.15, -0.10, 0.25, 1.00)
+    child_splines = (
+        Spline{0}(0.044),
+        Spline{0}(-0.2222),
+        Spline{0}(-0.2222),
+        Spline{0}(-0.12),
+        Spline{0}(-0.12),
+        spline1,
+        spline1,
+        spline2,
+        spline3,
+        spline4,
+    )
+    derivatives = zero_like(locations)
+
+    return Spline(SP_CONTINENTALNESS, locations, derivatives, child_splines)
 end
+
+const SPLINE_STACK = world_spline()
+#endregion
+#region Spline getter
+# ---------------------------------------------------------------------------- #
+#                                 Spline getter                                #
+# ---------------------------------------------------------------------------- #
 
 function get_spline(spline::Spline{0}, vals::NTuple{N2}) where {N2}
     Float32(Int(spline.spline_type))
@@ -350,38 +369,12 @@ function get_spline(spline::Spline{N}, vals::NTuple{N2}) where {N, N2}
     return r
 end
 
-@only_float32 function initBiomeNoise(bn::BiomeNoise)
-    spline1 = land_spline(-0.15, 0, 0, 0.1, 0, -0.03, Val(false))
-    spline2 = land_spline(-0.10, 0.03, 0.1, 0.1, 0.01, -0.03, Val(false))
-    spline3 = land_spline(-0.10, 0.03, 0.1, 0.7, 0.01, -0.03, Val(true))
-    spline4 = land_spline(-0.05, 0.03, 0.1, 1.0, 0.01, 0.01, Val(true))
-
-    locations = (-1.10, -1.02, -0.51, -0.44, -0.18, -0.16, -0.15, -0.10, 0.25, 1.00)
-    child_splines = (
-        Spline{0}(0.044),
-        Spline{0}(-0.2222),
-        Spline{0}(-0.2222),
-        Spline{0}(-0.12),
-        Spline{0}(-0.12),
-        spline1,
-        spline1,
-        spline2,
-        spline3,
-        spline4,
-    )
-    derivatives = zero_like(locations)
-
-    return Spline(Continentalness, locations, derivatives, child_splines)
-end
-
-
 function climate_to_biome(
     noise_parameters::NTuple{6},
     biome_tree::BiomeTree,
     dat::Ref{UInt64},
 )
     alt = dat[] % Int32
-    dist = -1
     dist = noise_params_distance(noise_parameters, biome_tree, alt)
     idx = get_resulting_node(noise_parameters, biome_tree, 0, alt, dist, 0)
     dat[] = idx % UInt64
@@ -393,11 +386,7 @@ function climate_to_biome(noise_parameters::NTuple{6}, biome_tree::BiomeTree)
     return (biome_tree.nodes[idx] >> 48) & 0xFF
 end
 
-function climate_to_biome(
-    noise_parameters::NTuple{6},
-    version::Val,
-    ::Nothing,
-)
+function climate_to_biome(noise_parameters::NTuple{6}, version::Val, ::Nothing)
     return climate_to_biome(noise_parameters, get_biome_tree(version))
 end
 
@@ -475,3 +464,55 @@ function get_resulting_node(
 
     return leaf
 end
+
+function sample_climate_param(bn::BiomeNoise, x, z, nptype::Type{<:NoiseParameter})
+    return sample_noise(bn.climate[nptype], x, z, 0)
+end
+
+function sample_climate_param!(
+    noise_params,
+    bn::BiomeNoise,
+    x,
+    z,
+    nptype::Type{<:NoiseParameter},
+)
+    p = sample_climate_param(bn, x, z, nptype)
+    noise_params[nptype] = Base.unsafe_trunc(Int, 10_000.0f0 * p)
+    return p
+end
+
+function sample_shift(bn::BiomeNoise, x, z)
+    px = sample_noise(bn.climate[Shift], x, z, 0) * 4.0
+    pz = sample_noise(bn.climate[Shift], z, 0, x) * 4.0
+
+    return px, pz
+end
+
+eval_weirdness(x) = -3.0f0 * (abs(abs(x) - 0.6666667f0) - 0.33333334f0)
+
+function sample_depth(spline, c, e, w, y)::Float32
+    off = get_spline(spline, (c, e, eval_weirdness(w), w)) + 0.015f0
+    return 1 - (y * 4) / 128 - 83 / 160 + off
+end
+
+# function sampleBiomeNoise
+# it is the simple form. More complex (for performance, when we only sample a part of the noise)
+# forms are not implemented yet
+function sample_biomenoises(bn::BiomeNoise, x, z, y, spline=SPLINE_STACK, dat=nothing)
+    px, pz = sample_shift(bn, x, z)
+    continentalness = sample_noise(bn.climate[Continentalness], x, z, 0)
+    erosion = sample_noise(bn.climate[Erosion], x, z, 0)
+    weirdness = sample_noise(bn.climate[Weirdness], x, z, 0)
+    depth = sample_depth(spline, continentalness, erosion, weirdness, y)
+
+    temperature = sample_noise(bn.climate[Temperature], px, pz, 0)
+    humidity = sample_noise(bn.climate[Humidity], px, pz, 0)
+
+    return 10_000.0f0 .* (temperature, humidity, continentalness, erosion, depth, weirdness)
+end
+
+function get_biome(bn::BiomeNoise, x, z, y, version, spline=SPLINE_STACK, dat=nothing)
+    noiseparams = sample_biomenoises(bn, x, z, y, spline, dat)
+    return climate_to_biome(noiseparams, version, dat)
+end
+

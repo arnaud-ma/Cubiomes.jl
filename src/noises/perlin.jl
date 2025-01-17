@@ -24,7 +24,7 @@ function next_perlin🎲 end
 next_perlin🎲(rng::JavaRandom, ::Type{Int32}, stop::Real) = next🎲(rng, Int32, stop)
 
 function _next_perlin🎲(rng::JavaXoroshiro128PlusPlus, ::Type{Int32}, n::UInt32)
-    mask = typemax(UInt32)
+    mask = 0x00000000ffffffff # = UInt64(typemax(UInt32))
     r = ((next🎲(rng, UInt64) & mask) * n)
     (r % UInt32) >= n && return (r >> 32) % Int32
 
