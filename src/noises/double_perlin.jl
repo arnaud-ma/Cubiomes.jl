@@ -28,10 +28,30 @@ function DoublePerlin{N}(x::UndefInitializer) where {N}
     return DoublePerlin{N}(x, amplitude)
 end
 
-function DoublePerlin{N}(x::UndefInitializer, amplitudes) where {N}
+function undef_double_perlin(len_amp, ::Val{N}) where {N}
+    DoublePerlin{N}(undef, AMPLITUDE_INI[len_amp])
+end
+
+function DoublePerlin{N}(
+    ::UndefInitializer,
+    amplitudes,
+    already_trimmed::Val{true},
+) where {N}
     # Xoroshiro128PlusPlus implementation
-    len = Utils.length_of_trimmed(iszero, amplitudes)
-    return DoublePerlin{N}(x, AMPLITUDE_INI[len])
+    return undef_double_perlin(length(amplitudes), Val(N))
+end
+
+function DoublePerlin{N}(
+    ::UndefInitializer,
+    amplitudes,
+    already_trimmed::Val{false},
+) where {N}
+    # Xoroshiro128PlusPlus implementation
+    return undef_double_perlin(Utils.length_of_trimmed(!iszero, amplitudes), Val(N))
+end
+
+function DoublePerlin{N}(x::UndefInitializer, amplitudes) where {N}
+    DoublePerlin{N}(x, amplitudes, Val{false})
 end
 
 function DoublePerlin(x::UndefInitializer, amplitudes)

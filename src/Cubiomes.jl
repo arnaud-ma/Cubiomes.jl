@@ -1,6 +1,6 @@
 module Cubiomes
 
-public JavaRNG, Noises
+public JavaRNG,Noises
 public BiomeGeneration
 
 include("mc_versions.jl")
@@ -14,4 +14,4 @@ include("biome_generation/BiomeGeneration.jl")
 
 include("display.jl")
 
-end
+end # module

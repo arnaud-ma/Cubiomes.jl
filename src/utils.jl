@@ -213,6 +213,23 @@ function length_filter(predicate, x)
     end
     return count
 end
+
+function trim(predicate, x)
+    first, last = firstindex(x), lastindex(x)
+    while predicate(x[first])
+        first += 1
+        if first > last
+            return x
+        end
+    end
+    while predicate(x[last])
+        last -= 1
+        if last < first
+            return x
+        end
+    end
+    return x[first:last]
+end
 #endregion
 #region types
 # ---------------------------------------------------------------------------- #
@@ -256,4 +273,17 @@ function iter_chunks_threads(collection)
     nb_chunks = len <= nb_threads ? 1 : len ÷ nb_threads
     return Iterators.partition(collection, nb_chunks)
 end
+
+"""
+    @map_inline(func, tuple)
+
+Inline the loop done by map(func, tuple), i.e. transform it to the tuple of the form
+`(:func(x1), :func(x2), ...)` at compile-time. Improves performance for small tuples.
+"""
+macro map_inline(func, tuple)
+    return Expr(:tuple, map(x -> esc(:($func($x))), tuple.args)...)
+end
+
 end # module
+
+

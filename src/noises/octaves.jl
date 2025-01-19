@@ -76,14 +76,15 @@ const PERSISTENCE_INI = Tuple(2^n / (2^(n + 1) - 1) for n in 0:8) # len = 4:9
 function set_rng!🎲(
     octaves_type::Octaves{N},
     rng::JavaXoroshiro128PlusPlus,
-    amplitudes,
+    amplitudes::NTuple{NA},
     octave_min,
-) where {N}
+    real_length=NA,
+) where {N, NA}
     if N != Utils.length_filter(!iszero, amplitudes)
         throw(ArgumentError(lazy"the number of octaves must be equal to length_filter(!iszero, amplitudes). \
                                  Got $N != $Utils.length_filter(!iszero, amplitudes)."))
     end
-    return unsafe_set_rng!🎲(octaves_type, rng, amplitudes, octave_min)
+    return unsafe_set_rng!🎲(octaves_type, rng, amplitudes, octave_min, real_length)
 end
 
 # In the ideal world, N is equal to the number of non-zero amplitudes
@@ -93,12 +94,13 @@ end
 function unsafe_set_rng!🎲(
     octaves_type::Octaves{N},
     rng::JavaXoroshiro128PlusPlus,
-    amplitudes,
+    amplitudes::NTuple{N2},
     octave_min,
-) where {N}
+    real_length=N2,
+) where {N, N2}
     # Initialize lacunarity and persistence based on octave_min and amplitudes length
     lacunarity = LACUNARITY_INI[-octave_min + 1]
-    persistence = PERSISTENCE_INI[length(amplitudes)]
+    persistence = PERSISTENCE_INI[real_length]
     xlo, xhi = next🎲(rng, UInt64), next🎲(rng, UInt64)
 
     # Initialize a temporary RNG state and the iterator over octaves
@@ -121,9 +123,7 @@ function unsafe_set_rng!🎲(
             set_rng_octave!🎲(octave, rng_temp, persistence, lacunarity, amp)
 
             # Move to the next octave
-            if octave_counter == N
-                break
-            end
+            octave_counter == N && break
             octave_counter += 1
         end
         lacunarity *= 2
