@@ -48,12 +48,18 @@ end
 `
 Initialize the noise in place with the given random number generator (of type AbstractJavaRNG).
 
-`N` represents the number of octaves, each associated with a non-zero amplitude. Therefore,
-`N` *MUST* be equal to the number of non-zero values in amplitudes. This number can be obtained with
-`Cubiomes.length_filter(!iszero, amplitudes)`.
+!!! warning
+    `N` represents the number of octaves, each associated with a non-zero amplitude.
+    Therefore, `N` *MUST* be equal to the number of non-zero values in amplitudes.
+    This number can be obtained with `Cubiomes.length_filter(!iszero, amplitudes)`.
+    For performance reasons, it is possible to lower `N` and completely ignore the last
+    amplitudes using [`unsafe_set_rng!🎲`](@ref).
 
-For performance reasons, it is possible to lower `N` and completely ignore the last amplitudes
-using [`unsafe_set_rng!🎲`](@ref).
+!!! tip
+    Since the last amplitudes are ignored if they are set to zero, replace the tuple of
+    amplitudes with the trimmed version without the last zeros can save a very small amount
+    of memory / time. However, only do this if the trimmed amplitudes are already known.
+    Computing them only for this function call will not save any time.
 
 See also: [`unsafe_set_rng!🎲`](@ref), [`Noise`](@ref), [`Noise🎲`](@ref)
 """
@@ -64,7 +70,7 @@ function set_rng!🎲 end
 
 Same as [`set_rng!🎲`](@ref) but allows to skip some octaves for performance reasons, i.e.
 `N` can be less than the number of non-zero values in `amplitudes`, and the last octaves are
-completely ignored.
+completely ignored. If instead `N` is greater, the behavior is undefined.
 
 See also: [`set_rng!🎲`](@ref), [`Noise`](@ref), [`Noise🎲`](@ref)
 """

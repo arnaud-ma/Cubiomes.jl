@@ -14,6 +14,7 @@ using Cubiomes.Noises
 using Cubiomes.JavaRNG: JavaRandom, JavaXoroshiro128PlusPlus
 
 using Test: @test, @testset, @test_throws
+using Test: Test
 include("data.jl")
 
 const atol_f64 = 1e-15
@@ -160,7 +161,10 @@ end
     @testset "sample noise with JavaRandom rng" begin
         function test_octaves_java_sample(nb, omin, args...; result, seed)
             noise = Noise🎲(Octaves{nb}, JavaRandom(seed), omin)
-            @test sample_noise(noise, args...) ≈ result atol = atol_f64
+            t = @test sample_noise(noise, args...) ≈ result atol = atol_f64
+            if !(t isa Test.Pass)
+                @info "nb, omin, args, result, seed = $nb, $omin, $args, $result, $seed"
+            end
         end
 
         # test x, z, y
@@ -188,10 +192,10 @@ end
             seed=0x547f9a17dcf68d8f,
         )
 
-        # test with yamp and ymin and y=missing
+        # test with yamp and ymin and no y
         test_octaves_java_sample(
             9, -10,
-            33860.49100816767, -70117.25276887477, missing, # x, z, y
+            33860.49100816767, -70117.25276887477, # x, z, y
             113.4582167462825, 10.558772655520132; # yamp, ymin
             result=-0.0846321181639296,
             seed=0x34e5c56112cddd55,
@@ -215,7 +219,7 @@ end
 
         test_octaves_xoroshiro_sample(
             2, -3,
-            (0, 3.6085191731282653, 0, 6.120582507763649),
+            (0., 3.6085191731282653, 0., 6.120582507763649),
             905.788158662778, -54162.592229314774, 16.88841898837666, ;
             result=-0.3637842988331072,
             seed=0x6905976105f4f341,
@@ -223,7 +227,7 @@ end
 
         test_octaves_xoroshiro_sample(
             2, -6,
-            (0, 3.6085191731282653, 0, 0, 6.120582507763649),
+            (0., 3.6085191731282653, 0., 0., 6.120582507763649),
             905.788158662778, -54162.592229314774, 16.88841898837666, ;
             result=-0.0047320120208560745,
             seed=0x62342335dd25f7ed,
@@ -310,15 +314,15 @@ end
         test_double_perlin_xoroshiro_sample(
             5, -6,
             (
-                0,
+                0.0,
                 4.01439625355631,
                 4.414662130640904,
                 0.9316139068738465,
-                3,
-                0,
+                3.0,
+                0.0,
                 2.536358650943736,
-                0,
-                0,
+                0.0,
+                0.0,
             ),
             -38978.750307685776, -28654.026725618372, 0; # x, z, y
             result=-1.15013160607318987,

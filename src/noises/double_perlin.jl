@@ -47,11 +47,11 @@ function DoublePerlin{N}(
     already_trimmed::Val{false},
 ) where {N}
     # Xoroshiro128PlusPlus implementation
-    return undef_double_perlin(Utils.length_of_trimmed(!iszero, amplitudes), Val(N))
+    return undef_double_perlin(Utils.length_of_trimmed(iszero, amplitudes), Val(N))
 end
 
 function DoublePerlin{N}(x::UndefInitializer, amplitudes) where {N}
-    DoublePerlin{N}(x, amplitudes, Val{false})
+    DoublePerlin{N}(x, amplitudes, Val(false))
 end
 
 function DoublePerlin(x::UndefInitializer, amplitudes)
@@ -85,16 +85,22 @@ function Noise🎲(
     return dp
 end
 
+const MOVE_FACTOR = 337 / 331
+
 function sample_noise(
     noise::DoublePerlin,
     x::Real,
     z::Real,
-    y=missing,
-    move_factor=337 / 331,
+    y,
+    unsafe_y=Val(false),
 )
-    f = move_factor
+    f = MOVE_FACTOR
     v =
-        sample_noise(noise.octave_A, x, z, y) +
-        sample_noise(noise.octave_B, x * f, z * f, y * f)
+        sample_noise(noise.octave_A, x, z, y, unsafe_y) +
+        sample_noise(noise.octave_B, x * f, z * f, y * f, unsafe_y)
     return v * noise.amplitude
+end
+
+function sample_noise(noise::DoublePerlin, x::Real, z::Real)
+    sample_noise(noise, x, z, missing, Val(true))
 end

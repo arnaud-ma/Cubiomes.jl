@@ -1,5 +1,5 @@
 using ..Noises
-using ..JavaRNG: JavaRandom
+using ..JavaRNG: JavaRandom, set_seed🎲
 using ..Utils: Utils
 using ..Cubiomes: MC_UNDEF, MC_1_15
 
@@ -30,14 +30,15 @@ end
 Nether(seed, sha=Val(true)) = Dimension(Nether, seed, sha)
 
 function Nether(::UndefInitializer)
-    return Nether(DoublePerlin{2}(undef, -7), DoublePerlin{2}(undef, -7), SomeSha(nothing))
+    return Nether(DoublePerlin{2}(undef), DoublePerlin{2}(undef), SomeSha(nothing))
 end
 
 function _set_temp_humid!(seed, temperature, humidity)
     rng_temp = JavaRandom(seed)
     set_rng!🎲(temperature, rng_temp, -7)
-    rng_humidity = JavaRandom(seed + 1)
-    set_rng!🎲(humidity, rng_humidity, -7)
+
+    set_seed🎲(rng_temp, seed + 1)
+    set_rng!🎲(humidity, rng_temp, -7)
     return nothing
 end
 
@@ -217,7 +218,7 @@ function fill_radius!(
         Val(N)
     ))
 
-    Threads.@threads for coord in coords
+    for coord in coords
         if distance_square(coord, coords) <= r_square
             @inbounds out[coord] = id
         end

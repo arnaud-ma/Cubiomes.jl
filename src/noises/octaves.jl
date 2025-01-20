@@ -135,29 +135,51 @@ end
 # TODO: OctaveNoiseBeta
 
 get_ay(y, perlin, lf) = y * lf
-get_ay(y::Missing, perlin, lf) = -perlin.y
+get_ay(y::Nothing, perlin, lf) = -perlin.y
 
-function sample_octave_noise(octave::Perlin, x, z, y=missing, yamp=missing, ymin=missing)
+function sample_octave_noise(octave::Perlin, x, z, y, yamp, ymin, unsafe_y)
     lf = octave.lacunarity
     ax = x * lf
     ay = get_ay(y, octave, lf)
     az = z * lf
-    return sample_noise(octave, ax, az, ay, yamp * lf, ymin * lf) * octave.amplitude
+    return sample_noise(octave, ax, az, ay, yamp * lf, ymin * lf, unsafe_y) *
+           octave.amplitude
 end
 
 function sample_noise(
-    octaves::Octaves{N},
+    octaves::Octaves,
     x::Real,
     z::Real,
-    y=missing,
-    yamp=missing,
-    ymin=missing,
-) where {N}
+    y,
+    yamp,
+    ymin,
+    unsafe_y=Val(false),
+)
     v = zero(Float64)
     for octave in octaves.octaves
-        v += sample_octave_noise(octave, x, z, y, yamp, ymin)
+        v += sample_octave_noise(octave, x, z, y, yamp, ymin, unsafe_y)
     end
     return v
+end
+
+function sample_noise(octaves::Octaves, x::Real, z::Real, y, unsafe_y::Val)
+    return sample_noise(octaves, x, z, y, missing, missing, unsafe_y)
+end
+function sample_noise(octaves::Octaves, x::Real, z::Real, y)
+    sample_noise(octaves, x, z, y, Val(false))
+end
+function sample_noise(octaves::Octaves, x::Real, z::Real)
+    sample_noise(octaves, x, z, missing, Val(true))
+end
+
+function sample_noise(
+    octaves::Octaves,
+    x::Real,
+    z::Real,
+    yamp::Real,
+    ymin::Real,
+)
+    return sample_noise(octaves, x, z, nothing, yamp, ymin, Val(true))
 end
 
 # TODO: sample_octave_beta17_biome
