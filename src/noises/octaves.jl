@@ -134,52 +134,41 @@ end
 
 # TODO: OctaveNoiseBeta
 
+# We need to do the difference between y = missing and y = nothing
+# y = missing is used in sample_noise of each octave
+# missing propagats to every operation, for example, y * lf = missing is y = missing
+
+# if y = nothing, it is used in sample_octave_noise to get ay.
+# it is not intended to be set by the user, it is automatically set when calling
+# sample_noise(octaves, x, z, yamp, ymin) without specifying y but with yamp and ymin
+# it's here and only here that y=nothing is used
+
 get_ay(y, perlin, lf) = y * lf
 get_ay(y::Nothing, perlin, lf) = -perlin.y
 
-function sample_octave_noise(octave::Perlin, x, z, y, yamp, ymin, unsafe_y)
+function sample_octave_noise(octave::Perlin, x, z, y, yamp, ymin)
     lf = octave.lacunarity
     ax = x * lf
     ay = get_ay(y, octave, lf)
     az = z * lf
-    return sample_noise(octave, ax, az, ay, yamp * lf, ymin * lf, unsafe_y) *
+    return sample_noise(octave, ax, az, ay, yamp * lf, ymin * lf) *
            octave.amplitude
 end
 
-function sample_noise(
-    octaves::Octaves,
-    x::Real,
-    z::Real,
-    y,
-    yamp,
-    ymin,
-    unsafe_y=Val(false),
-)
+function sample_noise(octaves::Octaves, x::Real, z::Real, y, yamp, ymin)
     v = zero(Float64)
     for octave in octaves.octaves
-        v += sample_octave_noise(octave, x, z, y, yamp, ymin, unsafe_y)
+        v += sample_octave_noise(octave, x, z, y, yamp, ymin)
     end
     return v
 end
 
-function sample_noise(octaves::Octaves, x::Real, z::Real, y, unsafe_y::Val)
-    return sample_noise(octaves, x, z, y, missing, missing, unsafe_y)
-end
-function sample_noise(octaves::Octaves, x::Real, z::Real, y)
-    sample_noise(octaves, x, z, y, Val(false))
-end
-function sample_noise(octaves::Octaves, x::Real, z::Real)
-    sample_noise(octaves, x, z, missing, Val(true))
+function sample_noise(octaves::Octaves, x::Real, z::Real, y=missing)
+    return sample_noise(octaves, x, z, y, missing, missing)
 end
 
-function sample_noise(
-    octaves::Octaves,
-    x::Real,
-    z::Real,
-    yamp::Real,
-    ymin::Real,
-)
-    return sample_noise(octaves, x, z, nothing, yamp, ymin, Val(true))
+function sample_noise(octaves::Octaves, x::Real, z::Real, yamp::Real, ymin::Real)
+    return sample_noise(octaves, x, z, nothing, yamp, ymin)
 end
 
 # TODO: sample_octave_beta17_biome

@@ -87,20 +87,10 @@ end
 
 const MOVE_FACTOR = 337 / 331
 
-function sample_noise(
-    noise::DoublePerlin,
-    x::Real,
-    z::Real,
-    y,
-    unsafe_y=Val(false),
-)
+function sample_noise(noise::DoublePerlin, x::Real, z::Real, y=missing)
     f = MOVE_FACTOR
     v =
-        sample_noise(noise.octave_A, x, z, y, unsafe_y) +
-        sample_noise(noise.octave_B, x * f, z * f, y * f, unsafe_y)
+        sample_noise(noise.octave_A, x, z, y) +
+        sample_noise(noise.octave_B, x * f, z * f, y * f)
     return v * noise.amplitude
-end
-
-function sample_noise(noise::DoublePerlin, x::Real, z::Real)
-    sample_noise(noise, x, z, missing, Val(true))
 end

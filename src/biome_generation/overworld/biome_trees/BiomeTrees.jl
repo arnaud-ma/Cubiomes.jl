@@ -4,19 +4,21 @@ export biome_trees, BiomeTree, get_biome_tree
 
 import ...Cubiomes
 
-@kwdef struct BiomeTree{N}
+struct BiomeTree{N}
     order::Int # ? Maybe dispatch this
     steps::NTuple{N, Int32}
     param::Vector{Tuple{Int32, Int32}}
     nodes::Vector{UInt64}
+    len_nodes::Int
 end
 
-function BiomeTree(order, steps, param, nodes)
+function BiomeTree(;order, steps, param, nodes)
     return BiomeTree(
         order,
         Int32.(steps),
         [Int32.(x) for x in param],
         nodes,
+        length(nodes),
     )
 end
 

@@ -2,7 +2,7 @@ using StaticArrays: SVector
 using InteractiveUtils: subtypes
 
 import ..Cubiomes
-using ..Utils: Utils, @only_float32, md5_to_uint64
+using ..Utils: Utils, @only_float32, md5_to_uint64, lerp
 using ..JavaRNG: JavaXoroshiro128PlusPlus, next🎲
 using ..Noises
 
@@ -108,7 +108,7 @@ end
 
 const TypeTupleClimate = Tuple{(DoublePerlin{nb_octaves(np)} for np in NOISE_PARAMETERS)...}
 
-Base.getindex(tc::TypeTupleClimate, np::Type{<:NoiseParameter}) = @inbounds tc[Int(np)]
+Base.getindex(tc::TypeTupleClimate, np::Type{<:NoiseParameter}) = tc[Int(np)]
 
 struct BiomeNoise <: Dimension
     climate::TypeTupleClimate
@@ -164,24 +164,23 @@ end
     SP_EROSION
     SP_RIDGES
     SP_WEIRDNESS
+    FIXSPLINE = typemax(Int32)
 end
 Base.trunc(::Type{SplineType}, x) = SplineType(trunc(Int, x))
 
-struct Spline{N, T}
+struct Spline{N}
     spline_type::SplineType
     locations::NTuple{N, Float32}
     derivatives::NTuple{N, Float32}
-    child_splines::T
+    child_splines::NTuple{N, Spline}
+    fix_value::Float32
 end
+Base.length(spline::Spline) = length(spline.locations)
 
-Spline{0}(spline_type::SplineType) = Spline(spline_type, (), (), ())
-Spline{0}(spline_type::SplineType, ::Tuple{}, ::Tuple{}, ::Tuple{}) = Spline{0}(spline_type)
-Spline{0}(spline_value::Real) = Spline{0}(trunc(SplineType, spline_value))
-# ^
-# |
-# if the parameter is not a SplineType, it can be a real number. Is is truncated to an Int
-# and converted to its related spline_type. trunc instead of floor in order
-# to mimic the Java behavior
+function Spline(spline_type::SplineType, locations, derivatives, child_splines)
+    return Spline(spline_type, locations, derivatives, child_splines, zero(Float32))
+end
+Spline{0}(value::Real) = Spline(FIXSPLINE, (), (), (), value)
 Spline{0}(values...) = map(Spline{0}, values)
 
 @only_float32 function get_offset_value(weirdness, continentalness)
@@ -237,11 +236,7 @@ end
         spline_type,
         (-1, 0, 1),
         (0, slope, slope),
-        Spline{0}(
-            max(offset_neg1, 0.2),
-            Utils.lerp(0.5, offset_neg1, offset_pos1),
-            offset_pos1,
-        ),
+        Spline{0}(max(offset_neg1, 0.2), lerp(0.5, offset_neg1, offset_pos1), offset_pos1),
     )
 end
 
@@ -252,7 +247,7 @@ end
         spline_type,
         (-1, 1),
         (slope, slope),
-        Spline{0}(max(offset_neg1, 0.2), Utils.lerp(0.5, offset_neg1, offset_pos1)),
+        Spline{0}(max(offset_neg1, 0.2), lerp(0.5, offset_neg1, offset_pos1)),
     )
 end
 
@@ -291,8 +286,8 @@ zero_like(x::Tuple{}) = x
 
 @only_float32 function land_spline(x1, x2, x3, x4, x5, x6, bl::Val{BL}) where {BL}
     # create initial splines with different linear interpolation values
-    lerp_4_15 = Utils.lerp(x4, 0.6, 1.5)
-    lerp_4_1 = Utils.lerp(x4, 0.6, 1.0)
+    lerp_4_15 = lerp(x4, 0.6, 1.5)
+    lerp_4_1 = lerp(x4, 0.6, 1.0)
     spline_1 = spline_38219(lerp_4_15, bl)
     spline_2 = spline_38219(lerp_4_1, bl)
     spline_3 = spline_38219(x4, bl)
@@ -349,10 +344,6 @@ const SPLINE_STACK = world_spline()
 #                                 Spline getter                                #
 # ---------------------------------------------------------------------------- #
 
-function get_spline(spline::Spline{0}, vals::NTuple{N2}) where {N2}
-    Float32(Int(spline.spline_type))
-end
-
 function findfirst_default(predicate::Function, A, default)
     for (i, a) in pairs(A)
         if predicate(a)
@@ -362,26 +353,21 @@ function findfirst_default(predicate::Function, A, default)
     return default
 end
 
-function get_spline_offset(spline::Spline, index, vals, f)
-    loc, der, sp = spline.locations[index], spline.derivatives[index], spline.child_splines[index]
+function get_spline_offset(spline::Spline{N}, index, vals, f) where {N}
+    loc, der, sp =
+        spline.locations[index], spline.derivatives[index], spline.child_splines[index]
     v = get_spline(sp, vals)
     return muladd(der, f - loc, v)
 end
 
 # TODO: transform the recursive to an iterate one, since Julia is very bad with recursion :(
-function get_spline(spline::Spline{N}, vals::NTuple{N2}) where {N, N2}
-    # if !((1 <= Int(spline.spline_type) <= 4) && (1 <= N <= 11))
-    #     throw(
-    #         ArgumentError(
-    #         lazy"getSpline(): bad parameters (spline_type: $(spline.spline_type), N: $N)",
-    #     ),
-    #     )
-    # end
-
+@only_float32 function get_spline(spline::Spline, vals::NTuple{N2}) where {N2}
+    N = length(spline)
+    N == 0 && return spline.fix_value
     f = vals[Int(spline.spline_type) + 1]
     i = findfirst_default(>=(f), spline.locations, N)
     isone(i) && return get_spline_offset(spline, 1, vals, f)
-    i == (N+1) && return get_spline_offset(spline, N, vals, f)
+    i == (N + 1) && return get_spline_offset(spline, N, vals, f)
 
     spline_1 = spline.child_splines[i - 1]
     spline_2 = spline.child_splines[i]
@@ -400,13 +386,13 @@ function get_spline(spline::Spline{N}, vals::NTuple{N2}) where {N, N2}
     p = l * (h - g) - (o - n)
     q = -m * (h - g) + (o - n)
 
-    r = Utils.lerp(k, n, o) + k * (1.0 - k) * Utils.lerp(k, p, q)
+    r = lerp(k, n, o) + k * (1.0 - k) * lerp(k, p, q)
     return r
 end
 
 function climate_to_biome(noise_parameters::NTuple{6}, biome_tree::BiomeTree)
-    idx = get_resulting_node(noise_parameters, biome_tree, 0, 0, -1, 0)
-    return (biome_tree.nodes[idx] >> 48) & 0xFF
+    idx = get_resulting_node(noise_parameters, biome_tree)
+    return (biome_tree.nodes[idx + 1] >> 48) & 0xFF
 end
 
 function climate_to_biome(noise_parameters::NTuple{6}, version::Val)
@@ -425,26 +411,27 @@ end
 
 function noise_params_distance(noise_params::NTuple{6}, biome_tree::BiomeTree, idx)
     dist_square = 0
-    node, param = biome_tree.nodes[idx], biome_tree.param
+    node, param = biome_tree.nodes[idx + 1], biome_tree.param
     for i in 1:6
         # idx is the index of the biome in the biome tree
         # we iterate over the 6 noise parameters
         # each noise_param is associated with 2 bytes in the biome tree
         # see the comments of the biome tree for more information
-        idx = (node >> 8 * (i - 1)) & 0xFF + 1
-        dist_square += calculate_distance(noise_params[i], param[idx][2], param[idx][1])
+        idx = (node >> (8 * (i - 1))) & 0xFF
+        dist_square +=
+            calculate_distance(noise_params[i], param[idx + 1][2], param[idx + 1][1])
     end
     return dist_square
 end
 
 function get_resulting_node(
     noise_params::NTuple{6},
-    biome_tree::BiomeTree{N},
-    idx,
-    alt,
-    dist,
-    depth,
-) where {N}
+    biome_tree::BiomeTree,
+    idx=0,
+    alt=0,
+    dist=typemax(UInt64),
+    depth=0,
+)
     iszero(biome_tree.steps[depth + 1]) && return idx
     # in all the code, dist refers to the square of the distance
 
@@ -452,18 +439,14 @@ function get_resulting_node(
     while true
         step = biome_tree.steps[depth + 1]
         depth += 1
-        idx + step >= N || break
+        idx + step >= biome_tree.len_nodes || break
     end
 
     node = biome_tree.nodes[idx + 1]
     inner = node >> 48
-
     leaf = alt
 
-    inner_first = (node >> 48)
-    inner_end = min(inner_first + biome_tree.order - 1, N)
-
-    for inner in inner_first:step:inner_end
+    for _ in 0:(biome_tree.order - 1)
         dist_inner = noise_params_distance(noise_params, biome_tree, inner)
         if dist_inner < dist
             leaf2 = get_resulting_node(noise_params, biome_tree, inner, leaf, dist, depth)
@@ -477,6 +460,8 @@ function get_resulting_node(
                 leaf = leaf2
             end
         end
+        inner += step
+        inner >= biome_tree.len_nodes && break
     end
 
     return leaf
@@ -492,7 +477,8 @@ end
 eval_weirdness(x) = -3 * (abs(abs(x) - 2 / 3) - 1 / 3)
 
 function sample_depth(spline, c, e, w, y)
-    off = get_spline(spline, (c, e, eval_weirdness(w), w)) + 0.015
+    vals = map(Float32, (c, e, eval_weirdness(w), w))
+    off = get_spline(spline, vals) + 0.015
     return 1 - (y * 4) / 128 - 83 / 160 + off
 end
 
@@ -502,7 +488,6 @@ end
 # forms are not implemented yet
 function sample_biomenoises(bn::BiomeNoise, x, z, y, spline=SPLINE_STACK)
     px, pz = sample_shift(bn, x, z)
-    @show px, pz
     continentalness = sample_noise(bn.climate[Continentalness], px, pz, 0)
     erosion = sample_noise(bn.climate[Erosion], px, pz, 0)
     weirdness = sample_noise(bn.climate[Weirdness], px, pz, 0)
@@ -511,20 +496,17 @@ function sample_biomenoises(bn::BiomeNoise, x, z, y, spline=SPLINE_STACK)
     temperature = sample_noise(bn.climate[Temperature], px, pz, 0)
     humidity = sample_noise(bn.climate[Humidity], px, pz, 0)
 
-    return Utils.@map_inline(
-        @inline(x -> Base.unsafe_trunc(Int64, 10_000.0 * x)),
-        (
-            temperature,
-            humidity,
-            continentalness,
-            erosion,
-            depth,
-            weirdness,
-        )
+    return Base.unsafe_trunc.(
+        Int64,
+        10_000 .* (temperature, humidity, continentalness, erosion, depth, weirdness),
     )
 end
 
-function get_biome(bn::BiomeNoise, x, z, y, version, spline=SPLINE_STACK)
+function get_biome_int(bn::BiomeNoise, x, z, y, version, spline=SPLINE_STACK)
     noiseparams = sample_biomenoises(bn, x, z, y, spline)
     return climate_to_biome(noiseparams, version)
+end
+
+function get_biome(bn::BiomeNoise, x, z, y, version, spline=SPLINE_STACK)
+    return BiomeID(get_biome_int(bn, x, z, y, version, spline))
 end
