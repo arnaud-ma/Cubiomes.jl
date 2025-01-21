@@ -70,7 +70,7 @@ for get_func in (:get_biome, :get_biome_unsafe)
 end
 
 function distance_square(coord1::CartesianIndex{N}, coord2::CartesianIndex{N}) where {N}
-    sum(i -> i^2, (coord1 - coord2).I)
+    return sum(abs2, (coord1 - coord2).I)
 end
 
 #region point 4 and 1

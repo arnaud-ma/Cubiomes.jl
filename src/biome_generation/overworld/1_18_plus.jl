@@ -168,6 +168,10 @@ end
 end
 Base.trunc(::Type{SplineType}, x) = SplineType(trunc(Int, x))
 
+# ? NTuple vs Vector ?
+# if we use ntuple, julia will always try to do some dynamic dispatch on N.
+# since the elements are getting accessed in get_spline very randomly, julia will
+# never be able to infer N.
 struct Spline{N}
     spline_type::SplineType
     locations::NTuple{N, Float32}
@@ -180,8 +184,20 @@ Base.length(spline::Spline) = length(spline.locations)
 function Spline(spline_type::SplineType, locations, derivatives, child_splines)
     return Spline(spline_type, locations, derivatives, child_splines, zero(Float32))
 end
-Spline{0}(value::Real) = Spline(FIXSPLINE, (), (), (), value)
-Spline{0}(values...) = map(Spline{0}, values)
+fixspline(value::Real) = Spline(FIXSPLINE, (), (), (), value)
+
+# function Spline(spline_type::SplineType, locations, derivatives, child_splines)
+#     return Spline(
+#         spline_type,
+#         collect(locations),
+#         collect(derivatives),
+#         collect(child_splines),
+#         zero(Float32),
+#     )
+# end
+# fixspline(value::Real) = Spline(FIXSPLINE, [], [], [], value)
+
+fixsplines(values...) = map(fixspline, values)
 
 @only_float32 function get_offset_value(weirdness, continentalness)
     f1 = (continentalness - 1) * 0.5
@@ -218,7 +234,7 @@ end
         spline_type,
         (-1, -0.75, -0.65, λ - 0.01, λ, 1),
         (scaled_diff, 0, 0, 0, slope, slope),
-        Spline{0}(
+        fixsplines(
             offset_neg1,
             offset_neg075,
             offset_neg065,
@@ -236,7 +252,7 @@ end
         spline_type,
         (-1, 0, 1),
         (0, slope, slope),
-        Spline{0}(max(offset_neg1, 0.2), lerp(0.5, offset_neg1, offset_pos1), offset_pos1),
+        fixsplines(max(offset_neg1, 0.2), lerp(0.5, offset_neg1, offset_pos1), offset_pos1),
     )
 end
 
@@ -247,7 +263,7 @@ end
         spline_type,
         (-1, 1),
         (slope, slope),
-        Spline{0}(max(offset_neg1, 0.2), lerp(0.5, offset_neg1, offset_pos1)),
+        fixsplines(max(offset_neg1, 0.2), lerp(0.5, offset_neg1, offset_pos1)),
     )
 end
 
@@ -259,7 +275,7 @@ end
         spline_type,
         (-1, -0.4, 0, 0.4, 1),
         (x₇, min(x₇, x₈), x₈, 2 * (x4 - x3), 0.7 * (x5 - x4)),
-        Spline{0}(x1, x2, x3, x4, x5),
+        fixsplines(x1, x2, x3, x4, x5),
     )
 end
 
@@ -270,7 +286,7 @@ end
         SP_RIDGES,
         (-1.0, -0.4, 0),
         (0, 0, 0),
-        (Spline{0}(x1), spline_6, Spline{0}(x3 + 0.07)),
+        (fixspline(x1), spline_6, fixspline(x3 + 0.07)),
     )
 
     locations = (0.4, 0.45, 0.55, 0.58)
@@ -321,11 +337,11 @@ end
 
     locations = (-1.10, -1.02, -0.51, -0.44, -0.18, -0.16, -0.15, -0.10, 0.25, 1.00)
     child_splines = (
-        Spline{0}(0.044),
-        Spline{0}(-0.2222),
-        Spline{0}(-0.2222),
-        Spline{0}(-0.12),
-        Spline{0}(-0.12),
+        fixspline(0.044),
+        fixspline(-0.2222),
+        fixspline(-0.2222),
+        fixspline(-0.12),
+        fixspline(-0.12),
         spline1,
         spline1,
         spline2,
@@ -353,7 +369,7 @@ function findfirst_default(predicate::Function, A, default)
     return default
 end
 
-function get_spline_offset(spline::Spline{N}, index, vals, f) where {N}
+function get_spline_offset(spline::Spline, index, vals, f)
     loc, der, sp =
         spline.locations[index], spline.derivatives[index], spline.child_splines[index]
     v = get_spline(sp, vals)
@@ -361,9 +377,9 @@ function get_spline_offset(spline::Spline{N}, index, vals, f) where {N}
 end
 
 # TODO: transform the recursive to an iterate one, since Julia is very bad with recursion :(
-@only_float32 function get_spline(spline::Spline, vals::NTuple{N2}) where {N2}
+function get_spline(spline::Spline, vals)
     N = length(spline)
-    N == 0 && return spline.fix_value
+    iszero(N) && return spline.fix_value
     f = vals[Int(spline.spline_type) + 1]
     i = findfirst_default(>=(f), spline.locations, N)
     isone(i) && return get_spline_offset(spline, 1, vals, f)
@@ -386,7 +402,7 @@ end
     p = l * (h - g) - (o - n)
     q = -m * (h - g) + (o - n)
 
-    r = lerp(k, n, o) + k * (1.0 - k) * lerp(k, p, q)
+    r = lerp(k, n, o) + k * (1 - k) * lerp(k, p, q)
     return r
 end
 
@@ -430,14 +446,14 @@ function get_resulting_node(
     idx=0,
     alt=0,
     dist=typemax(UInt64),
-    depth=0,
+    depth=1,
 )
-    iszero(biome_tree.steps[depth + 1]) && return idx
+    iszero(biome_tree.steps[depth]) && return idx
     # in all the code, dist refers to the square of the distance
 
     local step
     while true
-        step = biome_tree.steps[depth + 1]
+        step = biome_tree.steps[depth]
         depth += 1
         idx + step >= biome_tree.len_nodes || break
     end
@@ -482,7 +498,6 @@ function sample_depth(spline, c, e, w, y)
     return 1 - (y * 4) / 128 - 83 / 160 + off
 end
 
-@inline
 # function sampleBiomeNoise
 # it is the simple form. More complex (for performance, when we only sample a part of the noise)
 # forms are not implemented yet
@@ -496,9 +511,16 @@ function sample_biomenoises(bn::BiomeNoise, x, z, y, spline=SPLINE_STACK)
     temperature = sample_noise(bn.climate[Temperature], px, pz, 0)
     humidity = sample_noise(bn.climate[Humidity], px, pz, 0)
 
-    return Base.unsafe_trunc.(
-        Int64,
-        10_000 .* (temperature, humidity, continentalness, erosion, depth, weirdness),
+    return Utils.@map_inline(
+        @inline(x -> Base.unsafe_trunc(Int64, 10_000.0 * x)),
+        (
+            temperature,
+            humidity,
+            continentalness,
+            erosion,
+            depth,
+            weirdness,
+        ),
     )
 end
 
