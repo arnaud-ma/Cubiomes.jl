@@ -108,7 +108,7 @@ end
 
 const TypeTupleClimate = Tuple{(DoublePerlin{nb_octaves(np)} for np in NOISE_PARAMETERS)...}
 
-Base.getindex(tc::TypeTupleClimate, np::Type{<:NoiseParameter}) = tc[Int(np)]
+Base.getindex(tc::TypeTupleClimate, np::Type{<:NoiseParameter}) = @inbounds tc[Int(np)]
 
 struct BiomeNoise <: Dimension
     climate::TypeTupleClimate
@@ -483,36 +483,40 @@ function get_resulting_node(
     return leaf
 end
 
-function sample_shift(bn::BiomeNoise, x, z)
+function sample_shift(bn::BiomeNoise, x, z, skip_shift::Val{false})
     px = sample_noise(bn.climate[Shift], x, z, 0) * 4.0
     pz = sample_noise(bn.climate[Shift], z, 0, x) * 4.0
-
     return x + px, z + pz
 end
+sample_shift(bn::BiomeNoise, x, z, skip_shift::Val{true}) = x, z
 
-eval_weirdness(x) = -3 * (abs(abs(x) - 2 / 3) - 1 / 3)
+@only_float32 eval_weirdness(x) = -3 * (abs(abs(x) - 2 / 3) - 1 / 3)
 
-function sample_depth(spline, c, e, w, y)
-    vals = map(Float32, (c, e, eval_weirdness(w), w))
+@only_float32 function sample_depth(spline, c, e, w, y, skip_depth::Val{false})
+    vals = (c, e, eval_weirdness(w), w)
     off = get_spline(spline, vals) + 0.015
     return 1 - (y * 4) / 128 - 83 / 160 + off
 end
+sample_depth(spline, c, e, w, y, skip_depth::Val{true}) = 0.0f0
 
-# function sampleBiomeNoise
-# it is the simple form. More complex (for performance, when we only sample a part of the noise)
-# forms are not implemented yet
-function sample_biomenoises(bn::BiomeNoise, x, z, y, spline=SPLINE_STACK)
-    px, pz = sample_shift(bn, x, z)
-    continentalness = sample_noise(bn.climate[Continentalness], px, pz, 0)
-    erosion = sample_noise(bn.climate[Erosion], px, pz, 0)
-    weirdness = sample_noise(bn.climate[Weirdness], px, pz, 0)
-    depth = sample_depth(spline, continentalness, erosion, weirdness, y)
 
-    temperature = sample_noise(bn.climate[Temperature], px, pz, 0)
-    humidity = sample_noise(bn.climate[Humidity], px, pz, 0)
+function sample_biomenoises(
+    bn::BiomeNoise,
+    x, z, y,
+    spline=SPLINE_STACK;
+    skip_shift=Val(false), skip_depth=Val(false),
+)
+    px, pz = sample_shift(bn, x, z, skip_shift)
+    continentalness::Float32 = sample_noise(bn.climate[Continentalness], px, pz, 0)
+    erosion::Float32 = sample_noise(bn.climate[Erosion], px, pz, 0)
+    weirdness::Float32 = sample_noise(bn.climate[Weirdness], px, pz, 0)
+    depth = sample_depth(spline, continentalness, erosion, weirdness, y, skip_depth)
+
+    temperature::Float32 = sample_noise(bn.climate[Temperature], px, pz, 0)
+    humidity::Float32 = sample_noise(bn.climate[Humidity], px, pz, 0)
 
     return Utils.@map_inline(
-        @inline(x -> Base.unsafe_trunc(Int64, 10_000.0 * x)),
+        @inline(x -> Base.unsafe_trunc(Int64, 10_000.0f0 * x)),
         (
             temperature,
             humidity,
@@ -524,11 +528,26 @@ function sample_biomenoises(bn::BiomeNoise, x, z, y, spline=SPLINE_STACK)
     )
 end
 
-function get_biome_int(bn::BiomeNoise, x, z, y, version, spline=SPLINE_STACK)
-    noiseparams = sample_biomenoises(bn, x, z, y, spline)
+function get_biome_int(
+    bn::BiomeNoise,
+    x, z, y,
+    version, spline=SPLINE_STACK;
+    skip_shift=Val(false), skip_depth=Val(false),
+)
+    noiseparams = sample_biomenoises(
+        bn, x, z, y, spline; skip_shift=skip_shift, skip_depth=skip_depth,
+    )
     return climate_to_biome(noiseparams, version)
 end
 
-function get_biome(bn::BiomeNoise, x, z, y, version, spline=SPLINE_STACK)
-    return BiomeID(get_biome_int(bn, x, z, y, version, spline))
-end
+get_biome = BiomeID ∘ get_biome_int
+# function get_biome(
+#     bn::BiomeNoise,
+#     x, z, y,
+#     version, spline=SPLINE_STACK;
+#     skip_shift=Val(false), skip_depth=Val(false),
+# )
+#     return BiomeID(get_biome_int(
+#         bn, x, z, y, version, spline; skip_shift=skip_shift, skip_depth=skip_depth,
+#     ))
+# end
