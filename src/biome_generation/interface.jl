@@ -157,6 +157,12 @@ Base.broadcastable(o::Scale) = Ref(o)
 #region voronoi
 # ---------------------------------- Voronoi --------------------------------- #
 
+mutable struct SomeSha
+    x::Union{Nothing, UInt64}
+end
+Base.getindex(s::SomeSha) = s.x
+Base.setindex!(s::SomeSha, value) = s.x = value
+
 """
     get_voronoi_src_map3D(map3D::MCMap{3})
 

@@ -10,12 +10,6 @@ using Base.Iterators
 #                 Noise Struct Definition and Noise Generation                 #
 # ---------------------------------------------------------------------------- #
 
-mutable struct SomeSha
-    x::Union{Nothing, UInt64}
-end
-Base.getindex(s::SomeSha) = s.x
-Base.setindex!(s::SomeSha, value) = s.x = value
-
 """
     Nether{S<:Union{Nothing,UInt64}}
     Nether{seed::Integer; with_sha::Bool=true}
@@ -45,10 +39,12 @@ end
 function set_seed!(nn::Nether, seed::UInt64, ::Val{true})
     _set_temp_humid!(seed, nn.temperature, nn.humidity)
     nn.sha[] = Utils.sha256_from_seed(seed)
+    return nothing
 end
 function set_seed!(nn::Nether, seed::UInt64, ::Val{false})
     _set_temp_humid!(seed, nn.temperature, nn.humidity)
     nn.sha[] = nothing
+    return nothing
 end
 set_seed!(nn::Nether, seed::UInt64) = set_seed!(nn, seed, Val(true))
 

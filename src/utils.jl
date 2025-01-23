@@ -230,6 +230,22 @@ function trim(predicate, x)
     end
     return x[first:last]
 end
+
+"""
+    findfirst_default(predicate::Function, A, default)
+
+Return the first index i of A where predicate(A[i]) is true. If
+no i satisfy this, default is returned instead.
+"""
+function findfirst_default(predicate::Function, A, default)
+    for (i, a) in pairs(A)
+        if predicate(a)
+            return i
+        end
+    end
+    return default
+end
+
 #endregion
 #region types
 # ---------------------------------------------------------------------------- #

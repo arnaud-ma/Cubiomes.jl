@@ -112,15 +112,46 @@ Base.getindex(tc::TypeTupleClimate, np::Type{<:NoiseParameter}) = @inbounds tc[I
 
 struct BiomeNoise <: Dimension
     climate::TypeTupleClimate
+    sha::SomeSha
 end
 
-function BiomeNoise(::UndefInitializer)
-    BiomeNoise(Tuple(Noise(
-        DoublePerlin{nb_octaves(np)},
+@inline function create_noise(noise_param::NoiseParameter)
+    return Noise(
+        DoublePerlin{nb_octaves(noise_param)},
         undef,
-        trimmed_amplitudes(np),
+        trimmed_amplitudes(noise_param),
         Val(true), # tell the constructor it is already trimmed
-    ) for np in NOISE_PARAMETERS))
+    )
+end
+function BiomeNoise(::UndefInitializer)
+    return BiomeNoise(Utils.@map_inline(create_noise, NOISE_PARAMETERS), SomeSha(nothing))
+end
+
+function set_seed!(noise::BiomeNoise, seed::UInt64; sha=Val(true), large=Val(false))
+    return _set_seed!(noise, seed, sha, large)
+end
+
+function _set_seed!(noise::BiomeNoise, seed, sha::Val{false}, large)
+    __set_seed!(noise::BiomeNoise, seed::UInt64, large)
+    noise.sha[] = nothing
+    return nothing
+end
+
+function _set_seed!(noise::BiomeNoise, seed, sha::Val{true}, large)
+    __set_seed!(noise::BiomeNoise, seed::UInt64, large)
+    noise.sha[] = Utils.sha256_from_seed(seed)
+    return nothing
+end
+
+function __set_seed!(noise::BiomeNoise, seed, large)
+    rng = JavaXoroshiro128PlusPlus(seed)
+    xlo = next🎲(rng, UInt64)
+    xhi = next🎲(rng, UInt64)
+
+    for (clim, noise_param) in zip(noise.climate, NOISE_PARAMETERS)
+        set_seed!(clim, xlo, xhi, noise_param, large)
+    end
+    return nothing
 end
 
 function set_seed!(
@@ -139,23 +170,13 @@ function set_seed!(
     return nothing
 end
 
-function set_seed!(noise::BiomeNoise, seed::UInt64, large=Val(false))
-    rng = JavaXoroshiro128PlusPlus(seed)
-    xlo = next🎲(rng, UInt64)
-    xhi = next🎲(rng, UInt64)
-
-    for (clim, noise_param) in zip(noise.climate, NOISE_PARAMETERS)
-        set_seed!(clim, xlo, xhi, noise_param, large)
-    end
-    return nothing
-end
 #endregion
 #region Spline creation
 
 # ---------------------------------------------------------------------------- #
 #                              Splines Creation                                #
 # ---------------------------------------------------------------------------- #
-#! The entire goal of this part is to get this SPLINE_STACK constant
+#! The entire goal of this part is to get the SPLINE_STACK constant
 # (at the end of the part)
 
 # I think it's better here to use enums instead of types
@@ -357,17 +378,8 @@ const SPLINE_STACK = world_spline()
 #endregion
 #region Spline getter
 # ---------------------------------------------------------------------------- #
-#                                 Spline getter                                #
+#                                 Spline Getter                                #
 # ---------------------------------------------------------------------------- #
-
-function findfirst_default(predicate::Function, A, default)
-    for (i, a) in pairs(A)
-        if predicate(a)
-            return i
-        end
-    end
-    return default
-end
 
 function get_spline_offset(spline::Spline, index, vals, f)
     loc, der, sp =
@@ -381,7 +393,7 @@ function get_spline(spline::Spline, vals)
     N = length(spline)
     iszero(N) && return spline.fix_value
     f = vals[Int(spline.spline_type) + 1]
-    i = findfirst_default(>=(f), spline.locations, N)
+    i = Utils.findfirst_default(>=(f), spline.locations, N)
     isone(i) && return get_spline_offset(spline, 1, vals, f)
     i == (N + 1) && return get_spline_offset(spline, N, vals, f)
 
@@ -405,39 +417,105 @@ function get_spline(spline::Spline, vals)
     r = lerp(k, n, o) + k * (1 - k) * lerp(k, p, q)
     return r
 end
+#endregion
+#region Biome Getter
+# ---------------------------------------------------------------------------- #
+#                                 Biome Getter                                 #
+# ---------------------------------------------------------------------------- #
+# TODO: get_biome for scale != (1, 4)
 
-function climate_to_biome(noise_parameters::NTuple{6}, biome_tree::BiomeTree)
-    idx = get_resulting_node(noise_parameters, biome_tree)
-    return (biome_tree.nodes[idx + 1] >> 48) & 0xFF
+function get_biome(
+    bn::BiomeNoise,
+    x, z, y,
+    version,
+    ::T📏"1:4",
+    spline=SPLINE_STACK;
+    skip_shift=Val(false), skip_depth=Val(false),
+)
+    return BiomeID(get_biome_int(
+        bn, x, z, y, version, spline; skip_shift=skip_shift, skip_depth=skip_depth,
+    ))
 end
+
+function get_biome(
+    bn::BiomeNoise,
+    x, z, y,
+    version,
+    ::T📏"1:1",
+    spline=SPLINE_STACK;
+    skip_shift=Val(false), skip_depth=Val(false),
+)
+    x, z, y = voronoi_access(bn.sha[], x, z, y)
+    return get_biome(
+        bn,
+        x, z, y,
+        version, 📏"1:4", spline;
+        skip_shift=skip_shift, skip_depth=skip_depth,
+    )
+end
+
+function get_biome_int(
+    bn::BiomeNoise,
+    x, z, y,
+    version, spline=SPLINE_STACK;
+    skip_shift=Val(false), skip_depth=Val(false),
+)
+    noiseparams = sample_biomenoises(
+        bn, x, z, y, spline; skip_shift=skip_shift, skip_depth=skip_depth,
+    )
+    return climate_to_biome(noiseparams, version)
+end
+
+function sample_biomenoises(
+    bn::BiomeNoise,
+    x, z, y,
+    spline=SPLINE_STACK;
+    skip_shift=Val(false), skip_depth=Val(false),
+)
+    px, pz = sample_shift(bn, x, z, skip_shift)
+    continentalness::Float32 = sample_noise(bn.climate[Continentalness], px, pz, 0)
+    erosion::Float32 = sample_noise(bn.climate[Erosion], px, pz, 0)
+    weirdness::Float32 = sample_noise(bn.climate[Weirdness], px, pz, 0)
+    depth = sample_depth(spline, continentalness, erosion, weirdness, y, skip_depth)
+
+    temperature::Float32 = sample_noise(bn.climate[Temperature], px, pz, 0)
+    humidity::Float32 = sample_noise(bn.climate[Humidity], px, pz, 0)
+
+    return Utils.@map_inline(
+        @inline(x -> Base.unsafe_trunc(Int64, 10_000.0f0 * x)),
+        (
+            temperature,
+            humidity,
+            continentalness,
+            erosion,
+            depth,
+            weirdness,
+        ),
+    )
+end
+
+function sample_shift(bn::BiomeNoise, x, z, skip_shift::Val{false})
+    px = sample_noise(bn.climate[Shift], x, z, 0) * 4.0
+    pz = sample_noise(bn.climate[Shift], z, 0, x) * 4.0
+    return x + px, z + pz
+end
+sample_shift(bn::BiomeNoise, x, z, skip_shift::Val{true}) = x, z
+
+@only_float32 eval_weirdness(x) = -3 * (abs(abs(x) - 2 / 3) - 1 / 3)
+
+@only_float32 function sample_depth(spline, c, e, w, y, skip_depth::Val{false})
+    vals = (c, e, eval_weirdness(w), w)
+    off = get_spline(spline, vals) + 0.015
+    return 1 - (y * 4) / 128 - 83 / 160 + off
+end
+sample_depth(spline, c, e, w, y, skip_depth::Val{true}) = 0.0f0
 
 function climate_to_biome(noise_parameters::NTuple{6}, version::Val)
     return climate_to_biome(noise_parameters, get_biome_tree(version))
 end
-
-function calculate_distance(noise_param, param1, param2)
-    a = noise_param - param1
-    signed(a) > 0 && return a * a
-
-    b = param2 - noise_param
-    signed(b) > 0 && return b * b
-
-    return zero(a)
-end
-
-function noise_params_distance(noise_params::NTuple{6}, biome_tree::BiomeTree, idx)
-    dist_square = 0
-    node, param = biome_tree.nodes[idx + 1], biome_tree.param
-    for i in 1:6
-        # idx is the index of the biome in the biome tree
-        # we iterate over the 6 noise parameters
-        # each noise_param is associated with 2 bytes in the biome tree
-        # see the comments of the biome tree for more information
-        idx = (node >> (8 * (i - 1))) & 0xFF
-        dist_square +=
-            calculate_distance(noise_params[i], param[idx + 1][2], param[idx + 1][1])
-    end
-    return dist_square
+function climate_to_biome(noise_parameters::NTuple{6}, biome_tree::BiomeTree)
+    idx = get_resulting_node(noise_parameters, biome_tree)
+    return (biome_tree.nodes[idx + 1] >> 48) & 0xFF
 end
 
 function get_resulting_node(
@@ -483,71 +561,27 @@ function get_resulting_node(
     return leaf
 end
 
-function sample_shift(bn::BiomeNoise, x, z, skip_shift::Val{false})
-    px = sample_noise(bn.climate[Shift], x, z, 0) * 4.0
-    pz = sample_noise(bn.climate[Shift], z, 0, x) * 4.0
-    return x + px, z + pz
-end
-sample_shift(bn::BiomeNoise, x, z, skip_shift::Val{true}) = x, z
-
-@only_float32 eval_weirdness(x) = -3 * (abs(abs(x) - 2 / 3) - 1 / 3)
-
-@only_float32 function sample_depth(spline, c, e, w, y, skip_depth::Val{false})
-    vals = (c, e, eval_weirdness(w), w)
-    off = get_spline(spline, vals) + 0.015
-    return 1 - (y * 4) / 128 - 83 / 160 + off
-end
-sample_depth(spline, c, e, w, y, skip_depth::Val{true}) = 0.0f0
-
-
-function sample_biomenoises(
-    bn::BiomeNoise,
-    x, z, y,
-    spline=SPLINE_STACK;
-    skip_shift=Val(false), skip_depth=Val(false),
-)
-    px, pz = sample_shift(bn, x, z, skip_shift)
-    continentalness::Float32 = sample_noise(bn.climate[Continentalness], px, pz, 0)
-    erosion::Float32 = sample_noise(bn.climate[Erosion], px, pz, 0)
-    weirdness::Float32 = sample_noise(bn.climate[Weirdness], px, pz, 0)
-    depth = sample_depth(spline, continentalness, erosion, weirdness, y, skip_depth)
-
-    temperature::Float32 = sample_noise(bn.climate[Temperature], px, pz, 0)
-    humidity::Float32 = sample_noise(bn.climate[Humidity], px, pz, 0)
-
-    return Utils.@map_inline(
-        @inline(x -> Base.unsafe_trunc(Int64, 10_000.0f0 * x)),
-        (
-            temperature,
-            humidity,
-            continentalness,
-            erosion,
-            depth,
-            weirdness,
-        ),
-    )
+function noise_params_distance(noise_params::NTuple{6}, biome_tree::BiomeTree, idx)
+    dist_square = 0
+    node, param = biome_tree.nodes[idx + 1], biome_tree.param
+    for i in 1:6
+        # idx is the index of the biome in the biome tree
+        # we iterate over the 6 noise parameters
+        # each noise_param is associated with 2 bytes in the biome tree
+        # see the comments of the biome tree for more information
+        idx = (node >> (8 * (i - 1))) & 0xFF
+        dist_square +=
+            calculate_distance(noise_params[i], param[idx + 1][2], param[idx + 1][1])
+    end
+    return dist_square
 end
 
-function get_biome_int(
-    bn::BiomeNoise,
-    x, z, y,
-    version, spline=SPLINE_STACK;
-    skip_shift=Val(false), skip_depth=Val(false),
-)
-    noiseparams = sample_biomenoises(
-        bn, x, z, y, spline; skip_shift=skip_shift, skip_depth=skip_depth,
-    )
-    return climate_to_biome(noiseparams, version)
-end
+function calculate_distance(noise_param, param1, param2)
+    a = noise_param - param1
+    signed(a) > 0 && return a * a
 
-get_biome = BiomeID ∘ get_biome_int
-# function get_biome(
-#     bn::BiomeNoise,
-#     x, z, y,
-#     version, spline=SPLINE_STACK;
-#     skip_shift=Val(false), skip_depth=Val(false),
-# )
-#     return BiomeID(get_biome_int(
-#         bn, x, z, y, version, spline; skip_shift=skip_shift, skip_depth=skip_depth,
-#     ))
-# end
+    b = param2 - noise_param
+    signed(b) > 0 && return b * b
+
+    return zero(a)
+end
