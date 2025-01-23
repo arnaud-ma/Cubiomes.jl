@@ -483,12 +483,13 @@ function get_resulting_node(
     return leaf
 end
 
-function sample_shift(bn::BiomeNoise, x, z, skip_shift::Val{false})
+function sample_shift(bn, x, z, skip_shift::Val{false})
     px = sample_noise(bn.climate[Shift], x, z, 0) * 4.0
     pz = sample_noise(bn.climate[Shift], z, 0, x) * 4.0
     return x + px, z + pz
 end
-sample_shift(bn::BiomeNoise, x, z, skip_shift::Val{true}) = x, z
+sample_shift(bn, x, z, skip_shift::Val{true}) = x, z
+sample_shift(bn, x, z, skip_shift::Bool) = sample_shift(bn, x, z, Val(skip_shift))
 
 @only_float32 eval_weirdness(x) = -3 * (abs(abs(x) - 2 / 3) - 1 / 3)
 
@@ -498,6 +499,7 @@ sample_shift(bn::BiomeNoise, x, z, skip_shift::Val{true}) = x, z
     return 1 - (y * 4) / 128 - 83 / 160 + off
 end
 sample_depth(spline, c, e, w, y, skip_depth::Val{true}) = 0.0f0
+sample_depth(spline, c, e, w, y, skip_depth::Bool) = sample_depth(spline, c, e, w, y, Val(skip_depth))
 
 
 function sample_biomenoises(
