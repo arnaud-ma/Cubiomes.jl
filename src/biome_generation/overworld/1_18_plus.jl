@@ -115,7 +115,7 @@ struct BiomeNoise <: Dimension
     sha::SomeSha
 end
 
-@inline function create_noise(noise_param::NoiseParameter)
+@inline function create_noise(noise_param::Type{<:NoiseParameter})
     return Noise(
         DoublePerlin{nb_octaves(noise_param)},
         undef,
@@ -124,7 +124,7 @@ end
     )
 end
 function BiomeNoise(::UndefInitializer)
-    return BiomeNoise(Utils.@map_inline(create_noise, NOISE_PARAMETERS), SomeSha(nothing))
+    return BiomeNoise(map(create_noise, NOISE_PARAMETERS), SomeSha(nothing))
 end
 
 function set_seed!(noise::BiomeNoise, seed::UInt64; sha=Val(true), large=Val(false))
@@ -427,21 +427,8 @@ end
 function get_biome(
     bn::BiomeNoise,
     x, z, y,
-    version,
-    ::T📏"1:4",
-    spline=SPLINE_STACK;
-    skip_shift=Val(false), skip_depth=Val(false),
-)
-    return BiomeID(get_biome_int(
-        bn, x, z, y, version, spline; skip_shift=skip_shift, skip_depth=skip_depth,
-    ))
-end
-
-function get_biome(
-    bn::BiomeNoise,
-    x, z, y,
-    version,
     ::T📏"1:1",
+    version,
     spline=SPLINE_STACK;
     skip_shift=Val(false), skip_depth=Val(false),
 )
@@ -449,9 +436,22 @@ function get_biome(
     return get_biome(
         bn,
         x, z, y,
-        version, 📏"1:4", spline;
+        📏"1:4", version, spline;
         skip_shift=skip_shift, skip_depth=skip_depth,
     )
+end
+
+function get_biome(
+    bn::BiomeNoise,
+    x, z, y,
+    ::T📏"1:4",
+    version,
+    spline=SPLINE_STACK;
+    skip_shift=Val(false), skip_depth=Val(false),
+)
+    return BiomeID(get_biome_int(
+        bn, x, z, y, version, spline; skip_shift=skip_shift, skip_depth=skip_depth,
+    ))
 end
 
 function get_biome_int(
@@ -481,16 +481,9 @@ function sample_biomenoises(
     temperature::Float32 = sample_noise(bn.climate[Temperature], px, pz, 0)
     humidity::Float32 = sample_noise(bn.climate[Humidity], px, pz, 0)
 
-    return Utils.@map_inline(
-        @inline(x -> Base.unsafe_trunc(Int64, 10_000.0f0 * x)),
-        (
-            temperature,
-            humidity,
-            continentalness,
-            erosion,
-            depth,
-            weirdness,
-        ),
+    return map(
+        x -> Base.unsafe_trunc(Int64, 10_000.0f0 * x),
+        (temperature, humidity, continentalness, erosion, depth, weirdness),
     )
 end
 
@@ -500,6 +493,7 @@ function sample_shift(bn::BiomeNoise, x, z, skip_shift::Val{false})
     return x + px, z + pz
 end
 sample_shift(bn::BiomeNoise, x, z, skip_shift::Val{true}) = x, z
+sample_shift(bn, x, z, skip_shift::Bool) = sample_shift(bn, x, z, Val(skip_shift))
 
 @only_float32 eval_weirdness(x) = -3 * (abs(abs(x) - 2 / 3) - 1 / 3)
 
@@ -509,6 +503,9 @@ sample_shift(bn::BiomeNoise, x, z, skip_shift::Val{true}) = x, z
     return 1 - (y * 4) / 128 - 83 / 160 + off
 end
 sample_depth(spline, c, e, w, y, skip_depth::Val{true}) = 0.0f0
+function sample_depth(spline, c, e, w, y, skip_depth::Bool)
+    sample_depth(spline, c, e, w, y, Val(skip_depth))
+end
 
 function climate_to_biome(noise_parameters::NTuple{6}, version::Val)
     return climate_to_biome(noise_parameters, get_biome_tree(version))
@@ -584,4 +581,19 @@ function calculate_distance(noise_param, param1, param2)
     signed(b) > 0 && return b * b
 
     return zero(a)
+end
+#endregion
+#region Biome Generation
+# ---------------------------------------------------------------------------- #
+#                               Biome Generation                               #
+# ---------------------------------------------------------------------------- #
+
+function gen_biomes!(bn::BiomeNoise, map3D::MCMap{3}, ::Scale{S}, version) where {S}
+    scale = S ÷ 4
+    mid = scale ÷ 2
+
+    for coord in CartesianIndices(map3D)
+        coord_scale4 = map(x -> x * scale + mid, coord.I)
+        map3D[coord] = get_biome(bn, coord_scale4..., 📏"1:4", version)
+    end
 end

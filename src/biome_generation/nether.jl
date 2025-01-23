@@ -210,8 +210,8 @@ function fill_radius!(
     # - u is in the n dimension cube of center `center` and edges of the same size `r`
     # so we can simply iterate over the intersection coordinates.
     coords = CartesianIndices(ntuple(
-        dim -> (center[dim] - r: center[dim] + r) ∩ axes(out, dim),
-        Val(N)
+        dim -> ((center[dim] - r):(center[dim] + r)) ∩ axes(out, dim),
+        Val(N),
     ))
 
     for coord in coords
@@ -328,10 +328,10 @@ function gen_biomes_unsafe!(
     version::MCVersion=MC_UNDEF,
 )
     coords = CartesianIndices(map3D)
-
     # If there is only one value, simple wrapper around get_biome_unsafe
     if isone(length(coords))
-        map3D[1] = get_biome_unsafe(nn, first(coords), 📏"1:4")
+        coord = first(coords).I
+        map3D[1] = get_biome_unsafe(nn, coord..., 📏"1:4")
         return nothing
     end
 
