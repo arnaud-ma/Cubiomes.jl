@@ -18,6 +18,7 @@ overflow_int32(x::Int64) = signed(UInt32(x & typemax(UInt32))) < zero(Int32)
 See https://bugs.mojang.com/browse/MC-159283 for more information.
 """
 has_bug_mc159283(version, x::Int64, z::Int64) = false
-has_bug_mc159283(::mcV">=1.14", x::Int64, z::Int64) =
+function has_bug_mc159283(::mcvt">=1.14", x::Int64, z::Int64)
     overflow_int32((2x + 1)^2 + (2z + 1)^2)
+end
 end # module

@@ -1,6 +1,6 @@
 module BiomeTrees
 
-export biome_trees, BiomeTree, get_biome_tree
+export BiomeTree, get_biome_tree
 
 using ...MCVersions
 
@@ -12,7 +12,7 @@ struct BiomeTree{N}
     len_nodes::Int
 end
 
-function BiomeTree(;order, steps, param, nodes)
+function BiomeTree(; order, steps, param, nodes)
     return BiomeTree(
         order,
         Int32.(steps),
@@ -33,15 +33,9 @@ function get_biome_tree(::Type{<:MCVersion})
     throw(ArgumentError(msg))
 end
 
-get_biome_tree(::mcV"1.18") = MC_1_18
-get_biome_tree(::mcV"1.19.4") = MC_1_19
-get_biome_tree(::mcV"1.20") = MC_1_20
-get_biome_tree(::mcV"1.19.2") = MC_1_19_2
-
-const biome_trees = (
-    v1_18=MC_1_18,
-    v1_19=MC_1_19,
-    v1_20=MC_1_20,
-    v1_19_2=MC_1_19_2,
-)
+get_biome_tree(::mcvt"1.18") = MC_1_18
+get_biome_tree(::mcvt"1.19.2") = MC_1_19_2
+get_biome_tree(::mcvt"1.19.4") = MC_1_19
+get_biome_tree(::mcvt"1.20") = MC_1_20
+get_biome_tree(::mcvt"1.21") = MC_1_20
 end

@@ -63,8 +63,8 @@ function get_biome(
     return get_biome(nn, coords.I..., args...)
 end
 
-get_biome(nn::Nether, x::Real, z::Real, y::Real, ::Scale, ::mcV"<1.16") = nether_wastes
-function gen_biomes!(nn::Nether, out::MCMap, ::Scale, ::mcV"<1.16", args...)
+get_biome(nn::Nether, x::Real, z::Real, y::Real, ::Scale, ::mcvt"<1.16") = nether_wastes
+function gen_biomes!(nn::Nether, out::MCMap, ::Scale, ::mcvt"<1.16", args...)
     fill!(out, nether_wastes)
     return nothing
 end
@@ -88,7 +88,7 @@ end
 function get_biome(
     nn::Nether,
     x::Real, z::Real, y::Real,
-    scale::Scale, version::mcV">=1.16",
+    scale::Scale, version::mcvt">=1.16",
 )
     return get_biome(nn, x, z, scale, version)
 end
@@ -96,13 +96,13 @@ end
 function get_biome(
     nn::Nether,
     x::Real, z::Real, y::Real,
-    ::T📏"1:1", version::mcV">=1.16",
+    ::T📏"1:1", version::mcvt">=1.16",
 )
     source_x, source_z, _ = voronoi_access(nn.sha[], x, z, y)
     return get_biome(nn, source_x, source_z, 📏"1:4", version)
 end
 
-function get_biome(nn::Nether, x::Real, z::Real, ::T📏"1:4", version::mcV">=1.16")
+function get_biome(nn::Nether, x::Real, z::Real, ::T📏"1:4", version::mcvt">=1.16")
     temperature = sample_noise(nn.temperature, x, z)
     humidity = sample_noise(nn.humidity, x, z)
     return find_closest_biome(temperature, humidity)
@@ -242,7 +242,7 @@ end
 
 function gen_biomes_unsafe!(
     nn::Nether, map3d::MCMap{3},
-    scale::Scale{S}, ::mcV">=1.16", confidence=1,
+    scale::Scale{S}, ::mcvt">=1.16", confidence=1,
 ) where {S}
     # At scale != 1, the biome does not change with the y coordinate
     # So we simply take the first y coordinate and fill the other ones with the same biome
@@ -260,7 +260,7 @@ function gen_biomes!(
     nn::Nether,
     mc_map::MCMap,
     scale::Scale,
-    ::mcV">=1.16",
+    ::mcvt">=1.16",
     confidence=1,
 )
     fill!(mc_map, BIOME_NONE)
@@ -274,51 +274,25 @@ end
 #                Biome Generation for 2D and 3D, with scale == 1               #
 # ---------------------------------------------------------------------------- #
 
-const _FIRST_SIZE_CACHE_GEN_BIOME_NETHER = 1_000
-const _CACHE_GEN_BIOME_NETHER =
-    Tuple(fill(BIOME_NONE, _FIRST_SIZE_CACHE_GEN_BIOME_NETHER) for _ in 1:Threads.nthreads())
-
-"""
-    view_reshape_cache_like(axes)
-
-Create a view of the cache with the same shape as the axes. It is thread-safe because
-it uses a cache per thread. If the cache is too small, it will be automatically resized.
-"""
-function view_reshape_cache_like(axes)
-    size_axes = length.(axes)
-    required_size = prod(size_axes)
-    cache_vector = _CACHE_GEN_BIOME_NETHER[Threads.threadid()]
-    if length(cache_vector) < required_size
-        append!(
-            cache_vector,
-            fill(BIOME_NONE, required_size - length(cache_vector)),
-        )
-    end
-    buffer_view = @view cache_vector[1:required_size]
-    reshaped_view = reshape(buffer_view, size_axes...)
-    offset_view = OffsetArray(reshaped_view, axes...)
-    return offset_view
-end
-
 function gen_biomes!(
     nn::Nether,
     map3D::MCMap{3},
     ::T📏"1:1",
-    version::mcV">=1.16",
+    version::mcvt">=1.16",
     confidence=1,
 )
     coords = CartesianIndices(map3D)
     # If there is only one value, simple wrapper around get_biome_unsafe
     if isone(length(coords))
-        coord = first(coords).I
-        map3D[1] = get_biome(nn, coord..., 📏"1:4", version)
+        coord = first(coords)
+        map3D[coord] = get_biome(nn, coord.I..., 📏"1:4", version)
         return nothing
     end
 
     # The minimal map where we are sure we can find the source coordinates at scale 4
     biome_parent_axes = get_voronoi_src_axes2D(map3D)
     biome_parents = view_reshape_cache_like(biome_parent_axes)
-    gen_biomes!(nn, biome_parents, 📏"1:4", confidence, version)
+    gen_biomes!(nn, biome_parents, 📏"1:4", version, version)
 
     sha = nn.sha[]
     # TODO: we could use @threads but overhead if the size is small (1-10ms overhead)
@@ -335,7 +309,7 @@ function gen_biomes!(
     nn::Nether,
     map2D::MCMap{2},
     ::T📏"1:1",
-    version::mcV">=1.16",
+    version::mcvt">=1.16",
     confidence=1,
 )
     msg = "generate the nether biomes at scale 1 requires a 3D map because \

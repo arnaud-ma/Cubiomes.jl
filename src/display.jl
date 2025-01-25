@@ -20,6 +20,7 @@ const BIOME_COLORS = Dict(
     bg.frozen_ocean => colorant"0x7070d6",
     bg.frozen_river => colorant"0xa0a0ff",
     bg.snowy_plains => colorant"0xffffff",
+    bg.snowy_tundra => colorant"0xffffff",
     bg.snowy_mountains => colorant"0xa0a0a0",
     bg.mushroom_fields => colorant"0xff00ff",
     bg.mushroom_field_shore => colorant"0xa000ff",

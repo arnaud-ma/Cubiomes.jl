@@ -429,7 +429,7 @@ function get_biome(
     bn::BiomeNoise,
     x, z, y,
     ::T📏"1:1",
-    version,
+    version::mcvt">=1.18",
     spline=SPLINE_STACK;
     skip_shift=Val(false), skip_depth=Val(false),
 )
@@ -445,32 +445,59 @@ end
 function get_biome(
     bn::BiomeNoise,
     x, z, y,
-    ::T📏"1:4",
-    version,
+    ::T📏"1:4", version::mcvt">=1.18",
     spline=SPLINE_STACK;
-    skip_shift=Val(false), skip_depth=Val(false),
+    skip_shift=Val(false), skip_depth=Val(false), old_idx=nothing,
+)
+    return _get_biome(
+        bn, x, z, y, 📏"1:4", version, spline, skip_shift, skip_depth, old_idx,
+    )
+end
+
+# The use of two _get_biome that are almost the same is a bit ugly but im too lazy
+# it works so it's fine, the issue is that we have two values to return if old_idx is not nothing
+function _get_biome(
+    bn::BiomeNoise,
+    x, z, y,
+    ::T📏"1:4", version::mcvt">=1.18",
+    spline, skip_shift, skip_depth, old_idx::Nothing,
 )
     return BiomeID(get_biome_int(
-        bn, x, z, y, version, spline; skip_shift=skip_shift, skip_depth=skip_depth,
+        bn, x, z, y, version, spline,
+        skip_shift, skip_depth, old_idx,
     ))
+end
+
+function _get_biome(
+    bn::BiomeNoise,
+    x, z, y,
+    ::T📏"1:4", version::mcvt">=1.18",
+    spline, skip_shift, skip_depth, old_idx,
+)
+    biome_int, old_idx = get_biome_int(
+        bn, x, z, y, version, spline,
+        skip_shift, skip_depth, old_idx,
+    )
+    return BiomeID(biome_int), old_idx
 end
 
 function get_biome_int(
     bn::BiomeNoise,
     x, z, y,
-    version, spline=SPLINE_STACK;
-    skip_shift=Val(false), skip_depth=Val(false),
+    version::mcvt">=1.18",
+    spline=SPLINE_STACK,
+    skip_shift=Val(false), skip_depth=Val(false), old_idx=nothing,
 )
     noiseparams = sample_biomenoises(
-        bn, x, z, y, spline; skip_shift=skip_shift, skip_depth=skip_depth,
+        bn, x, z, y, spline, skip_shift, skip_depth,
     )
-    return climate_to_biome(noiseparams, version)
+    return climate_to_biome(noiseparams, version, old_idx)
 end
 
 function sample_biomenoises(
     bn::BiomeNoise,
     x, z, y,
-    spline=SPLINE_STACK;
+    spline=SPLINE_STACK,
     skip_shift=Val(false), skip_depth=Val(false),
 )
     px, pz = sample_shift(bn, x, z, skip_shift)
@@ -508,20 +535,33 @@ function sample_depth(spline, c, e, w, y, skip_depth::Bool)
     sample_depth(spline, c, e, w, y, Val(skip_depth))
 end
 
-function climate_to_biome(noise_parameters::NTuple{6}, version::Type{<:MCVersion})
-    return climate_to_biome(noise_parameters, get_biome_tree(version))
+function climate_to_biome(
+    noise_parameters::NTuple{6},
+    version::mcvt">=1.18",
+    old_idx=nothing,
+)
+    return climate_to_biome(noise_parameters, get_biome_tree(version), old_idx)
 end
+
+climate_to_biome(np::NTuple{6}, bt::BiomeTree, ::Nothing) = climate_to_biome(np, bt)
 function climate_to_biome(noise_parameters::NTuple{6}, biome_tree::BiomeTree)
     idx = get_resulting_node(noise_parameters, biome_tree)
-    return (biome_tree.nodes[idx + 1] >> 48) & 0xFF
+    return extract_biome_index(biome_tree, idx)
 end
+function climate_to_biome(noise_parameters::NTuple{6}, biome_tree::BiomeTree, old_idx)
+    dist = noise_params_distance(noise_parameters, biome_tree, old_idx)
+    idx = get_resulting_node(noise_parameters, biome_tree, old_idx, dist)
+    return extract_biome_index(biome_tree, idx), idx
+end
+
+extract_biome_index(biome_tree::BiomeTree, idx) = (biome_tree.nodes[idx + 1] >> 48) & 0xFF
 
 function get_resulting_node(
     noise_params::NTuple{6},
     biome_tree::BiomeTree,
-    idx=0,
     alt=0,
     dist=typemax(UInt64),
+    idx=0,
     depth=1,
 )
     iszero(biome_tree.steps[depth]) && return idx
@@ -541,7 +581,7 @@ function get_resulting_node(
     for _ in 0:(biome_tree.order - 1)
         dist_inner = noise_params_distance(noise_params, biome_tree, inner)
         if dist_inner < dist
-            leaf2 = get_resulting_node(noise_params, biome_tree, inner, leaf, dist, depth)
+            leaf2 = get_resulting_node(noise_params, biome_tree, leaf, dist, inner, depth)
             dist_leaf2 = if (inner == leaf2)
                 dist_inner
             else
@@ -589,12 +629,50 @@ end
 #                               Biome Generation                               #
 # ---------------------------------------------------------------------------- #
 
-function gen_biomes!(bn::BiomeNoise, map3D::MCMap{3}, ::Scale{S}, version) where {S}
+function gen_biomes!(bn::BiomeNoise, map3D::MCMap{3}, ::T📏"1:1", version::mcvt">=1.18")
+    coords = CartesianIndices(map3D)
+    # If there is only one value, simple wrapper around get_biome_unsafe
+    if isone(length(coords))
+        coord = first(coords)
+        map3D[coord] = get_biome(bn, coord.I..., 📏"1:4", version)
+    end
+
+    # The minimal map where we are sure we can find the source coordinates at scale 4
+    biome_parent_axes = get_voronoi_src_axes3D(map3D)
+    biome_parents = view_reshape_cache_like(biome_parent_axes)
+    gen_biomes!(bn, biome_parents, 📏"1:4", version)
+
+    sha = bn.sha[]
+    for coord in coords
+        source_x, source_z, source_y = voronoi_access(sha, coord)
+        result = biome_parents[source_x, source_z, source_y]
+        @inbounds map3D[coord] = result
+    end
+end
+
+function gen_biomes!(bn::BiomeNoise, map3D::MCMap{3}, ::T📏"1:4", version::mcvt">=1.18")
+    for coord in CartesianIndices(map3D)
+        map3D[coord] = get_biome(bn, coord.I..., 📏"1:4", version)
+    end
+    return nothing
+end
+
+function gen_biomes!(
+    bn::BiomeNoise, map3D::MCMap{3},
+    ::Scale{S}, version::mcvt">=1.18",
+) where {S}
     scale = S ÷ 4
     mid = scale ÷ 2
-
+    old_idx = zero(UInt64)
     for coord in CartesianIndices(map3D)
-        coord_scale4 = map(x -> x * scale + mid, coord.I)
-        map3D[coord] = get_biome(bn, coord_scale4..., 📏"1:4", version)
+        @inbounds coord_scale4 = (
+            coord[1] * scale + mid,
+            coord[2] * scale + mid,
+            coord[3],
+        )
+        map3D[coord], old_idx = get_biome(
+            bn, coord_scale4..., 📏"1:4", version;
+            skip_shift=Val(true), old_idx=old_idx,
+        )
     end
 end

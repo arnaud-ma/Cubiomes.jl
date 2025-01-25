@@ -1,6 +1,6 @@
 module MCVersions
 
-export @mcv_str, @mcV_str, MCVersion
+export @mcv_str, @mcvt_str, MCVersion
 
 #!format: off
 public MC_VERSIONS, vNEWEST, vUNDEF
@@ -106,7 +106,7 @@ macro mcv_str(str)
     return str_to_mcversion(str)
 end
 
-function _mcV(str)
+function _mcvt(str)
     regex_sign = r"(<=)|(>=)|(<)|(>)"
 
     matches_sign = map(x -> x.match, eachmatch(regex_sign, str))
@@ -137,33 +137,33 @@ function _mcV(str)
 end
 
 """
-    @mcV_str
+    @mcvt_str
 
 A string macro to get the type representation of one or more (with an Union{}) Minecraft versions.
 Useful for functions who need to dispatch over specifics versions.
 
 The syntax is:
-    - `mcV"1.8.9"` -> expands to Type{mcv"1.8.9"}
-    - `mcV">=1.8.9"` -> expands to Union{...} on every version >=1.8.9.
+    - `mcvt"1.8.9"` -> expands to Type{mcv"1.8.9"}
+    - `mcvt">=1.8.9"` -> expands to Union{...} on every version >=1.8.9.
       The supported operations are `<, <=, >, >=`.
-    - `mcV"1.0.0<=x<=1.8.9` -> expands to Union{...} on every version such that 1.0.0<=version<=1.8.9.
+    - `mcvt"1.0.0<=x<=1.8.9` -> expands to Union{...} on every version such that 1.0.0<=version<=1.8.9.
       The place holder `x` can be anything, can even be empty. The supported operations are **only** `<, <=`.
 
 # Example
 ```
-julia> end_type(::mcV"<1.0.0") = nothing
+julia> end_type(::mcvt"<1.0.0") = nothing
 end_type (generic function with 3 methods)
 
-julia> end_type(::mcV"1.0.0<=_<1.9.0") = :old
+julia> end_type(::mcvt"1.0.0<=_<1.9.0") = :old
 end_type (generic function with 3 methods)
 
-julia> end_type(::mcV">=1.9.0") = :new
+julia> end_type(::mcvt">=1.9.0") = :new
 end_type (generic function with 3 methods)
 
 julia> end_type(mcv"1.13")
 :new
 """
-macro mcV_str(str)
-    return _mcV(str)
+macro mcvt_str(str)
+    return _mcvt(str)
 end
 end # module

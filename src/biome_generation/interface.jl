@@ -148,6 +148,11 @@ macro 📏_str(str)
     if numerator(scale) != 1
         throw(ArgumentError("The numerator of the scale must be 1."))
     end
+    if !(isinteger(log2(denom)) && denom > 0)
+        closers = 2^round(Int, log2(denom)), 2^(round(Int, log2(denom)) + 1)
+        closer = closers[argmin(abs.(closers .- denom))]
+        throw(ArgumentError("The scale must be a power of 2. Got 1:$denom. The closer power of 2 is 1:$closer."))
+    end
     return Scale(denominator(scale))
 end
 const var"@T📏_str" = typeof ∘ var"@📏_str"
@@ -156,6 +161,7 @@ Base.broadcastable(o::Scale) = Ref(o)
 
 #region voronoi
 # ---------------------------------- Voronoi --------------------------------- #
+# TODO: try to make the voronoi algorithms more type stable maybe ??
 
 mutable struct SomeSha
     x::Union{Nothing, UInt64}
@@ -169,7 +175,7 @@ Base.setindex!(s::SomeSha, value) = s.x = value
 Get the 3D axes of the 1:1 scale that corresponds to the 1:4 scale map.
 """
 function get_voronoi_src_axes3D(map3D::MCMap{3})
-    cx, cy, cz = origin_coords(map3D)
+    cx, cz, cy = origin_coords(map3D)
     size_x, size_z, size_y = size(map3D)
     # The >> 2 is equivalent to ÷ 4 but could be faster
     temp_x = cx - 2
@@ -181,7 +187,7 @@ function get_voronoi_src_axes3D(map3D::MCMap{3})
     sz = ((temp_z + size_z) >> 2) - z + 2
 
     if size_y < 1
-        y, sy = 0, 1
+        y, sy = 0, 0
     else
         ty = cy - 2
         y = ty >> 2
@@ -285,7 +291,7 @@ function voronoi_access(sha::UInt64, x::Integer, z::Integer, y::Integer)
         distance_squared =
             voronoi_x * UInt64(unsigned(voronoi_x)) +
             voronoi_y * UInt64(unsigned(voronoi_y)) +
-            voronoi_z * UInt64(unsigned(voronoi_y))
+            voronoi_z * UInt64(unsigned(voronoi_z))
 
         if distance_squared < min_distance_squared
             min_distance_squared = distance_squared
@@ -300,3 +306,36 @@ end
 
 #endregion
 #endregion
+
+#region Cache
+# ---------------------------------------------------------------------------- #
+#                                     Cache                                    #
+# ---------------------------------------------------------------------------- #
+
+const FIRST_CACHE_SIZE_VECTOR_BIOMES = 1024
+const CACHE_VECTOR_BIOMES = fill(BIOME_NONE, FIRST_CACHE_SIZE_VECTOR_BIOMES)
+
+"""
+    view_reshape_cache_like(axes)
+
+Create a view of the cache with the same shape as the axes.
+
+!!! warning
+    This function is not thread-safe and should not be used in a multithreaded context.
+
+This is a TODO: maybe use of @init from Floops.jl to create a thread-safe cache
+"""
+function view_reshape_cache_like(axes, cache=CACHE_VECTOR_BIOMES)
+    size_axes = length.(axes)
+    required_size = prod(size_axes)
+    if length(cache) < required_size
+        append!(
+            cache,
+            fill(BIOME_NONE, required_size - length(cache)),
+        )
+    end
+    buffer_view = @view cache[1:required_size]
+    reshaped_view = reshape(buffer_view, size_axes...)
+    offset_view = OffsetArray(reshaped_view, axes...)
+    return offset_view
+end
