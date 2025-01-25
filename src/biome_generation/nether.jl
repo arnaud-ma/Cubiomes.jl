@@ -55,14 +55,12 @@ function gen_biomes end
 function gen_biomes_unsafe! end
 #endregion
 
-for get_func in (:get_biome, :get_biome_unsafe)
-    @eval function $get_func(
-        nn::Nether,
-        coords::CartesianIndex{CN},
-        args::Vararg{Any, N},
-    ) where {CN, N}
-        return $get_func(nn, coords.I..., args...)
-    end
+function get_biome(
+    nn::Nether,
+    coords::CartesianIndex{CN},
+    args::Vararg{Any, N},
+) where {CN, N}
+    return get_biome(nn, coords.I..., args...)
 end
 
 get_biome(nn::Nether, x::Real, z::Real, y::Real, ::Scale, ::mcV"<1.16") = nether_wastes

@@ -28,13 +28,13 @@ julia> ] add github.com/arnaud-ma/cubiomes.jl
 It is still a work in progress, so the API is not yet stable at all. The nether generation should be working, here is an example:
 
 ```julia
-using Cubiomes.BiomeGeneration
+using Cubiomes
 
 seed = "hello world" # (1)
-nether_generator = Nether(seed) # (2)
-mc_map = MCMap(-1000:1000, -1000:1000) # (3)
-gen_biomes!(nether_generator, mc_map, 📏"1:4") # (4)
-
+version = mcv"1.18" # (2)
+nether_generator = Nether(seed) # (3)
+mc_map = MCMap(-1000:1000, -1000:1000) # (4)
+gen_biomes!(nether_generator, mc_map, 📏"1:4", version) # (5)
 using Plots, Cubiomes.Display
 plot(to_color(mc_map)) # (5)
 ```
@@ -42,10 +42,12 @@ plot(to_color(mc_map)) # (5)
 Let's explain step by step:
 
 1. The seed is exactly the same as in Minecraft. It can be any string or integer.
-2. We create a generator, that is mandatory to generate the biomes. It's there that we can pass a seed.
-3. We create a `MCMap` object, that will store the biomes. It can be 2D or 3D (depending if the y coordinate is provided or not). Biomes are stored as enum values. You can access to it with the exact same coordinates as in Minecraft (e.g. `mc_map[0, 0, 0]` will give you the biome at the origin of the world). At the moment of the code, the map is full of `BIOME_NONE` values because we did not generate the biomes yet.
-4. We generate the biomes with the `gen_biomes!` function. It will fill the `MCMap` with the biomes. The last argument is the scale of the biomes, i.e. how many blocks in the world correspond to one biome value in the map. For example, with a scale of 4, one biome value in the map corresponds to a square of 4x4 blocks in the world. The only supported values are `📏"1:1"`, `📏"1:4"`, `📏"1:16"` and `📏"1:64"`. The symbol name is ":straight_ruler:".
-5. We can visualize the map with `plot`. The colors are the same as in Minecraft, so you can easily recognize the biomes.
+2. The version **must** always be prefixed with `mcv` (stands for *minecraft version*). It allows
+the code to have completely different behaviors depending on the version.
+3. We create a generator, that is mandatory to generate the biomes. It's there that we can pass a seed.
+4. We create a `MCMap` object, that will store the biomes. It can be 2D or 3D (depending if the y coordinate is provided or not). Biomes are stored as enum values. You can access to it with the exact same coordinates as in Minecraft (e.g. `mc_map[0, 0, 0]` will give you the biome at the origin of the world). At the moment of the code, the map is full of `BIOME_NONE` values because we did not generate the biomes yet.
+5. We generate the biomes with the `gen_biomes!` function. It will fill the `MCMap` with the biomes. The argument with a `📏` (a ruler) is the scale of the biomes, i.e. how many blocks in the world correspond to one biome value in the map. For example, with a scale of 4, one biome value in the map corresponds to a square of 4x4 blocks in the world. The only supported values are `📏"1:1"`, `📏"1:4"`, `📏"1:16"` and `📏"1:64"`. The symbol name is ":straight_ruler:".
+6. We can visualize the map with `plot`. The colors are the same as in Minecraft, so you can easily recognize the biomes.
 
 ## TODO
 

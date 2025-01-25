@@ -4,14 +4,12 @@ TODO: the docstring
 module BiomeGeneration
 
     export Dimension, set_seed!
-    export MCMap, similar_expand
-    export Nether
-    export gen_biomes, gen_biomes!, gen_biomes_unsafe!
-    export get_biome, get_biome_unsafe
+    export MCMap, similar_expand, origin_coords
+    export Nether, BiomeNoise
+    export gen_biomes, gen_biomes!
+    export get_biome
     export Scale, @📏_str
-    export BiomeTrees
-
-    public origin_coords
+    # export BiomeTrees
 
     include("biomes.jl")
     include("interface.jl")
