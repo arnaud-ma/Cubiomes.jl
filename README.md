@@ -90,7 +90,7 @@ Let's explain step by step:
 
 ### Infrastructure changes
 
-- [ ] Make the Minecraft version types instead of enums and dispatch the functions instead of if checks. I don't really know if it's a good idea or not. See the julia doc: [The-dangers-of-abusing-multiple-dispatch](https://docs.julialang.org/en/v1/manual/performance-tips/#The-dangers-of-abusing-multiple-dispatch-(aka,-more-on-types-with-values-as-parameters)).
+- [X] Make the Minecraft version types instead of enums and dispatch the functions instead of if checks.
 
 ## Contributing
 

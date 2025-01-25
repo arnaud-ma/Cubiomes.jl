@@ -1,6 +1,6 @@
 using CEnum
 
-using ..Cubiomes: MCVersion
+using ..MCVersions
 
 #region Biome def
 # ---------------------------------------------------------------------------- #
@@ -139,12 +139,12 @@ isnone(biome::BiomeID) = biome == BIOME_NONE
 #                   Utility Functions for Biomes and Versions                  #
 # ---------------------------------------------------------------------------- #
 
-function biome_exists(version::MCVersion, biome::BiomeID)
-    if version >= MC_1_18
+function biome_exists(version::Type{<:MCVersion}, biome::BiomeID)
+    if version >= mcv"1.18"
         soul_sand_valley <= biome <= basalt_deltas && return true
         small_end_islands <= biome <= end_barrens && return true
-        biome == cherry_grove && return version >= MC_1_20
-        biome == deep_dark || biome == mangrove_swamp && return version >= MC_1_19_2
+        biome == cherry_grove && return version >= mcv"1.20"
+        biome == deep_dark || biome == mangrove_swamp && return version >= mcv"1.19.2"
 
         biome == ocean ||
             biome == plains ||
@@ -200,7 +200,7 @@ function biome_exists(version::MCVersion, biome::BiomeID)
         return false
     end
 
-    if version <= MC_B1_7
+    if version <= mcv"beta1.7"
         biome == plains ||
             biome == desert ||
             biome == forest ||
@@ -216,7 +216,7 @@ function biome_exists(version::MCVersion, biome::BiomeID)
         return false
     end
 
-    if version <= MC_B1_8
+    if version <= mcv"beta1.8"
         biome == frozen_ocean ||
             biome == frozen_river ||
             biome == snowy_tundra ||
@@ -225,7 +225,7 @@ function biome_exists(version::MCVersion, biome::BiomeID)
             biome == the_end && return false
     end
 
-    if version <= MC_1_0
+    if version <= mcv"1.0"
         biome == snowy_mountains ||
             biome == beach ||
             biome == desert_hills ||
@@ -235,12 +235,12 @@ function biome_exists(version::MCVersion, biome::BiomeID)
     end
 
     ocean <= biome <= mountain_edge && return true
-    jungle <= biome <= jungle_hills && return version >= MC_1_2
-    jungle_edge <= biome <= badlands_plateau && return version >= MC_1_7
-    small_end_islands <= biome <= end_barrens && return version >= MC_1_9
-    warm_ocean <= biome <= deep_frozen_ocean && return version >= MC_1_13
+    jungle <= biome <= jungle_hills && return version >= mcv"1.2"
+    jungle_edge <= biome <= badlands_plateau && return version >= mcv"1.7"
+    small_end_islands <= biome <= end_barrens && return version >= mcv"1.9"
+    warm_ocean <= biome <= deep_frozen_ocean && return version >= mcv"1.13"
 
-    biome == the_void && return version >= MC_1_9
+    biome == the_void && return version >= mcv"1.9"
     biome == sunflower_plains ||
         biome == desert_lakes ||
         biome == gravelly_mountains ||
@@ -261,21 +261,21 @@ function biome_exists(version::MCVersion, biome::BiomeID)
         biome == shattered_savanna_plateau ||
         biome == eroded_badlands ||
         biome == modified_wooded_badlands_plateau ||
-        biome == modified_badlands_plateau && return version >= MC_1_7
+        biome == modified_badlands_plateau && return version >= mcv"1.7"
 
-    biome == bamboo_jungle || biome == bamboo_jungle_hills && return version >= MC_1_14
+    biome == bamboo_jungle || biome == bamboo_jungle_hills && return version >= mcv"1.14"
 
     biome == soul_sand_valley ||
         biome == crimson_forest ||
         biome == warped_forest ||
-        biome == basalt_deltas && return version >= MC_1_16_1
+        biome == basalt_deltas && return version >= mcv"1.16.1"
 
-    biome == dripstone_caves || biome == lush_caves && return version >= MC_1_17
+    biome == dripstone_caves || biome == lush_caves && return version >= mcv"1.17"
 
     return false
 end
 
-function is_overworld(version::MCVersion, biome::BiomeID)::Bool
+function is_overworld(version::Type{<:MCVersion}, biome::BiomeID)::Bool
     if !biome_exists(biome, version)
         return false
     end
@@ -283,15 +283,15 @@ function is_overworld(version::MCVersion, biome::BiomeID)::Bool
     basalt_deltas <= biome <= soul_sand_valley && return false
     biome == nether_wastes && return false
     biome == the_end && return false
-    biome == frozen_ocean && return version <= MC_1_16 || version == MC_1_13
-    biome == mountain_edge && return version <= MC_1_6
+    biome == frozen_ocean && return version <= mcv"1.16" || version == mcv"1.13"
+    biome == mountain_edge && return version <= mcv"1.6"
     biome == deep_warm_ocean || biome == the_void && return false
-    biome == tall_birch_forest && return version <= MC_1_8 || version >= MC_1_11
-    biome == dripstone_caves || biome == lush_caves && return version >= MC_1_18
+    biome == tall_birch_forest && return version <= mcv"1.8" || version >= mcv"1.11"
+    biome == dripstone_caves || biome == lush_caves && return version >= mcv"1.18"
     return true
 end
 
-function mutated(biome::BiomeID, version::MCVersion)::BiomeID
+function mutated(biome::BiomeID, version::Type{<:MCVersion})::BiomeID
     biome == plains && return sunflower_plains
     biome == desert && return desert_lakes
     biome == mountains && return gravelly_mountains
@@ -301,13 +301,13 @@ function mutated(biome::BiomeID, version::MCVersion)::BiomeID
     biome == snowy_tundra && return ice_spikes
     biome == jungle && return modified_jungle
     biome == jungle_edge && return modified_jungle_edge
-    biome == birch_forest && return if version >= MC_1_9 && version <= MC_1_10
+    biome == birch_forest && return if version >= mcv"1.9" && version <= mcv"1.10"
         tall_birch_hills
     else
         tall_birch_forest
     end
     biome == birch_forest_hills &&
-        return version >= MC_1_9 && version <= MC_1_10 ? BIOME_NONE : tall_birch_hills
+        return version >= mcv"1.9" && version <= mcv"1.10" ? BIOME_NONE : tall_birch_hills
     biome == dark_forest && return dark_forest_hills
     biome == snowy_taiga && return snowy_taiga_mountains
     biome == giant_tree_taiga && return giant_spruce_taiga
@@ -321,7 +321,7 @@ function mutated(biome::BiomeID, version::MCVersion)::BiomeID
     return BIOME_NONE
 end
 
-function category(version::MCVersion, biome::BiomeID)
+function category(version::Type{<:MCVersion}, biome::BiomeID)
     (biome == beach || biome == snowy_beach) && return beach
     (biome == desert || biome == desert_hills || biome == desert_lakes) && return desert
     (
@@ -360,7 +360,7 @@ function category(version::MCVersion, biome::BiomeID)
         biome == modified_badlands_plateau
     ) && return mesa
     (biome == wooded_badlands_plateau || biome == badlands_plateau) &&
-        return version <= MC_1_15 ? mesa : badlands_plateau
+        return version <= mcv"1.15" ? mesa : badlands_plateau
     (biome == mushroom_fields || biome == mushroom_field_shore) && return mushroom_fields
     biome == stone_shore && return stone_shore
     (
@@ -413,9 +413,9 @@ For a given version, check if two biomes have the same category.
 `wooded_badlands_plateau` and `badlands_plateau` are considered similar even though
 they have a different category in `version <= 1.15`.
 """
-function are_similar(version::MCVersion, biome1::BiomeID, biome2::BiomeID)
+function are_similar(version::Type{<:MCVersion}, biome1::BiomeID, biome2::BiomeID)
     biome1 == biome2 && return true
-    if version <= MC_1_15
+    if version <= mcv"1.15"
         if biome1 == wooded_badlands_plateau || biome1 == badlands_plateau
             return biome2 == wooded_badlands_plateau || biome2 == badlands_plateau
         end

@@ -2,7 +2,7 @@ module BiomeTrees
 
 export biome_trees, BiomeTree, get_biome_tree
 
-import ...Cubiomes
+using ...MCVersions
 
 struct BiomeTree{N}
     order::Int # ? Maybe dispatch this
@@ -27,19 +27,16 @@ include("1_19.jl")
 include("1_20.jl")
 include("1_19_2.jl")
 
-function get_biome_tree(::Val{Version}) where Version
-    if Version isa Cubiomes.MCVersions
-        msg = "Biome tree not implemented for this version. Trying to get a biome for a version < 1.18 but
-        you used something that is only available for 1.18+"
-        throw(ArgumentError(msg))
-    end
-    throw(MethodError(get_biome_tree, (Version,), :Version))
+function get_biome_tree(::Type{<:MCVersion})
+    msg = "Biome tree not implemented for this version. Trying to get a biome for a version < 1.18 but
+    you used something that is only available for 1.18+"
+    throw(ArgumentError(msg))
 end
 
-get_biome_tree(::Val{Cubiomes.MC_1_18}) = MC_1_18
-get_biome_tree(::Val{Cubiomes.MC_1_19}) = MC_1_19
-get_biome_tree(::Val{Cubiomes.MC_1_20}) = MC_1_20
-get_biome_tree(::Val{Cubiomes.MC_1_19_2}) = MC_1_19_2
+get_biome_tree(::mcV"1.18") = MC_1_18
+get_biome_tree(::mcV"1.19.4") = MC_1_19
+get_biome_tree(::mcV"1.20") = MC_1_20
+get_biome_tree(::mcV"1.19.2") = MC_1_19_2
 
 const biome_trees = (
     v1_18=MC_1_18,

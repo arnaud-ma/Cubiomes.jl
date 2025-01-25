@@ -5,6 +5,7 @@ import ..Cubiomes
 using ..Utils: Utils, @only_float32, md5_to_uint64, lerp
 using ..JavaRNG: JavaXoroshiro128PlusPlus, next🎲
 using ..Noises
+using ..MCVersions
 
 using .BiomeTrees
 
@@ -507,7 +508,7 @@ function sample_depth(spline, c, e, w, y, skip_depth::Bool)
     sample_depth(spline, c, e, w, y, Val(skip_depth))
 end
 
-function climate_to_biome(noise_parameters::NTuple{6}, version::Val)
+function climate_to_biome(noise_parameters::NTuple{6}, version::Type{<:MCVersion})
     return climate_to_biome(noise_parameters, get_biome_tree(version))
 end
 function climate_to_biome(noise_parameters::NTuple{6}, biome_tree::BiomeTree)

@@ -1,7 +1,7 @@
 using ..Noises
 using ..JavaRNG: JavaRandom, set_seed🎲
 using ..Utils: Utils
-using ..Cubiomes: MC_UNDEF, MC_1_15
+using ..MCVersions
 
 using Base.Iterators
 
@@ -65,6 +65,18 @@ for get_func in (:get_biome, :get_biome_unsafe)
     end
 end
 
+get_biome(nn::Nether, x::Real, z::Real, y::Real, ::Scale, ::mcV"<1.16") = nether_wastes
+function gen_biomes!(nn::Nether, out::MCMap, ::Scale, ::mcV"<1.16", args...)
+    fill!(out, nether_wastes)
+    return nothing
+end
+
+# default to 1.16 if version not specified
+function get_biome(nn::Nether, x::Real, z::Real, y::Real, s::Scale)
+    get_biome(nn, x, z, y, s, mcv"1.16")
+end
+gen_biomes!(nn::Nether, out::MCMap, s::Scale) = gen_biomes!(nn, out, s, mcv"1.16")
+
 function distance_square(coord1::CartesianIndex{N}, coord2::CartesianIndex{N}) where {N}
     return sum(abs2, (coord1 - coord2).I)
 end
@@ -74,40 +86,28 @@ end
 #                   Nether Biome Point Access (Scale 4 and 1)                  #
 # ---------------------------------------------------------------------------- #
 
+# y coordinate not used in scale != 1
 function get_biome(
     nn::Nether,
-    x::Real,
-    z::Real,
-    y::Real,
-    scale::Scale{S},
-    version::MCVersion=MC_UNDEF,
-) where {S}
-    if (version <= MC_1_15 && version != MC_UNDEF)
-        return nether_wastes
-    end
-    return get_biome_unsafe(nn, x, z, y, scale)
+    x::Real, z::Real, y::Real,
+    scale::Scale, version::mcV">=1.16",
+)
+    return get_biome(nn, x, z, scale, version)
 end
 
-# To zoom from the scale 4 to the scale 1, each coordinate at scale 1 is associated with
-# a random (taken from the sha of the seed) source coordinate at scale 4
-# where the biome is the same (with a voronoi diagram).
-# So we only need to take this source coordinates, with the voronoi_access_3d function,
-# and then take the biome with this new coordinates.
-# The source_x and source_z DEPENDS on x, z AND on y.
-# i.e., if y is modified, source_x and source_z could be modified too.
-function get_biome_unsafe(nn::Nether, x::Real, z::Real, y::Real, ::T📏"1:1")
+function get_biome(
+    nn::Nether,
+    x::Real, z::Real, y::Real,
+    ::T📏"1:1", version::mcV">=1.16",
+)
     source_x, source_z, _ = voronoi_access(nn.sha[], x, z, y)
-    return get_biome_unsafe(nn, source_x, source_z, 📏"1:4")
+    return get_biome(nn, source_x, source_z, 📏"1:4", version)
 end
 
-function get_biome_unsafe(nn::Nether, x::Real, z::Real, ::T📏"1:4")
+function get_biome(nn::Nether, x::Real, z::Real, ::T📏"1:4", version::mcV">=1.16")
     temperature = sample_noise(nn.temperature, x, z)
     humidity = sample_noise(nn.humidity, x, z)
     return find_closest_biome(temperature, humidity)
-end
-
-function get_biome_unsafe(nn::Nether, x::Real, z::Real, y::Real, scale::T📏"1:4")
-    get_biome_unsafe(nn, x, z, scale)
 end
 
 # TODO: get_biome for scale != (1, 4)
@@ -176,20 +176,6 @@ const NETHER_POINTS = (
 # for readability and performance, we prefer to have two methods, even if it is a bit more code.
 
 """
-    _manage_less_1_15!(out::AbstractArray{BiomeID}, version::MCVersion)
-
-Fills the output array `out` with the biome `nether_wastes` if the Minecraft version
-is less than or equal to 1.15. Return true if filled, false otherwise.
-"""
-function _manage_less_1_15!(out::AbstractArray{BiomeID}, version::MCVersion)
-    if version <= MC_1_15 && version != MC_UNDEF
-        fill!(out, nether_wastes)
-        return true
-    end
-    return false
-end
-clamp
-"""
     fill_radius!(out::AbstractMatrix{BiomeID}, x, z, id::BiomeID, radius)
 
 Fills a circular area around the point `(x, z)` in `out` with the biome `id`,
@@ -257,7 +243,8 @@ function gen_biomes_unsafe!(nn::Nether, map2D::MCMap{2}, ::Scale{S}, confidence=
 end
 
 function gen_biomes_unsafe!(
-    nn::Nether, map3d::MCMap{3}, scale::Scale{S}, confidence=1,
+    nn::Nether, map3d::MCMap{3},
+    scale::Scale{S}, ::mcV">=1.16", confidence=1,
 ) where {S}
     # At scale != 1, the biome does not change with the y coordinate
     # So we simply take the first y coordinate and fill the other ones with the same biome
@@ -271,20 +258,15 @@ function gen_biomes_unsafe!(
     return nothing
 end
 
-function _gen_biomes!(nn, mc_map, scale, confidence, version)
-    _manage_less_1_15!(mc_map, version) && return nothing
-    gen_biomes_unsafe!(nn, mc_map, scale, confidence)
-end
-
 function gen_biomes!(
     nn::Nether,
     mc_map::MCMap,
     scale::Scale,
+    ::mcV">=1.16",
     confidence=1,
-    version::MCVersion=MC_UNDEF,
 )
     fill!(mc_map, BIOME_NONE)
-    _gen_biomes!(nn, mc_map, scale, confidence, version)
+    gen_biomes_unsafe!(nn, mc_map, scale, confidence)
 end
 
 #endregion
@@ -320,18 +302,18 @@ function view_reshape_cache_like(axes)
     return offset_view
 end
 
-function gen_biomes_unsafe!(
+function gen_biomes!(
     nn::Nether,
     map3D::MCMap{3},
     ::T📏"1:1",
+    version::mcV">=1.16",
     confidence=1,
-    version::MCVersion=MC_UNDEF,
 )
     coords = CartesianIndices(map3D)
     # If there is only one value, simple wrapper around get_biome_unsafe
     if isone(length(coords))
         coord = first(coords).I
-        map3D[1] = get_biome_unsafe(nn, coord..., 📏"1:4")
+        map3D[1] = get_biome(nn, coord..., 📏"1:4", version)
         return nothing
     end
 
@@ -352,17 +334,11 @@ function gen_biomes_unsafe!(
 end
 
 function gen_biomes!(
-    nn::Nether, mc_map::MCMap, scale::T📏"1:1", confidence=1, version::MCVersion=MC_UNDEF,
-)
-    _gen_biomes!(nn, mc_map, scale, confidence, version)
-end
-
-function gen_biomes!(
     nn::Nether,
     map2D::MCMap{2},
     ::T📏"1:1",
+    version::mcV">=1.16",
     confidence=1,
-    version::MCVersion=MC_UNDEF,
 )
     msg = "generate the nether biomes at scale 1 requires a 3D map because \
             the biomes depend on the y coordinate. You can create a 3D map with \

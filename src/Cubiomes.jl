@@ -1,9 +1,13 @@
 module Cubiomes
 
-public JavaRNG,Noises
-public BiomeGeneration
+using Reexport
+
+publicJavaRNG,Noises
+publicBiomeGeneration
 
 include("mc_versions.jl")
+@reexport using .MCVersions
+
 include("utils.jl")
 include("mc_seed_utils.jl")
 
