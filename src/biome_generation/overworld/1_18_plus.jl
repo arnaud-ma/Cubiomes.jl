@@ -469,13 +469,13 @@ function sample_biomenoises(
     skip_shift=Val(false), skip_depth=Val(false),
 )
     px, pz = sample_shift(bn, x, z, skip_shift)
-    continentalness::Float32 = sample_noise(bn.climate[Continentalness], px, pz, 0)
-    erosion::Float32 = sample_noise(bn.climate[Erosion], px, pz, 0)
-    weirdness::Float32 = sample_noise(bn.climate[Weirdness], px, pz, 0)
+    continentalness::Float32 = sample_noise(bn.climate[Continentalness], px, pz)
+    erosion::Float32 = sample_noise(bn.climate[Erosion], px, pz)
+    weirdness::Float32 = sample_noise(bn.climate[Weirdness], px, pz)
     depth = sample_depth(spline, continentalness, erosion, weirdness, y, skip_depth)
 
-    temperature::Float32 = sample_noise(bn.climate[Temperature], px, pz, 0)
-    humidity::Float32 = sample_noise(bn.climate[Humidity], px, pz, 0)
+    temperature::Float32 = sample_noise(bn.climate[Temperature], px, pz)
+    humidity::Float32 = sample_noise(bn.climate[Humidity], px, pz)
 
     return map(
         x -> Base.unsafe_trunc(Int64, 10_000.0f0 * x),
@@ -484,7 +484,7 @@ function sample_biomenoises(
 end
 
 function sample_shift(bn::BiomeNoise, x, z, skip_shift::Val{false})
-    px = sample_noise(bn.climate[Shift], x, z, 0) * 4.0
+    px = sample_noise(bn.climate[Shift], x, z) * 4.0
     pz = sample_noise(bn.climate[Shift], z, 0, x) * 4.0
     return x + px, z + pz
 end
@@ -541,10 +541,12 @@ function get_resulting_node(
     end
 
     node = biome_tree.nodes[idx + 1]
-    inner = node >> 48
     leaf = alt
 
-    for _ in 0:(biome_tree.order - 1)
+    inner_start = node >> 48
+    inner_end = min(inner_start + step * (biome_tree.order - 1), biome_tree.len_nodes - 1)
+
+    for inner in inner_start:step:inner_end
         dist_inner = noise_params_distance(noise_params, biome_tree, inner)
         if dist_inner < dist
             leaf2 = get_resulting_node(noise_params, biome_tree, leaf, dist, inner, depth)
@@ -558,10 +560,7 @@ function get_resulting_node(
                 leaf = leaf2
             end
         end
-        inner += step
-        inner >= biome_tree.len_nodes && break
     end
-
     return leaf
 end
 
@@ -573,9 +572,9 @@ function noise_params_distance(noise_params::NTuple{6}, biome_tree::BiomeTree, i
         # we iterate over the 6 noise parameters
         # each noise_param is associated with 2 bytes in the biome tree
         # see the comments of the biome tree for more information
-        idx = (node >> (8 * (i - 1))) & 0xFF
+        idx = ((node >> (8 * (i - 1))) & 0xFF) + 1
         dist_square +=
-            calculate_distance(noise_params[i], param[idx + 1][2], param[idx + 1][1])
+            calculate_distance(noise_params[i], param[idx][2], param[idx][1])
     end
     return dist_square
 end
@@ -626,13 +625,10 @@ end
 function gen_biomes!(bn::BiomeNoise, map3D::MCMap{3}, ::Scale{S}) where {S}
     scale = S ÷ 4
     mid = scale ÷ 2
+    coord_mid = CartesianIndex(mid, mid, 0)
     old_idx = zero(UInt64)
     for coord in CartesianIndices(map3D)
-        @inbounds coord_scale4 = (
-            coord[1] * scale + mid,
-            coord[2] * scale + mid,
-            coord[3],
-        )
+        coord_scale4 = coord * scale + coord_mid
         map3D[coord], old_idx = get_biome(
             bn, coord_scale4..., 📏"1:4";
             skip_shift=Val(true), old_idx=old_idx)
