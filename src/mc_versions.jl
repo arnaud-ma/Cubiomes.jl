@@ -111,11 +111,12 @@ function filter_versions()
 end
 
 function _mcvt(str)
+    str = strip(str)
     regex_sign = r"(<=)|(>=)|(<)|(>)"
 
     matches_sign = map(x -> x.match, eachmatch(regex_sign, str))
     if length(matches_sign) == 0
-        return :(Type{$(str_to_mcversion(strip(str)))})
+        return :(Type{$(str_to_mcversion(str))})
     end
 
     func = x -> throw(ArgumentError("Too much comparison"))

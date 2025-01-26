@@ -124,7 +124,19 @@ in the real world. So the coordinates (5, 5) are equal to the real world coordin
 The supported values for N are usually 1, 4, 16, 64, 256. But it can vary from the function
 that uses it. Read the documentation of the function that uses it to know the supported values.
 """
-struct Scale{N} end
+struct Scale{N}
+    function Scale{N}()
+        if N < 1
+            throw(ArgumentError("The scale must be to the form 2^n with n >= 0. Got $N."))
+        end
+        if !(isinteger(log2(N)))
+            closests = 2^round(Int, log2(N)), 2^(round(Int, log2(N)) + 1)
+            closest = closests[argmin(abs.(closests .- N))]
+            throw(ArgumentError("The scale must be a power of 2. The closest power of 2 is $closest."))
+        end
+        return new()
+    end
+end
 Scale(N::Integer) = Scale{N}()
 
 macro 📏_str(str)
@@ -135,12 +147,7 @@ macro 📏_str(str)
     num, denom = parse.(Int, splitted)
     scale = num // denom
     if numerator(scale) != 1
-        throw(ArgumentError("The numerator of the scale must be 1."))
-    end
-    if !(isinteger(log2(denom)) && denom > 0)
-        closers = 2^round(Int, log2(denom)), 2^(round(Int, log2(denom)) + 1)
-        closer = closers[argmin(abs.(closers .- denom))]
-        throw(ArgumentError("The scale must be a power of 2. Got 1:$denom. The closer power of 2 is 1:$closer."))
+        throw(ArgumentError("The scale must be simplified to the form 1:N. Got $str -> $num:$denom."))
     end
     return Scale(denominator(scale))
 end

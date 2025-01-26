@@ -13,11 +13,11 @@ using Base.Iterators
 abstract type Nether <: Dimension end
 
 # Nothing to do if version is <1.16. The nether is only composed of nether_wastes
-struct Nether1_16Moins end
-Nether(::UndefInitializer, ::mcvt"<1.16") = Nether1_16Moins()
-set_seed!(::Nether1_16Moins, seed) = nothing
-get_biome(::Nether1_16Moins, x::Real, z::Real, y::Real, ::Scale) = nether_wastes
-gen_biomes!(::Nether1_16Moins, out::MCMap) = fill!(out, nether_wastes)
+struct Nether1_16Minus end
+Nether(::UndefInitializer, ::mcvt"<1.16") = Nether1_16Minus()
+set_seed!(::Nether1_16Minus, seed::UInt64) = nothing
+get_biome(::Nether1_16Minus, x::Real, z::Real, y::Real, ::Scale) = nether_wastes
+gen_biomes!(::Nether1_16Minus, out::MCMap) = fill!(out, nether_wastes)
 
 struct Nether1_16Plus <: Nether
     temperature::DoublePerlin{2}

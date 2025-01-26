@@ -132,6 +132,7 @@ using ..MCVersions
 #! format: on
 BiomeID = BiomeID
 isnone(biome::BiomeID) = biome == BIOME_NONE
+Base.transpose(x::BiomeID) = x
 #endregion
 
 #region Utility functions

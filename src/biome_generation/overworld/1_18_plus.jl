@@ -138,9 +138,7 @@ function __set_seed!(noise::BiomeNoise, seed, large)
     return nothing
 end
 
-function set_seed!(
-    dp::DoublePerlin, xlo, xhi, noise_param, large=Val(false),
-)
+function set_seed!(dp::DoublePerlin, xlo, xhi, noise_param, large=Val(false))
     xlo ⊻= magic_xlo(noise_param, large)
     xhi ⊻= magic_xhi(noise_param, large)
     rng = JavaXoroshiro128PlusPlus(xlo, xhi)
