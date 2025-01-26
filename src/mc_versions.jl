@@ -1,9 +1,9 @@
 module MCVersions
 
-export @mcv_str, @mcvt_str, MCVersion
+export @mcv_str, @mcvt_str, MCVersion, MC_VERSIONS
 
 #!format: off
-public MC_VERSIONS, vNEWEST, vUNDEF
+public vNEWEST, vUNDEF
 #!format: on
 
 using InteractiveUtils: subtypes
@@ -104,6 +104,10 @@ represents the 1.8.9 version or `mcv"beta1.7"` for the beta 1.7.
 """
 macro mcv_str(str)
     return str_to_mcversion(str)
+end
+
+function filter_versions()
+    filtered = filter(func, VERSIONS)
 end
 
 function _mcvt(str)

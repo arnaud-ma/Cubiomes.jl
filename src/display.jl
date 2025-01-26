@@ -106,7 +106,7 @@ const BIOME_COLORS = Dict(
 )
 
 to_color(x::bg.BiomeID) = BIOME_COLORS[x]
-to_color(x::AbstractMatrix{bg.BiomeID}) = to_color.(x)
+to_color(x::bg.MCMap) = to_color.(bg.view2d(x))
 
 @recipe f(::Type{bg.MCMap{2}}, mc_map::bg.MCMap{2}) = to_color(mc_map)
 

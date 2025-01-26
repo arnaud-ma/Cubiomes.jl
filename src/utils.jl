@@ -231,6 +231,17 @@ function trim(predicate, x)
     return x[first:last]
 end
 
+function trim_end(predicate, x)
+    first, last = firstindex(x), lastindex(x)
+    while predicate(x[last])
+        last -=1
+        if last < first
+            return x
+        end
+    end
+    return x[begin:last]
+end
+
 """
     findfirst_default(predicate::Function, A, default)
 

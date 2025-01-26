@@ -25,29 +25,28 @@ julia> ] add github.com/arnaud-ma/cubiomes.jl
 
 ## Usage
 
-It is still a work in progress, so the API is not yet stable at all. The nether generation should be working, here is an example:
+It is still a work in progress, so the API is not yet stable at all. The nether generation and the overworld 1.18+ generation should be working, here is an example:
 
 ```julia
 using Cubiomes
 
-seed = "hello world" # (1)
-version = mcv"1.18" # (2)
-nether_generator = Nether(seed) # (3)
-mc_map = MCMap(-1000:1000, -1000:1000) # (4)
-gen_biomes!(nether_generator, mc_map, 📏"1:4", version) # (5)
-using Plots, Cubiomes.Display
-plot(to_color(mc_map)) # (5)
+overworld = Overworld(undef, mcv"1.20")    # (1)
+set_seed!(overworld, 42)                   # (2)
+mc_map = MCMap(-1000:1000, -1000:1000, 63) # (3)
+gen_biomes!(overworld, mc_map, 📏"1:1")    # (4)
+
+using FileIO  # using Pkg; Pkg.add("FileIO")
+save("mcmap.png", to_color(mc_map))        # (5)
 ```
 
 Let's explain step by step:
 
-1. The seed is exactly the same as in Minecraft. It can be any string or integer.
-2. The version **must** always be prefixed with `mcv` (stands for *minecraft version*). It allows
-the code to have completely different behaviors depending on the version.
-3. We create a generator, that is mandatory to generate the biomes. It's there that we can pass a seed.
-4. We create a `MCMap` object, that will store the biomes. It can be 2D or 3D (depending if the y coordinate is provided or not). Biomes are stored as enum values. You can access to it with the exact same coordinates as in Minecraft (e.g. `mc_map[0, 0, 0]` will give you the biome at the origin of the world). At the moment of the code, the map is full of `BIOME_NONE` values because we did not generate the biomes yet.
-5. We generate the biomes with the `gen_biomes!` function. It will fill the `MCMap` with the biomes. The argument with a `📏` (a ruler) is the scale of the biomes, i.e. how many blocks in the world correspond to one biome value in the map. For example, with a scale of 4, one biome value in the map corresponds to a square of 4x4 blocks in the world. The only supported values are `📏"1:1"`, `📏"1:4"`, `📏"1:16"` and `📏"1:64"`. The symbol name is ":straight_ruler:".
-6. We can visualize the map with `plot`. The colors are the same as in Minecraft, so you can easily recognize the biomes.
+1. We need to create a dimension object with a given version, which will serve as a generator. `undef` means that it is an empty object at the moment. The Minecraft version must **always** be prefixed with `mcv` (stands for minecraft version). It allows the code to have completely different behaviors depending on the version.
+2. We set the seed to the generator. The seed can be any valid seed as in Minecraft (a string or a number). It will automatically be converted to a `UInt64` number.
+3. We create a `MCMap` object, that will store the biomes. It can be 2D or 3D (depending if the y coordinate is provided or not). You can access to the biomes by simply indexing with the exact same coordinates as in Minecraft (e.g. `mc_map[0, 0, 0]` will give you the biome at the origin of the world). At the moment of the code, the map is full of `BIOME_NONE` values because we did not generate the biomes yet. The syntax `a:b` in Julia means any integer between `a` and `b` (inclusive).
+4. We create a generator, that is mandatory to generate the biomes. It's there that we can pass a seed.
+5. We generate the biomes with the `gen_biomes!` function. It will fill the `MCMap` with the biomes. The argument with a `📏` (a ruler) is the scale of the biomes, i.e. how many blocks in the world correspond to one biome value in the map. For example, with a scale of 4, one biome value in the map corresponds to a square of 4x4 blocks in the world. The only supported values are `📏"1:1"`, `📏"1:4"`, `📏"1:16"` and `📏"1:64"`. The symbol name is ":straight_ruler:". You can use `Scale(1)` or `Scale(4)` instead if you don't like emojis.
+6. We can visualize / save the map using other Julia packages (such as FileIO to save into an image file) and `to_color` to transform the biomes into nice colors and other Julia packages.
 
 ## TODO
 
@@ -63,17 +62,6 @@ the code to have completely different behaviors depending on the version.
 - [X] Octaves noise
 - [ ] Simplex noise
 - [X] Double Perlin noise
-
-### Interface
-
-- [ ] Use the [broadcasting interface](https://docs.julialang.org/en/v1/manual/interfaces/#man-interfaces-broadcasting) for the `MCMap` object, to be able to use the dot syntax, i.e.
-
-    ```julia
-    mc_map = MCMap(-1000:1000, -1000:1000)
-    mc_map .= get_biomes.(nether_generator, mc_map, 📏"1:4")
-    ```
-
-    instead of the `gen_biomes!` function.
 
 ### Features
 

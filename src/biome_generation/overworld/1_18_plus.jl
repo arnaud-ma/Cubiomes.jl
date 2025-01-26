@@ -1,10 +1,9 @@
 using StaticArrays: SVector
 using InteractiveUtils: subtypes
 
-import ..Cubiomes
 using ..Utils: Utils, @only_float32, md5_to_uint64, lerp
 using ..JavaRNG: JavaXoroshiro128PlusPlus, next🎲
-using ..Noises
+using ..Noises: Noise, DoublePerlin
 using ..MCVersions
 
 using .BiomeTrees
@@ -17,36 +16,23 @@ using .BiomeTrees
 abstract type NoiseParameter end
 
 # only here to help the editor, poor baby :(
+#! format: off
 amplitudes(::NoiseParameter) = throw(MethodError(amplitudes, (NoiseParameter,)))
-function octave_min(::NoiseParameter, large)
-    throw(MethodError(octave_min, (NoiseParameter, typeof(large))))
-end
-id(::NoiseParameter, large) = throw(MethodError(id, (NoiseParameter, typeof(large))))
-function filtered_amplitudes(::NoiseParameter)
-    throw(MethodError(filtered_amplitudes, (NoiseParameter,)))
-end
-function trimmed_amplitudes(::NoiseParameter)
-    throw(MethodError(trimmed_amplitudes, (NoiseParameter,)))
-end
-
+octave_min(::NoiseParameter, large) = throw(MethodError(octave_min, (NoiseParameter, typeof(large))))
+trimmed_amplitudes(::NoiseParameter) = throw(MethodError(trimmed_amplitudes, (NoiseParameter,)))
+trimmed_end_amplitudes(::NoiseParameter) = throw(MethodError(trimmed_end_amplitudes, (NoiseParameter,)))
 nb_octaves(::NoiseParameter) = throw(MethodError(nb_octaves, (NoiseParameter,)))
-nb_trimmed(::NoiseParameter) = throw(MethodError(nb_trimmed, (NoiseParameter,)))
-function create_octaves(::NoiseParameter, ::Val{N}) where {N}
-    throw(MethodError(create_octaves, (NoiseParameter, Val{N})))
-end
-function magic_xlo(::NoiseParameter, large)
-    throw(MethodError(magic_xlo, (NoiseParameter, typeof(large))))
-end
-function magic_xhi(::NoiseParameter, large)
-    throw(MethodError(magic_xhi, (NoiseParameter, typeof(large))))
-end
+create_octaves(::NoiseParameter, n::Val) =  throw(MethodError(create_octaves, (NoiseParameter, typeof(n))))
+magic_xlo(::NoiseParameter, large) = throw(MethodError(magic_xlo, (NoiseParameter, typeof(large))))
+magic_xhi(::NoiseParameter, large) = throw(MethodError(magic_xhi, (NoiseParameter, typeof(large))))
+#! format: on
 
 function create_noise_param(noise_param, amp, oct, id_str, oct_large)
     amp = float.(amp)
     filtered_amp = filter(!iszero, amp)
     nb_octaves_ = length(filtered_amp)
     trimmed_ = Utils.trim(iszero, amp)
-    nb_trimmed_ = length(trimmed_)
+    trimmed_end_ = Utils.trim_end(iszero, amp)
 
     if isnothing(oct_large)
         oct_large = oct
@@ -56,20 +42,17 @@ function create_noise_param(noise_param, amp, oct, id_str, oct_large)
         id_str_large = "$(id_str)_large"
     end
 
-    xlo, xhi = Utils.md5_to_uint64(id_str)
-    xlo_large, xh_large = Utils.md5_to_uint64(id_str_large)
+    xlo, xhi = md5_to_uint64(id_str)
+    xlo_large, xh_large = md5_to_uint64(id_str_large)
 
     T = Type{noise_param}
     @eval begin
         amplitudes(::$T) = $amp
         octave_min(::$T, ::Val{false}) = $oct
         octave_min(::$T, ::Val{true}) = $oct_large
-        id(::$T, ::Val{false}) = $id_str
-        id(::$T, ::Val{true}) = $id_str_large
-        filtered_amplitudes(::$T) = $filtered_amp
         nb_octaves(::$T) = $nb_octaves_
-        nb_trimmed(::$T) = $nb_trimmed_
         trimmed_amplitudes(::$T) = $trimmed_
+        trimmed_end_amplitudes(::$T) = $trimmed_end_
         magic_xlo(::$T, ::Val{false}) = $xlo
         magic_xhi(::$T, ::Val{false}) = $xhi
         magic_xlo(::$T, ::Val{true}) = $xlo_large
@@ -111,7 +94,7 @@ const TypeTupleClimate = Tuple{(DoublePerlin{nb_octaves(np)} for np in NOISE_PAR
 
 Base.getindex(tc::TypeTupleClimate, np::Type{<:NoiseParameter}) = @inbounds tc[Int(np)]
 
-struct BiomeNoise <: Dimension
+struct BiomeNoise{V} <: Overworld
     climate::TypeTupleClimate
     sha::SomeSha
 end
@@ -124,8 +107,8 @@ end
         Val(true), # tell the constructor it is already trimmed
     )
 end
-function BiomeNoise(::UndefInitializer)
-    return BiomeNoise(map(create_noise, NOISE_PARAMETERS), SomeSha(nothing))
+function BiomeNoise{V}(::UndefInitializer) where {V}
+    return BiomeNoise{V}(map(create_noise, NOISE_PARAMETERS), SomeSha(nothing))
 end
 
 function set_seed!(noise::BiomeNoise, seed::UInt64; sha=Val(true), large=Val(false))
@@ -164,7 +147,7 @@ function set_seed!(
     set_rng!🎲(
         dp,
         rng,
-        trimmed_amplitudes(noise_param),
+        trimmed_end_amplitudes(noise_param),
         octave_min(noise_param, large),
         length(amplitudes(noise_param)),
     )
@@ -194,30 +177,31 @@ Base.trunc(::Type{SplineType}, x) = SplineType(trunc(Int, x))
 # if we use ntuple, julia will always try to do some dynamic dispatch on N.
 # since the elements are getting accessed in get_spline very randomly, julia will
 # never be able to infer N.
-struct Spline{N}
+struct Spline
     spline_type::SplineType
-    locations::NTuple{N, Float32}
-    derivatives::NTuple{N, Float32}
-    child_splines::NTuple{N, Spline}
+    locations::Vector{Float32}#::NTuple{N, Float32}
+    derivatives::Vector{Float32}#::NTuple{N, Float32}
+    child_splines::Vector{Spline}#::NTuple{N, Spline}
     fix_value::Float32
 end
+
 Base.length(spline::Spline) = length(spline.locations)
 
-function Spline(spline_type::SplineType, locations, derivatives, child_splines)
-    return Spline(spline_type, locations, derivatives, child_splines, zero(Float32))
-end
-fixspline(value::Real) = Spline(FIXSPLINE, (), (), (), value)
-
 # function Spline(spline_type::SplineType, locations, derivatives, child_splines)
-#     return Spline(
-#         spline_type,
-#         collect(locations),
-#         collect(derivatives),
-#         collect(child_splines),
-#         zero(Float32),
-#     )
+#     return Spline(spline_type, locations, derivatives, child_splines, zero(Float32))
 # end
-# fixspline(value::Real) = Spline(FIXSPLINE, [], [], [], value)
+# fixspline(value::Real) = Spline(FIXSPLINE, (), (), (), value)
+
+function Spline(spline_type::SplineType, locations, derivatives, child_splines)
+    return Spline(
+        spline_type,
+        collect(locations),
+        collect(derivatives),
+        collect(child_splines),
+        zero(Float32),
+    )
+end
+fixspline(value::Real) = Spline(FIXSPLINE, Float32[], Float32[], Spline[], value)
 
 fixsplines(values...) = map(fixspline, values)
 
@@ -429,7 +413,6 @@ function get_biome(
     bn::BiomeNoise,
     x, z, y,
     ::T📏"1:1",
-    version::mcvt">=1.18",
     spline=SPLINE_STACK;
     skip_shift=Val(false), skip_depth=Val(false),
 )
@@ -437,7 +420,7 @@ function get_biome(
     return get_biome(
         bn,
         x, z, y,
-        📏"1:4", version, spline;
+        📏"1:4", spline;
         skip_shift=skip_shift, skip_depth=skip_depth,
     )
 end
@@ -445,53 +428,38 @@ end
 function get_biome(
     bn::BiomeNoise,
     x, z, y,
-    ::T📏"1:4", version::mcvt">=1.18",
+    ::T📏"1:4",
     spline=SPLINE_STACK;
     skip_shift=Val(false), skip_depth=Val(false), old_idx=nothing,
 )
     return _get_biome(
-        bn, x, z, y, 📏"1:4", version, spline, skip_shift, skip_depth, old_idx,
+        bn, x, z, y, 📏"1:4", spline, skip_shift, skip_depth, old_idx,
     )
 end
 
 # The use of two _get_biome that are almost the same is a bit ugly but im too lazy
 # it works so it's fine, the issue is that we have two values to return if old_idx is not nothing
 function _get_biome(
-    bn::BiomeNoise,
-    x, z, y,
-    ::T📏"1:4", version::mcvt">=1.18",
-    spline, skip_shift, skip_depth, old_idx::Nothing,
+    bn::BiomeNoise, x, z, y, ::T📏"1:4", spline, skip_shift, skip_depth, old_idx::Nothing,
 )
-    return BiomeID(get_biome_int(
-        bn, x, z, y, version, spline,
-        skip_shift, skip_depth, old_idx,
-    ))
+    return BiomeID(get_biome_int(bn, x, z, y, spline, skip_shift, skip_depth, old_idx))
 end
 
 function _get_biome(
-    bn::BiomeNoise,
-    x, z, y,
-    ::T📏"1:4", version::mcvt">=1.18",
-    spline, skip_shift, skip_depth, old_idx,
+    bn::BiomeNoise, x, z, y, ::T📏"1:4", spline, skip_shift, skip_depth, old_idx,
 )
-    biome_int, old_idx = get_biome_int(
-        bn, x, z, y, version, spline,
-        skip_shift, skip_depth, old_idx,
-    )
+    biome_int, old_idx = get_biome_int(bn, x, z, y, spline, skip_shift, skip_depth, old_idx)
     return BiomeID(biome_int), old_idx
 end
 
 function get_biome_int(
-    bn::BiomeNoise,
-    x, z, y,
-    version::mcvt">=1.18",
-    spline=SPLINE_STACK,
+    bn::BiomeNoise{V}, x, z, y, spline=SPLINE_STACK,
     skip_shift=Val(false), skip_depth=Val(false), old_idx=nothing,
-)
+) where {V}
     noiseparams = sample_biomenoises(
         bn, x, z, y, spline, skip_shift, skip_depth,
     )
-    return climate_to_biome(noiseparams, version, old_idx)
+    return climate_to_biome(noiseparams, V, old_idx)
 end
 
 function sample_biomenoises(
@@ -536,9 +504,7 @@ function sample_depth(spline, c, e, w, y, skip_depth::Bool)
 end
 
 function climate_to_biome(
-    noise_parameters::NTuple{6},
-    version::mcvt">=1.18",
-    old_idx=nothing,
+    noise_parameters::NTuple{6}, version::mcvt">=1.18", old_idx=nothing,
 )
     return climate_to_biome(noise_parameters, get_biome_tree(version), old_idx)
 end
@@ -629,18 +595,18 @@ end
 #                               Biome Generation                               #
 # ---------------------------------------------------------------------------- #
 
-function gen_biomes!(bn::BiomeNoise, map3D::MCMap{3}, ::T📏"1:1", version::mcvt">=1.18")
+function gen_biomes!(bn::BiomeNoise, map3D::MCMap{3}, ::T📏"1:1")
     coords = CartesianIndices(map3D)
     # If there is only one value, simple wrapper around get_biome_unsafe
     if isone(length(coords))
         coord = first(coords)
-        map3D[coord] = get_biome(bn, coord.I..., 📏"1:4", version)
+        map3D[coord] = get_biome(bn, coord.I..., 📏"1:4")
     end
 
     # The minimal map where we are sure we can find the source coordinates at scale 4
     biome_parent_axes = get_voronoi_src_axes3D(map3D)
     biome_parents = view_reshape_cache_like(biome_parent_axes)
-    gen_biomes!(bn, biome_parents, 📏"1:4", version)
+    gen_biomes!(bn, biome_parents, 📏"1:4")
 
     sha = bn.sha[]
     for coord in coords
@@ -650,17 +616,14 @@ function gen_biomes!(bn::BiomeNoise, map3D::MCMap{3}, ::T📏"1:1", version::mcv
     end
 end
 
-function gen_biomes!(bn::BiomeNoise, map3D::MCMap{3}, ::T📏"1:4", version::mcvt">=1.18")
+function gen_biomes!(bn::BiomeNoise, map3D::MCMap{3}, ::T📏"1:4")
     for coord in CartesianIndices(map3D)
-        map3D[coord] = get_biome(bn, coord.I..., 📏"1:4", version)
+        map3D[coord] = get_biome(bn, coord.I..., 📏"1:4")
     end
     return nothing
 end
 
-function gen_biomes!(
-    bn::BiomeNoise, map3D::MCMap{3},
-    ::Scale{S}, version::mcvt">=1.18",
-) where {S}
+function gen_biomes!(bn::BiomeNoise, map3D::MCMap{3}, ::Scale{S}) where {S}
     scale = S ÷ 4
     mid = scale ÷ 2
     old_idx = zero(UInt64)
@@ -671,8 +634,7 @@ function gen_biomes!(
             coord[3],
         )
         map3D[coord], old_idx = get_biome(
-            bn, coord_scale4..., 📏"1:4", version;
-            skip_shift=Val(true), old_idx=old_idx,
-        )
+            bn, coord_scale4..., 📏"1:4";
+            skip_shift=Val(true), old_idx=old_idx)
     end
 end

@@ -4,6 +4,7 @@ using ..Noises
 using ..JavaRNG: AbstractJavaRNG
 using ..Utils: Utils
 using ..SeedUtils: mc_step_seed
+using ..MCVersions
 
 #region Noise
 # ---------------------------------------------------------------------------- #
@@ -11,7 +12,7 @@ using ..SeedUtils: mc_step_seed
 # ---------------------------------------------------------------------------- #
 
 """
-    Dimension <: Noises.Noise
+    Dimension
 
 An abstract type that represents a dimension in Minecraft. It is used to generate
 the noise for the biomes in that dimension.
@@ -23,7 +24,7 @@ The concrete type must implement:
   - An inplace constructor `set_seed!(dim::TheDim, seed::UInt64, args...)` where `TheDim`
     is the concrete type. Be aware that the seed must be constrained to `UInt64` dispatch to work.
 """
-abstract type Dimension <: Noise end
+abstract type Dimension end
 
 """
     set_seed!(dim::Dimension, seed, args...)
@@ -37,24 +38,10 @@ See also: [`Nether`](@ref)
 """
 set_seed!(dim::Dimension, seed, args...) = set_seed!(dim, Utils.u64_seed(seed), args...)
 
-function Noises.set_rng!🎲(noise::Dimension, rng::AbstractJavaRNG, args...)
-    msg = lazy"Dimension type does not support set_rng!🎲. Use set_seed! to initialize one"
-    throw(ArgumentError(msg))
-end
-
-# Dimension is simply an alias to Noise here
 function Dimension(
-    d::Type{D},
-    u::UndefInitializer,
-    args::Vararg{Any, N},
+    ::Type{D}, version::MCVersion, u::UndefInitializer, args::Vararg{Any, N},
 ) where {D <: Dimension, N}
-    Noise(d, u, args...)
-end
-
-function Dimension(::Type{D}, seed, args::Vararg{Any, N}) where {D <: Dimension, N}
-    dim = Dimension(D, undef)
-    set_seed!(dim, seed, args...)
-    return dim
+    return D{version}(u, args...)
 end
 
 #endregion
@@ -70,15 +57,17 @@ function MCMap(range::Vararg{UnitRange, N}) where {N}
     return fill(BIOME_NONE, range...)
 end
 
-function MCMap{2}(array::MCMap{3})
-    size_x, size_z, size_y = size(array)
+function view2d(array::MCMap{3})
+    size_y = size(array)[3]
     if size_y != 1
         msg = "Cannot view a 3D cube as a 2D square if the y size is greater than 1"
         throw(ArgumentError(msg))
     end
-    ax = axes(array)
-    return MCMap(reshape(array, size_x, size_z), ax[1], ax[2])
+    y = first(axes(array)[3])
+    return @view array[:, :, y]
 end
+view2d(x::MCMap{2}) = x
+
 function MCMap{3}(array::MCMap{2}, y_index=1)
     return MCMap(reshape(array, size(array)..., 1), axes(array)..., y_index:y_index)
 end
@@ -234,11 +223,13 @@ function get_voronoi_cell(sha::UInt64, x::Int64, z::Int64, y::Int64)
     get_voronoi_cell(sha, unsigned(x), unsigned(z), unsigned(y))
 end
 
-voronoi_access(sha::UInt64, coord::CartesianIndex) = voronoi_access(sha, coord.I...)
+function voronoi_access(sha::UInt64, coord::CartesianIndex{3})
+    voronoi_access(sha, coord[1], coord[2], coord[3])
+end
 # TODO: change this following docstring
 """
     voronoi_access(sha::UInt64, x, y, z)
-    voronoi_access(sha::UInt64, coord::CartesianIndex)
+    voronoi_access(sha::UInt64, coord::CartesianIndex{3})
 
 With 1.15, voronoi changed in preparation for 3D biome generation.
 Biome generation now stops at scale 1:4 OceanMix and voronoi is just
