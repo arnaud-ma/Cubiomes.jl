@@ -410,11 +410,8 @@ end
 # TODO: get_biome for scale != (1, 4)
 
 function get_biome(
-    bn::BiomeNoise,
-    x, z, y,
-    ::T📏"1:1",
-    spline=SPLINE_STACK;
-    skip_shift=Val(false), skip_depth=Val(false),
+    bn::BiomeNoise, x::Real, z::Real, y::Real, ::T📏"1:1",
+    spline=SPLINE_STACK; skip_shift=Val(false), skip_depth=Val(false),
 )
     x, z, y = voronoi_access(bn.sha[], x, z, y)
     return get_biome(
@@ -426,19 +423,27 @@ function get_biome(
 end
 
 function get_biome(
-    bn::BiomeNoise,
-    x, z, y,
-    ::T📏"1:4",
-    spline=SPLINE_STACK;
-    skip_shift=Val(false), skip_depth=Val(false), old_idx=nothing,
+    bn::BiomeNoise, x::Real, z::Real, y::Real, ::Scale{S},
+    spline=SPLINE_STACK; skip_depth=Val(false),
+) where {S}
+    scale = S ÷ 4
+    mid = scale ÷ 2
+    x4, z4, y4 = map(i -> i * scale + mid, (x, z, y))
+    return get_biome(
+        bn, x4, z4, y4, 📏"1:4", spline;
+        skip_shift=Val(true), skip_depth=skip_depth,
+    )
+end
+
+function get_biome(
+    bn::BiomeNoise, x::Real, z::Real, y::Real, ::T📏"1:4",
+    spline=SPLINE_STACK; skip_shift=Val(false), skip_depth=Val(false), old_idx=nothing,
 )
     return _get_biome(
         bn, x, z, y, 📏"1:4", spline, skip_shift, skip_depth, old_idx,
     )
 end
 
-# The use of two _get_biome that are almost the same is a bit ugly but im too lazy
-# it works so it's fine, the issue is that we have two values to return if old_idx is not nothing
 function _get_biome(
     bn::BiomeNoise, x, z, y, ::T📏"1:4", spline, skip_shift, skip_depth, old_idx::Nothing,
 )
@@ -456,9 +461,7 @@ function get_biome_int(
     bn::BiomeNoise{V}, x, z, y, spline=SPLINE_STACK,
     skip_shift=Val(false), skip_depth=Val(false), old_idx=nothing,
 ) where {V}
-    noiseparams = sample_biomenoises(
-        bn, x, z, y, spline, skip_shift, skip_depth,
-    )
+    noiseparams = sample_biomenoises(bn, x, z, y, spline, skip_shift, skip_depth)
     return climate_to_biome(noiseparams, V, old_idx)
 end
 
@@ -542,7 +545,6 @@ function get_resulting_node(
 
     node = biome_tree.nodes[idx + 1]
     leaf = alt
-
     inner_start = node >> 48
     inner_end = min(inner_start + step * (biome_tree.order - 1), biome_tree.len_nodes - 1)
 

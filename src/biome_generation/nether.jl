@@ -66,6 +66,12 @@ function get_biome(nn::Nether1_16Plus, x::Real, z::Real, y::Real, ::T📏"1:1")
     return get_biome(nn, source_x, source_z, 📏"1:4")
 end
 
+function get_biome(nn::Nether1_16Plus, x::Real, z::Real, ::Scale{S}) where S
+    scale = S ÷ 4
+    x, z = x * scale, z * scale
+    return get_biome(nn, x, z, 📏"1:4")
+end
+
 function get_biome(nn::Nether1_16Plus, x::Real, z::Real, ::T📏"1:4")
     temperature = sample_noise(nn.temperature, x, z)
     humidity = sample_noise(nn.humidity, x, z)
