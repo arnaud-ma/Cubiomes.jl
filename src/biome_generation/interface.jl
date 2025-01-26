@@ -125,7 +125,7 @@ The supported values for N are usually 1, 4, 16, 64, 256. But it can vary from t
 that uses it. Read the documentation of the function that uses it to know the supported values.
 """
 struct Scale{N}
-    function Scale{N}()
+    function Scale{N}() where {N}
         if N < 1
             throw(ArgumentError("The scale must be to the form 2^n with n >= 0. Got $N."))
         end

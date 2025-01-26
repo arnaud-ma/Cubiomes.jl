@@ -41,8 +41,9 @@ struct v1_20 <: MCVersion end
 struct v1_21 <: MCVersion end
 
 remove_first(x::AbstractString) = chop(x; head=1, tail=0)
+
 function to_jl_version(x)
-    return string(x) |>                     # Module1.Module2.v1_8_9
+    return string(nameof(x)) |>                     # Module1.Module2.v1_8_9
            Fix2(split, ".") |> last |>      # v1_8_9
            remove_first |>                  # 1_8_9
            Fix2(replace, "_" => ".") |>     # 1.8.9
@@ -65,6 +66,9 @@ for func in (:(==), :isless)
     @eval Base.$func(x::Type{<:MCVersion}, y::Type{<:MCVersion}) =
         $func(id(x), id(y))
 end
+
+Base.print(io::IO, v::Type{<:MCVersion}) = print(io, to_jl_version(v))
+Base.show(io::IO, v::Type{<:MCVersion}) = print(io, "mcv\"", v, "\"")
 
 function get_closest_minor_version(version, compare_versions)
     version in compare_versions && return version
