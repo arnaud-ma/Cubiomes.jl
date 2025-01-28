@@ -110,11 +110,14 @@ struct Elevations{V}
     inner::AbstractMatrix{UInt16}
 end
 
+elevation_val(x, z) = ((abs(x) * 3439 + abs(z) * 147) % 13) + 9
+
+function get_elevation_outside_center(perlin, x, z)
+    (sample_simplex(perlin, x, z) < -0.9) ? elevation_val(x, z) : zero(UInt16)
+end
+
 function get_elevation(end_::End1_9Plus, x, z)::UInt16
-    # if outside of the main island and sample < -0.9
-    if (x^2 + z^2 > 4096) && (sample_simplex(end_.perlin, x, z) < -0.9)
-        return ((abs(x) * 3439 + abs(z) * 147) % 13) + 9
-    end
+    x^2 + z^2 > 4096 && return get_elevation_outside_center(end_.perlin, x, z)
     return zero(UInt16)
 end
 
@@ -175,6 +178,14 @@ function get_height_sample(end_noise::End1_9Plus, x, z, start_height, range::Int
     )
 end
 
+function get_height_sample_outside_center(
+    end_noise::End1_9Plus, x, z, start_height, range::Integer=12,
+)
+    return _get_height_sample(
+        (x, z) -> get_elevation_outside_center(end_noise, x, z), x, z, start_height, range,
+    )
+end
+
 get_height_end(height_value) = clamp(-100 - sqrt(height_value), -100, 80)
 
 function get_height(end_noise::End1_9Plus, x, z, range::Integer=12)
@@ -203,35 +214,57 @@ function biome_from_height_sample(height)
     return small_end_islands
 end
 
-function get_biome(
-    elevation_getter::ElevationGetter{V}, x::Real, z::Real, ::T📏"1:16", range::Integer=12,
-) where {V}
-    x^2 + z^2 <= 4096 && return the_end
-    has_bug_mc159283(V, x, z) && return small_end_islands
-    return biome_from_height_sample(
-        get_height_sample(elevation_getter, x, z, 14_401, range)
-    )
+# we need to do like this instead of ::Union{End1_9Plus, Elevations} because it leads to
+# ambiguity with the  get_biome(end_::Cubiomes.BiomeGeneration.End1_9Plus, x::Real, z::Real, ::Scale{S}, range) where S
+# below
+for eg_type in (:End1_9Plus, :Elevations)
+    @eval function get_biome(
+        eg::$eg_type{V}, x::Real, z::Real, ::T📏"1:16", range::Integer=12,
+    ) where {V}
+        x^2 + z^2 <= 4096 && return the_end
+        has_bug_mc159283(V, x, z) && return small_end_islands
+        return biome_from_height_sample(
+            get_height_sample(eg, x, z, 14_401, range)
+        )
+    end
+
+    @eval function get_biome(eg::$eg_type, x::Real, z::Real, ::T📏"1:4", range=12)
+        return get_biome(eg, x >> 2, z >> 2, 📏"1:16", range)
+    end
 end
 
-elev_range(::T📏"1:4") = 12
-elev_range(::T📏"1:16") = 12
-elev_range(::T📏"1:64") = 4
-
-elev_ω(::T📏"1:4") = 2
-elev_ω(::T📏"1:16") = 0
-elev_ω(::T📏"1:64") = -2
-
-
-function get_biome(eg::ElevationGetter, x::Real, z::Real, s::Union{T📏"1:4", T📏"1:64"})
-    ω, range = elev_ω(s), elev_range(s)
-    return return get_biome(eg, x >> ω, z >> ω, 📏"1:16", range)
+# For scale > 16
+function get_biome(end_::End1_9Plus, x::Real, z::Real, ::Scale{S}, range=4) where {S}
+    scale = S ÷ 8
+    return get_biome(end_, x * scale, z * scale, 📏"1:16", range)
 end
 
-function gen_biomes!(end_noise::End1_9Plus, map2D::MCMap{2}, s::Scale)
+function gen_biomes!(end_noise::End1_9Plus, map2D::MCMap{2}, s::T📏"1:16")
     #! memory allocation
-    elevations = Elevations(end_noise, map2D, 12)
+    elevations = Elevations(end_noise, map2D, #=range=#12)
     for coord in CartesianIndices(map2D)
         map2D[coord] = get_biome(elevations, coord.I..., s)
+    end
+    return nothing
+end
+
+function gen_biomes!(end_noise::End1_9Plus, map2D::MCMap{2}, ::T📏"1:4")
+    # It's *exactly* the same as the generation at scale 1:16. We just need to
+    # rescale the coordinates by 4 (right shift by 2).
+    # TODO: it would be nice to not store the same 4 copies of the same data in memory
+    # instead, we could create a new subtype of AbstractMatrix which would be a view
+    # of the 1:16 matrix, and the getindex(x, y) would return the value at x >> 2, y >> 2
+    # I thin we could do this for any MCMap{2} and any scale. But big work.
+    throw(ArgumentError("1:4 end generation is the same as 1:16 but simply rescaled by 4.
+                        Use 1:16 scale instead. The scale 1:4 will be supported in the future."))
+end
+
+# scale > 16
+function gen_biomes!(end_noise::End1_9Plus, map2D::MCMap{2}, s::Scale{S}) where {S}
+    # only cache the elevations for scale <= 16. Because they rely if they are
+    # close together at scale 16.
+    for coord in CartesianIndices(map2D)
+        map2D[coord] = get_biome(end_noise, coord.I..., s)
     end
     return nothing
 end
@@ -239,6 +272,15 @@ end
 # #==========================================================================================#
 # # Biome Generation / Scale 1 ⚠ STILL DRAFT # TODO
 # #==========================================================================================#
+
+function get_biome(end_::End1_9Plus, x::Real, z::Real, ::T📏"1:1")
+    throw(ArgumentError("1:1 end generation is not implemented yet."))
+end
+
+function gen_biomes!(end_noise::End1_9Plus, map2D::MCMap{2}, ::T📏"1:1")
+    throw(ArgumentError("1:1 end generation is not implemented yet."))
+end
+
 
 # # function gen_biomes_unsafe!(end_noise::EndNoise, mc_map::MCMap{3}, scale::Val{1})
 # #     biome_parents  = get_voronoi_src_map2D(mc_map)
