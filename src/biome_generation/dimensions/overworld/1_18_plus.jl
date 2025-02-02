@@ -5,7 +5,7 @@ using ..Utils: Utils, @only_float32, md5_to_uint64, lerp
 using ..JavaRNG: JavaXoroshiro128PlusPlus, next🎲
 using ..Noises: Noise, DoublePerlin
 using .BiomeArrays: World, coordinates
-using .Voronoi: voronoi_access, get_voronoi_src_axes2D, voronoi_source
+using .Voronoi: voronoi_access, voronoi_source
 using ..MCVersions
 
 using .BiomeTrees

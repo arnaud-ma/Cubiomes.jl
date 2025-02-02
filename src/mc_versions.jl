@@ -42,7 +42,7 @@ struct v1_21 <: MCVersion end
 
 remove_first(x::AbstractString) = chop(x; head=1, tail=0)
 
-function to_jl_version(x)
+function _to_jl_version(x::Type{<:MCVersion})
     return string(nameof(x)) |>                     # Module1.Module2.v1_8_9
            Fix2(split, ".") |> last |>      # v1_8_9
            remove_first |>                  # 1_8_9
@@ -50,9 +50,12 @@ function to_jl_version(x)
            VersionNumber                    # v"1.8.9"
 end
 
-const VERSIONS_DICT = Dict(to_jl_version(x) => x for x in subtypes(MCVersion))
+const VERSIONS_DICT = Dict(_to_jl_version(x) => x for x in subtypes(MCVersion))
 const VERSIONS = keys(VERSIONS_DICT) |> collect |> sort |> Tuple
 const MC_VERSIONS = Tuple([VERSIONS_DICT[x] for x in VERSIONS])
+const VERSIONS_DICT_JL = Dict(zip(values(VERSIONS_DICT), keys(VERSIONS_DICT)))
+
+to_jl_version(x::Type{<:MCVersion}) = VERSIONS_DICT_JL[x]
 
 const vNEWEST = MC_VERSIONS[end]
 struct vUNDEF <: MCVersion end
@@ -108,10 +111,6 @@ represents the 1.8.9 version or `mcv"beta1.7"` for the beta 1.7.
 """
 macro mcv_str(str)
     return str_to_mcversion(str)
-end
-
-function filter_versions()
-    filtered = filter(func, VERSIONS)
 end
 
 function _mcvt(str)

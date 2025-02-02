@@ -6,6 +6,7 @@ using ..JavaRNG: JavaRandom, randjump🎲
 using ..MCBugs: has_bug_mc159283
 using .BiomeArrays: World, coordinates
 using ..MCVersions
+using ..Biomes: the_end, end_highlands, end_midlands, end_barrens, small_end_islands
 
 abstract type End <: Dimension end
 

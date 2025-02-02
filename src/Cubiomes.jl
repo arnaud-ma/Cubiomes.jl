@@ -10,7 +10,9 @@ include("mc_seed_utils.jl")
 include("mc_bugs.jl")
 include("rng.jl")
 include("noises/Noises.jl")
+
 include("Biomes.jl")
+@reexport using .Biomes
 
 include("biome_generation/BiomeGeneration.jl")
 @reexport using .BiomeGeneration

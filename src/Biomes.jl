@@ -1,6 +1,9 @@
 module Biomes
-using CEnum
 
+export Biome, isnone, biome_exists, is_overworld, mutated, category, are_similar, is_mesa,
+    is_shallow_ocean, is_deep_ocean, is_oceanic, is_snowy
+
+using CEnum
 using ..MCVersions
 
 # TODO: a module for the biomes instead of a raw file
@@ -130,84 +133,94 @@ Biome = Biome
 isnone(biome::Biome) = biome == BIOME_NONE
 Base.transpose(x::Biome) = x
 
+@inline function biome_exists(::mcvt">= 1.20", biome::Biome)
+    return biome_exists(mcv"1.19", biome) || biome == cherry_grove
+end
+
+@inline function biome_exists(::mcvt"1.19<= x < 1.20", biome::Biome)
+    return biome_exists(mcv"1.18", biome) || biome == deep_dark || biome == mangrove_swamp
+end
+
+@inline function biome_exists(::mcvt"1.18 <= x < 1.19", biome::Biome)
+    #      nether >= 1.16
+    return biome == soul_sand_valley ||
+           biome == crimson_forest ||
+           biome == warped_forest ||
+           biome == basalt_deltas ||
+    #      end >= 1.9
+           biome == small_end_islands ||
+           biome == end_midlands ||
+           biome == end_highlands ||
+           biome == end_barrens ||
+    #      overworld
+           biome == ocean ||
+           biome == plains ||
+           biome == desert ||
+           biome == mountains ||
+           biome == forest ||
+           biome == taiga ||
+           biome == swamp ||
+           biome == river ||
+           biome == nether_wastes ||
+           biome == the_end ||
+           biome == frozen_ocean ||
+           biome == frozen_river ||
+           biome == snowy_tundra ||
+           biome == mushroom_fields ||
+           biome == beach ||
+           biome == jungle ||
+           biome == jungle_edge ||
+           biome == deep_ocean ||
+           biome == stone_shore ||
+           biome == snowy_beach ||
+           biome == birch_forest ||
+           biome == dark_forest ||
+           biome == snowy_taiga ||
+           biome == giant_tree_taiga ||
+           biome == wooded_mountains ||
+           biome == savanna ||
+           biome == savanna_plateau ||
+           biome == badlands ||
+           biome == wooded_badlands_plateau ||
+           biome == badlands_plateau ||
+           biome == sunflower_plains ||
+           biome == desert_lakes ||
+           biome == gravelly_mountains ||
+           biome == flower_forest ||
+           biome == taiga_mountains ||
+           biome == swamp_hills ||
+           biome == ice_spikes ||
+           biome == modified_jungle ||
+           biome == modified_jungle_edge ||
+           biome == tall_birch_forest ||
+           biome == dark_forest_hills ||
+           biome == snowy_taiga_mountains ||
+           biome == giant_spruce_taiga ||
+           biome == giant_spruce_taiga_hills ||
+           biome == modified_gravelly_mountains ||
+           biome == shattered_savanna ||
+           biome == shattered_savanna_plateau ||
+           biome == eroded_badlands ||
+           biome == modified_wooded_badlands_plateau ||
+           biome == modified_badlands_plateau
+end
+
+function biome_exists(::mcvt"beta1.7", biome::Biome)
+    return biome == plains ||
+           biome == desert ||
+           biome == forest ||
+           biome == taiga ||
+           biome == swamp ||
+           biome == snowy_tundra ||
+           biome == savanna ||
+           biome == seasonal_forest ||
+           biome == rainforest ||
+           biome == shrubland ||
+           biome == ocean ||
+           biome == frozen_ocean
+end
 
 function biome_exists(version::Type{<:MCVersion}, biome::Biome)
-    if version >= mcv"1.18"
-        soul_sand_valley <= biome <= basalt_deltas && return true
-        small_end_islands <= biome <= end_barrens && return true
-        biome == cherry_grove && return version >= mcv"1.20"
-        biome == deep_dark || biome == mangrove_swamp && return version >= mcv"1.19.2"
-
-        biome == ocean ||
-            biome == plains ||
-            biome == desert ||
-            biome == mountains ||
-            biome == forest ||
-            biome == taiga ||
-            biome == swamp ||
-            biome == river ||
-            biome == nether_wastes ||
-            biome == the_end ||
-            biome == frozen_ocean ||
-            biome == frozen_river ||
-            biome == snowy_tundra ||
-            biome == mushroom_fields ||
-            biome == beach ||
-            biome == jungle ||
-            biome == jungle_edge ||
-            biome == deep_ocean ||
-            biome == stone_shore ||
-            biome == snowy_beach ||
-            biome == birch_forest ||
-            biome == dark_forest ||
-            biome == snowy_taiga ||
-            biome == giant_tree_taiga ||
-            biome == wooded_mountains ||
-            biome == savanna ||
-            biome == savanna_plateau ||
-            biome == badlands ||
-            biome == wooded_badlands_plateau ||
-            biome == badlands_plateau ||
-            biome == sunflower_plains ||
-            biome == desert_lakes ||
-            biome == gravelly_mountains ||
-            biome == flower_forest ||
-            biome == taiga_mountains ||
-            biome == swamp_hills ||
-            biome == ice_spikes ||
-            biome == modified_jungle ||
-            biome == modified_jungle_edge ||
-            biome == tall_birch_forest ||
-            biome == dark_forest_hills ||
-            biome == snowy_taiga_mountains ||
-            biome == giant_spruce_taiga ||
-            biome == giant_spruce_taiga_hills ||
-            biome == modified_gravelly_mountains ||
-            biome == shattered_savanna ||
-            biome == shattered_savanna_plateau ||
-            biome == eroded_badlands ||
-            biome == modified_wooded_badlands_plateau ||
-            biome == modified_badlands_plateau && return true
-
-        return false
-    end
-
-    if version <= mcv"beta1.7"
-        biome == plains ||
-            biome == desert ||
-            biome == forest ||
-            biome == taiga ||
-            biome == swamp ||
-            biome == snowy_tundra ||
-            biome == savanna ||
-            biome == seasonal_forest ||
-            biome == rainforest ||
-            biome == shrubland ||
-            biome == ocean ||
-            biome == frozen_ocean && return true
-        return false
-    end
-
     if version <= mcv"beta1.8"
         biome == frozen_ocean ||
             biome == frozen_river ||
