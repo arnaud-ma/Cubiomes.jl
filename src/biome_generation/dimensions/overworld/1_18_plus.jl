@@ -275,12 +275,12 @@ end
 
 @only_float32 function flat_offset_spline(x1, x2, x3, x4, x5, x6)
     spline_type = SP_RIDGES
-    x₇ = max(0.5 * (x2 - x1), x6)
-    x₈ = 5 * (x3 - x2)
+    x7 = max(0.5 * (x2 - x1), x6)
+    x8 = 5 * (x3 - x2)
     return Spline(
         spline_type,
         (-1, -0.4, 0, 0.4, 1),
-        (x₇, min(x₇, x₈), x₈, 2 * (x4 - x3), 0.7 * (x5 - x4)),
+        (x7, min(x7, x8), x8, 2 * (x4 - x3), 0.7 * (x5 - x4)),
         fixsplines(x1, x2, x3, x4, x5),
     )
 end
@@ -610,14 +610,8 @@ function gen_biomes!(bn::BiomeNoise, map3D::World{3}, ::Scale{1})
 
     sha = bn.sha[]
     for coord in coords
-        source_x, source_z, source_y = voronoi_access(sha, coord)
-        # try
-        result = biome_parents[source_x, source_z, source_y]
-        # catch e
-        #     println("ERROR")
-        #     @show (source_x, source_y, source_z)
-        #     @show coord
-        # end
+        x, z, y = voronoi_access(sha, coord)
+        result = biome_parents[x, z, y]
         @inbounds map3D[coord] = result
     end
 end

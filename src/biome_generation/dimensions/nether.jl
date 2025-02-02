@@ -241,8 +241,8 @@ function gen_biomes!(nn::Nether1_16Plus, map3D::World{3}, ::Scale{1}, confidence
     sha = nn.sha[]
     for coord in coords
         # See the comment on get_biome_unsafe for the explanation
-        source_x, source_z, _ = voronoi_access(sha, coord)
-        result = biome_parents[source_x, source_z]
+        x, z, _ = voronoi_access(sha, coord)
+        result = biome_parents[x, z]
         @inbounds map3D[coord] = result
     end
     return nothing

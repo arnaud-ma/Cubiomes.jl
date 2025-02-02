@@ -69,8 +69,6 @@ function voronoi_access(sha::UInt64, coord::NTuple{3, T}) where {T}
     coord = coord .- 2
     parent = coord .>> 2
     offset = (coord .& 3) .* CELL_SCALE
-
-    closest = (zero(T), zero(T), zero(T))
     min_distance_squared = typemax(UInt64)
 
     for neighbor_offset in OFFSETS
@@ -80,10 +78,10 @@ function voronoi_access(sha::UInt64, coord::NTuple{3, T}) where {T}
         distance_squared = sum(voronoi .* unsigned.(voronoi))
         if distance_squared < min_distance_squared
             min_distance_squared = distance_squared
-            closest = neighbors
+            coord = neighbors
         end
     end
-    return closest
+    return coord
 end
 voronoi_access(sha::UInt64, coord::CartesianIndex{3}) = voronoi_access(sha, coord.I)
 voronoi_access(sha::UInt64, x, z, y) = voronoi_access(sha, (x, z, y))
