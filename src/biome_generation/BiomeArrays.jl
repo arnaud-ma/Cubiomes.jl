@@ -39,7 +39,7 @@ ScaledWorld{S}(x::AbstractArray{Int, N}) where {S, N} = ScaledWorld{S, N, typeof
 
 scale(::ScaledWorld{S, N}) where {S, N} = Scale(S)
 shift_coord(W::ScaledWorld, x) = shift_coord(scale(W), x)
-shift_coord(::Scale{1}, x) = x
+shift_coord(::Scale{1}, x::Real) = x
 for shift in 1:8
     S = 1 << shift
     @eval shift_coord(::Scale{$S}, x::Real) = x >> $shift

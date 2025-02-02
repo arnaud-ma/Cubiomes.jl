@@ -147,12 +147,12 @@ end
            biome == crimson_forest ||
            biome == warped_forest ||
            biome == basalt_deltas ||
-    #      end >= 1.9
+           #      end >= 1.9
            biome == small_end_islands ||
            biome == end_midlands ||
            biome == end_highlands ||
            biome == end_barrens ||
-    #      overworld
+           #      overworld
            biome == ocean ||
            biome == plains ||
            biome == desert ||
@@ -205,7 +205,7 @@ end
            biome == modified_badlands_plateau
 end
 
-function biome_exists(::mcvt"beta1.7", biome::Biome)
+@inline function biome_exists(::mcvt"beta1.7", biome::Biome)
     return biome == plains ||
            biome == desert ||
            biome == forest ||
@@ -220,7 +220,7 @@ function biome_exists(::mcvt"beta1.7", biome::Biome)
            biome == frozen_ocean
 end
 
-function biome_exists(version::Type{<:MCVersion}, biome::Biome)
+@inline function biome_exists(version::Type{<:MCVersion}, biome::Biome)
     if version <= mcv"beta1.8"
         biome == frozen_ocean ||
             biome == frozen_river ||
@@ -280,7 +280,7 @@ function biome_exists(version::Type{<:MCVersion}, biome::Biome)
     return false
 end
 
-function is_overworld(version::Type{<:MCVersion}, biome::Biome)::Bool
+@inline function is_overworld(version::Type{<:MCVersion}, biome::Biome)::Bool
     if !biome_exists(biome, version)
         return false
     end
@@ -296,7 +296,7 @@ function is_overworld(version::Type{<:MCVersion}, biome::Biome)::Bool
     return true
 end
 
-function mutated(biome::Biome, version::Type{<:MCVersion})::Biome
+@inline function mutated(biome::Biome, version::Type{<:MCVersion})::Biome
     biome == plains && return sunflower_plains
     biome == desert && return desert_lakes
     biome == mountains && return gravelly_mountains
@@ -326,7 +326,7 @@ function mutated(biome::Biome, version::Type{<:MCVersion})::Biome
     return BIOME_NONE
 end
 
-function category(version::Type{<:MCVersion}, biome::Biome)
+@inline function category(version::Type{<:MCVersion}, biome::Biome)
     (biome == beach || biome == snowy_beach) && return beach
     (biome == desert || biome == desert_hills || biome == desert_lakes) && return desert
     (
@@ -411,6 +411,12 @@ function category(version::Type{<:MCVersion}, biome::Biome)
     return BIOME_NONE
 end
 
+
+@inline function _are_similar(version::Type{<:MCVersion}, biome1::Biome, biome2::Biome)
+    biome1 == biome2 && return true
+    return category(version, biome1) == category(version, biome2)
+end
+
 """
     are_similar(V::Type{MCVersion}, B1::Type{Biome}, B2::Type{Biome})::Bool
 
@@ -418,17 +424,18 @@ For a given version, check if two biomes have the same category.
 `wooded_badlands_plateau` and `badlands_plateau` are considered similar even though
 they have a different category in `version <= 1.15`.
 """
-function are_similar(version::Type{<:MCVersion}, biome1::Biome, biome2::Biome)
-    biome1 == biome2 && return true
-    if version <= mcv"1.15"
-        if biome1 == wooded_badlands_plateau || biome1 == badlands_plateau
-            return biome2 == wooded_badlands_plateau || biome2 == badlands_plateau
-        end
-    end
-    return category(version, biome1) == category(version, biome2)
+@inline function are_similar(version::Type{<:MCVersion}, biome1::Biome, biome2::Biome)
+    return _are_similar(version, biome1, biome2)
 end
 
-function is_mesa(biome::Biome)
+@inline function are_similar(version::mcvt"<=1.15", biome1::Biome, biome2::Biome)
+    if biome1 == wooded_badlands_plateau || biome1 == badlands_plateau
+        return biome2 == wooded_badlands_plateau || biome2 == badlands_plateau
+    end
+    return _are_similar(version, biome1, biome2)
+end
+
+@inline function is_mesa(biome::Biome)
     return (
         biome == badlands ||
         biome == eroded_badlands ||
@@ -439,7 +446,7 @@ function is_mesa(biome::Biome)
     )
 end
 
-function is_shallow_ocean(biome::Biome)
+@inline function is_shallow_ocean(biome::Biome)
     return (
         biome == ocean ||
         biome == frozen_ocean ||
@@ -449,7 +456,7 @@ function is_shallow_ocean(biome::Biome)
     )
 end
 
-function is_deep_ocean(biome::Biome)
+@inline function is_deep_ocean(biome::Biome)
     return (
         biome == deep_ocean ||
         biome == deep_warm_ocean ||
@@ -459,22 +466,10 @@ function is_deep_ocean(biome::Biome)
     )
 end
 
-function is_oceanic(biome::Biome)
-    return (
-        biome == ocean ||
-        biome == frozen_ocean ||
-        biome == deep_ocean ||
-        biome == warm_ocean ||
-        biome == lukewarm_ocean ||
-        biome == cold_ocean ||
-        biome == deep_warm_ocean ||
-        biome == deep_lukewarm_ocean ||
-        biome == deep_cold_ocean ||
-        biome == deep_frozen_ocean
-    )
-end
+@inline is_oceanic(biome::Biome) = is_shallow_ocean(biome) || is_deep_ocean(biome)
+@inline is_water(biome::Biome) = is_oceanic(biome) || biome == river
 
-function is_snowy(biome::Biome)
+@inline function is_snowy(biome::Biome)
     return (
         biome == frozen_ocean ||
         biome == frozen_river ||
