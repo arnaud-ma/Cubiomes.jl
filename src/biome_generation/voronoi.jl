@@ -79,7 +79,7 @@ function voronoi_access(sha::UInt64, coord::NTuple{3, T}) where {T}
             adjust_voronoi_cell,
             get_voronoi_cell(sha, neighbors), offset, neighbor_offset,
         )
-        distance_squared = mapreduce(t -> t * unsigned(t), +, voronoi)
+        distance_squared = sum(t -> t * unsigned(t), voronoi)
 
         if distance_squared < min_distance_squared
             min_distance_squared = distance_squared
