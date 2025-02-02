@@ -4,6 +4,8 @@ using InteractiveUtils: subtypes
 using ..Utils: Utils, @only_float32, md5_to_uint64, lerp
 using ..JavaRNG: JavaXoroshiro128PlusPlus, next🎲
 using ..Noises: Noise, DoublePerlin
+using .BiomeArrays: World, coordinates
+using .Voronoi: voronoi_access, get_voronoi_src_axes2D, voronoi_source
 using ..MCVersions
 
 using .BiomeTrees
@@ -445,14 +447,14 @@ end
 function _get_biome(
     bn::BiomeNoise, x, z, y, ::T📏"1:4", spline, skip_shift, skip_depth, old_idx::Nothing,
 )
-    return BiomeID(get_biome_int(bn, x, z, y, spline, skip_shift, skip_depth, old_idx))
+    return Biome(get_biome_int(bn, x, z, y, spline, skip_shift, skip_depth, old_idx))
 end
 
 function _get_biome(
     bn::BiomeNoise, x, z, y, ::T📏"1:4", spline, skip_shift, skip_depth, old_idx,
 )
     biome_int, old_idx = get_biome_int(bn, x, z, y, spline, skip_shift, skip_depth, old_idx)
-    return BiomeID(biome_int), old_idx
+    return Biome(biome_int), old_idx
 end
 
 function get_biome_int(
@@ -594,43 +596,48 @@ end
 #                               Biome Generation                               #
 # ---------------------------------------------------------------------------- #
 
-function gen_biomes!(bn::BiomeNoise, map3D::MCMap{3}, ::T📏"1:1")
-    coords = CartesianIndices(map3D)
-    # If there is only one value, simple wrapper around get_biome_unsafe
+function gen_biomes!(bn::BiomeNoise, map3D::World{3}, ::Scale{1})
+    coords = coordinates(map3D)
     if isone(length(coords))
         coord = first(coords)
-        map3D[coord] = get_biome(bn, coord.I..., 📏"1:4")
+        map3D[coord] = get_biome(bn, coord.I..., Scale(4))
     end
 
     # The minimal map where we are sure we can find the source coordinates at scale 4
-    biome_parent_axes = get_voronoi_src_axes3D(map3D)
+    biome_parent_axes = voronoi_source(map3D)
     biome_parents = view_reshape_cache_like(biome_parent_axes)
-    gen_biomes!(bn, biome_parents, 📏"1:4")
+    gen_biomes!(bn, biome_parents, Scale(4))
 
     sha = bn.sha[]
     for coord in coords
         source_x, source_z, source_y = voronoi_access(sha, coord)
+        # try
         result = biome_parents[source_x, source_z, source_y]
+        # catch e
+        #     println("ERROR")
+        #     @show (source_x, source_y, source_z)
+        #     @show coord
+        # end
         @inbounds map3D[coord] = result
     end
 end
 
-function gen_biomes!(bn::BiomeNoise, map3D::MCMap{3}, ::T📏"1:4")
-    for coord in CartesianIndices(map3D)
-        map3D[coord] = get_biome(bn, coord.I..., 📏"1:4")
+function gen_biomes!(bn::BiomeNoise, map3D::World{3}, s::Scale{4})
+    for coord in coordinates(map3D)
+        map3D[coord] = get_biome(bn, coord.I..., s)
     end
     return nothing
 end
 
-function gen_biomes!(bn::BiomeNoise, map3D::MCMap{3}, ::Scale{S}) where {S}
-    scale = S ÷ 4
-    mid = scale ÷ 2
+function gen_biomes!(bn::BiomeNoise, map3D::World{3}, ::Scale{S}) where {S}
+    scale = S >> 2
+    mid = scale >> 1
     coord_mid = CartesianIndex(mid, mid, 0)
     old_idx = zero(UInt64)
-    for coord in CartesianIndices(map3D)
+    for coord in coordinates(map3D)
         coord_scale4 = coord * scale + coord_mid
         map3D[coord], old_idx = get_biome(
-            bn, coord_scale4..., 📏"1:4";
+            bn, coord_scale4..., Scale(4);
             skip_shift=Val(true), old_idx=old_idx)
     end
 end

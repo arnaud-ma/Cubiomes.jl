@@ -4,6 +4,7 @@ using OffsetArrays: Origin
 using ..Noises
 using ..JavaRNG: JavaRandom, randjump🎲
 using ..MCBugs: has_bug_mc159283
+using .BiomeArrays: World, coordinates
 using ..MCVersions
 
 abstract type End <: Dimension end
@@ -16,7 +17,7 @@ struct End1_9Minus <: End end
 End(::UndefInitializer, ::mcvt"1.0 <= x < 1.9") = End1_9Minus()
 set_seed!(::End1_9Minus, seed::UInt64) = nothing
 get_biome(::End1_9Minus, x::Real, z::Real, y::Real, ::Scale) = the_end
-gen_biomes!(::End1_9Minus, out::MCMap) = fill!(out, the_end)
+gen_biomes!(::End1_9Minus, out::World) = fill!(out, the_end)
 
 struct End1_9Plus{V} <: End
     perlin::Perlin
@@ -24,9 +25,7 @@ struct End1_9Plus{V} <: End
 end
 
 function End(::UndefInitializer, version::mcvt">=1.9")
-    return End1_9Plus{version}(
-        Perlin(undef), SomeSha(nothing),
-    )
+    return End1_9Plus{version}(Perlin(undef), SomeSha(nothing))
 end
 
 function set_seed!(nn::End1_9Plus, seed::UInt64, ::Val{true})
@@ -64,7 +63,7 @@ optimizations and scaling on this basis (for scale >= 4).
 But not so sure that the optimizations are really important, most of ones are
 just avoid √ operations, but hypot is already really fast in Julia.
 """
-function original_get_biome(end_::End1_9Plus, x, z, ::T📏"1:4")
+function original_get_biome(end_::End1_9Plus, x, z, ::Scale{4})
     x >>= 2
     z >>= 2
 
@@ -130,9 +129,9 @@ function fill_elevations!(end_noise::End1_9Plus, elevations)
 end
 
 # TODO: maybe use sparse matrix instead
-function Elevations(end_noise::End1_9Plus{V}, mc_map::MCMap{2}, range::Integer=12) where {V}
+function Elevations(end_noise::End1_9Plus{V}, A::World{2}, range::Integer=12) where {V}
     #! memory allocation
-    elevations = Elevations{V}(similar_expand(UInt16, mc_map, range, range))
+    elevations = Elevations{V}(similar_expand(UInt16, A, range, range))
     fill_elevations!(end_noise, elevations)
     return elevations
 end
@@ -217,9 +216,9 @@ end
 # we need to do like this instead of ::Union{End1_9Plus, Elevations} because it leads to
 # ambiguity with the  get_biome(end_::Cubiomes.BiomeGeneration.End1_9Plus, x::Real, z::Real, ::Scale{S}, range) where S
 # below
-for eg_type in (:End1_9Plus, :Elevations)
+for type in (:End1_9Plus, :Elevations)
     @eval function get_biome(
-        eg::$eg_type{V}, x::Real, z::Real, ::T📏"1:16", range::Integer=12,
+        eg::$type{V}, x::Real, z::Real, ::Scale{16}, range::Integer=12,
     ) where {V}
         x^2 + z^2 <= 4096 && return the_end
         has_bug_mc159283(V, x, z) && return small_end_islands
@@ -228,42 +227,37 @@ for eg_type in (:End1_9Plus, :Elevations)
         )
     end
 
-    @eval function get_biome(eg::$eg_type, x::Real, z::Real, ::T📏"1:4", range=12)
-        return get_biome(eg, x >> 2, z >> 2, 📏"1:16", range)
+    @eval function get_biome(eg::$type, x::Real, z::Real, ::Scale{4}, range=12)
+        return get_biome(eg, x >> 2, z >> 2, Scale(16), range)
     end
 end
 
 # For scale > 16
 function get_biome(end_::End1_9Plus, x::Real, z::Real, ::Scale{S}, range=4) where {S}
-    scale = S ÷ 8
-    return get_biome(end_, x * scale, z * scale, 📏"1:16", range)
+    scale = S >> 3
+    return get_biome(end_, x * scale, z * scale, Scale(16), range)
 end
 
-function gen_biomes!(end_noise::End1_9Plus, map2D::MCMap{2}, s::T📏"1:16")
+function gen_biomes!(end_noise::End1_9Plus, map2D::World{2}, s::Scale{16})
     #! memory allocation
-    elevations = Elevations(end_noise, map2D, #=range=#12)
-    for coord in CartesianIndices(map2D)
+    # TODO: remove this allocation
+    elevations = Elevations(end_noise, map2D, 12)
+    for coord in coordinates(map2D)
         map2D[coord] = get_biome(elevations, coord.I..., s)
     end
     return nothing
 end
 
-function gen_biomes!(end_noise::End1_9Plus, map2D::MCMap{2}, ::T📏"1:4")
-    # It's *exactly* the same as the generation at scale 1:16. We just need to
-    # rescale the coordinates by 4 (right shift by 2).
-    # TODO: it would be nice to not store the same 4 copies of the same data in memory
-    # instead, we could create a new subtype of AbstractMatrix which would be a view
-    # of the 1:16 matrix, and the getindex(x, y) would return the value at x >> 2, y >> 2
-    # I thin we could do this for any MCMap{2} and any scale. But big work.
-    throw(ArgumentError("1:4 end generation is the same as 1:16 but simply rescaled by 4.
-                        Use 1:16 scale instead. The scale 1:4 will be supported in the future."))
+function gen_biomes!(::End1_9Plus, ::World{2}, ::Scale{4})
+    throw(ArgumentError(
+        "4:16 end generation is the same as 1:16 but simply rescaled by 4. \
+        Use 1:16 scale instead. The scale 1:4 could be supported in the future."
+    ))
 end
 
 # scale > 16
-function gen_biomes!(end_noise::End1_9Plus, map2D::MCMap{2}, s::Scale{S}) where {S}
-    # only cache the elevations for scale <= 16. Because they rely if they are
-    # close together at scale 16.
-    for coord in CartesianIndices(map2D)
+function gen_biomes!(end_noise::End1_9Plus, map2D::World{2}, s::Scale{S}) where {S}
+    for coord in coordinates(map2D)
         map2D[coord] = get_biome(end_noise, coord.I..., s)
     end
     return nothing
@@ -273,20 +267,13 @@ end
 # # Biome Generation / Scale 1 ⚠ STILL DRAFT # TODO
 # #==========================================================================================#
 
-function get_biome(end_::End1_9Plus, x::Real, z::Real, ::T📏"1:1")
+function get_biome(end_::End1_9Plus, x::Real, z::Real, ::Scale{1})
     throw(ArgumentError("1:1 end generation is not implemented yet."))
 end
 
-function gen_biomes!(end_noise::End1_9Plus, map2D::MCMap{2}, ::T📏"1:1")
+function gen_biomes!(end_noise::End1_9Plus, map2D::World{2}, ::Scale{1})
     throw(ArgumentError("1:1 end generation is not implemented yet."))
 end
-
-
-# # function gen_biomes_unsafe!(end_noise::EndNoise, mc_map::MCMap{3}, scale::Val{1})
-# #     biome_parents  = get_voronoi_src_map2D(mc_map)
-# #     gen_biomes_unsafe!(end_noise, biome_parents, Val(16))
-# #    # TODO
-# # end
 
 # #==========================================================================================#
 # # End Height ⚠ STILL DRAFT # TODO

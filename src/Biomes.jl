@@ -1,17 +1,13 @@
+module Biomes
 using CEnum
 
 using ..MCVersions
 
-#region Biome def
-# ---------------------------------------------------------------------------- #
-#                                    BIOMES                                    #
-# ---------------------------------------------------------------------------- #
 # TODO: a module for the biomes instead of a raw file
 
 #! format: off
 @cenum(
-    BiomeID::UInt8,
-    # none = -1,
+    Biome::UInt8,
 
     ocean =                   0,
     plains =                  1,
@@ -130,17 +126,12 @@ using ..MCVersions
     BIOME_NONE = typemax(UInt8)
 )
 #! format: on
-BiomeID = BiomeID
-isnone(biome::BiomeID) = biome == BIOME_NONE
-Base.transpose(x::BiomeID) = x
-#endregion
+Biome = Biome
+isnone(biome::Biome) = biome == BIOME_NONE
+Base.transpose(x::Biome) = x
 
-#region Utility functions
-# ---------------------------------------------------------------------------- #
-#                   Utility Functions for Biomes and Versions                  #
-# ---------------------------------------------------------------------------- #
 
-function biome_exists(version::Type{<:MCVersion}, biome::BiomeID)
+function biome_exists(version::Type{<:MCVersion}, biome::Biome)
     if version >= mcv"1.18"
         soul_sand_valley <= biome <= basalt_deltas && return true
         small_end_islands <= biome <= end_barrens && return true
@@ -276,7 +267,7 @@ function biome_exists(version::Type{<:MCVersion}, biome::BiomeID)
     return false
 end
 
-function is_overworld(version::Type{<:MCVersion}, biome::BiomeID)::Bool
+function is_overworld(version::Type{<:MCVersion}, biome::Biome)::Bool
     if !biome_exists(biome, version)
         return false
     end
@@ -292,7 +283,7 @@ function is_overworld(version::Type{<:MCVersion}, biome::BiomeID)::Bool
     return true
 end
 
-function mutated(biome::BiomeID, version::Type{<:MCVersion})::BiomeID
+function mutated(biome::Biome, version::Type{<:MCVersion})::Biome
     biome == plains && return sunflower_plains
     biome == desert && return desert_lakes
     biome == mountains && return gravelly_mountains
@@ -322,7 +313,7 @@ function mutated(biome::BiomeID, version::Type{<:MCVersion})::BiomeID
     return BIOME_NONE
 end
 
-function category(version::Type{<:MCVersion}, biome::BiomeID)
+function category(version::Type{<:MCVersion}, biome::Biome)
     (biome == beach || biome == snowy_beach) && return beach
     (biome == desert || biome == desert_hills || biome == desert_lakes) && return desert
     (
@@ -408,13 +399,13 @@ function category(version::Type{<:MCVersion}, biome::BiomeID)
 end
 
 """
-    are_similar(V::Type{MCVersion}, B1::Type{BiomeID}, B2::Type{BiomeID})::Bool
+    are_similar(V::Type{MCVersion}, B1::Type{Biome}, B2::Type{Biome})::Bool
 
 For a given version, check if two biomes have the same category.
 `wooded_badlands_plateau` and `badlands_plateau` are considered similar even though
 they have a different category in `version <= 1.15`.
 """
-function are_similar(version::Type{<:MCVersion}, biome1::BiomeID, biome2::BiomeID)
+function are_similar(version::Type{<:MCVersion}, biome1::Biome, biome2::Biome)
     biome1 == biome2 && return true
     if version <= mcv"1.15"
         if biome1 == wooded_badlands_plateau || biome1 == badlands_plateau
@@ -424,7 +415,7 @@ function are_similar(version::Type{<:MCVersion}, biome1::BiomeID, biome2::BiomeI
     return category(version, biome1) == category(version, biome2)
 end
 
-function is_mesa(biome::BiomeID)
+function is_mesa(biome::Biome)
     return (
         biome == badlands ||
         biome == eroded_badlands ||
@@ -435,7 +426,7 @@ function is_mesa(biome::BiomeID)
     )
 end
 
-function is_shallow_ocean(biome::BiomeID)
+function is_shallow_ocean(biome::Biome)
     return (
         biome == ocean ||
         biome == frozen_ocean ||
@@ -445,7 +436,7 @@ function is_shallow_ocean(biome::BiomeID)
     )
 end
 
-function is_deep_ocean(biome::BiomeID)
+function is_deep_ocean(biome::Biome)
     return (
         biome == deep_ocean ||
         biome == deep_warm_ocean ||
@@ -455,7 +446,7 @@ function is_deep_ocean(biome::BiomeID)
     )
 end
 
-function is_oceanic(biome::BiomeID)
+function is_oceanic(biome::Biome)
     return (
         biome == ocean ||
         biome == frozen_ocean ||
@@ -470,7 +461,7 @@ function is_oceanic(biome::BiomeID)
     )
 end
 
-function is_snowy(biome::BiomeID)
+function is_snowy(biome::Biome)
     return (
         biome == frozen_ocean ||
         biome == frozen_river ||
@@ -483,4 +474,5 @@ function is_snowy(biome::BiomeID)
         biome == snowy_taiga_mountains
     )
 end
-#endregion
+
+end # module
