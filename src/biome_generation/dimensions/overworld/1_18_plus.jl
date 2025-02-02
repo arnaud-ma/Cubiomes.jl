@@ -410,14 +410,14 @@ end
 # TODO: get_biome for scale != (1, 4)
 
 function get_biome(
-    bn::BiomeNoise, x::Real, z::Real, y::Real, ::T📏"1:1",
+    bn::BiomeNoise, x::Real, z::Real, y::Real, ::Scale{1},
     spline=SPLINE_STACK; skip_shift=Val(false), skip_depth=Val(false),
 )
     x, z, y = voronoi_access(bn.sha[], x, z, y)
     return get_biome(
         bn,
         x, z, y,
-        📏"1:4", spline;
+        Scale(4), spline;
         skip_shift=skip_shift, skip_depth=skip_depth,
     )
 end
@@ -426,32 +426,32 @@ function get_biome(
     bn::BiomeNoise, x::Real, z::Real, y::Real, ::Scale{S},
     spline=SPLINE_STACK; skip_depth=Val(false),
 ) where {S}
-    scale = S ÷ 4
-    mid = scale ÷ 2
+    scale = S >> 2
+    mid = scale >> 1
     x4, z4, y4 = map(i -> i * scale + mid, (x, z, y))
     return get_biome(
-        bn, x4, z4, y4, 📏"1:4", spline;
+        bn, x4, z4, y4, Scale(4), spline;
         skip_shift=Val(true), skip_depth=skip_depth,
     )
 end
 
 function get_biome(
-    bn::BiomeNoise, x::Real, z::Real, y::Real, ::T📏"1:4",
+    bn::BiomeNoise, x::Real, z::Real, y::Real, ::Scale{4},
     spline=SPLINE_STACK; skip_shift=Val(false), skip_depth=Val(false), old_idx=nothing,
 )
     return _get_biome(
-        bn, x, z, y, 📏"1:4", spline, skip_shift, skip_depth, old_idx,
+        bn, x, z, y, Scale(4), spline, skip_shift, skip_depth, old_idx,
     )
 end
 
 function _get_biome(
-    bn::BiomeNoise, x, z, y, ::T📏"1:4", spline, skip_shift, skip_depth, old_idx::Nothing,
+    bn::BiomeNoise, x, z, y, ::Scale{4}, spline, skip_shift, skip_depth, old_idx::Nothing,
 )
     return Biome(get_biome_int(bn, x, z, y, spline, skip_shift, skip_depth, old_idx))
 end
 
 function _get_biome(
-    bn::BiomeNoise, x, z, y, ::T📏"1:4", spline, skip_shift, skip_depth, old_idx,
+    bn::BiomeNoise, x, z, y, ::Scale{4}, spline, skip_shift, skip_depth, old_idx,
 )
     biome_int, old_idx = get_biome_int(bn, x, z, y, spline, skip_shift, skip_depth, old_idx)
     return Biome(biome_int), old_idx

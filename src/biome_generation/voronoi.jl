@@ -15,7 +15,7 @@ voronoi_source2d(W) = voronoi_source(W, Val(2))
 
 new_coord_voronoi(t) = (((t >> 24) & 1023) - 512) * 36
 
-function get_voronoi_cell(sha::UInt64, x::UInt64, z::UInt64, y::UInt64)
+function voronoi_cell(sha::UInt64, x::UInt64, z::UInt64, y::UInt64)
     s = sha
 
     s = mc_step_seed(s, x)
@@ -35,10 +35,10 @@ function get_voronoi_cell(sha::UInt64, x::UInt64, z::UInt64, y::UInt64)
     return signed(new_x), signed(new_z), signed(new_y)
 end
 
-function get_voronoi_cell(sha::UInt64, x::Int64, z::Int64, y::Int64)
-    get_voronoi_cell(sha, unsigned(x), unsigned(z), unsigned(y))
+function voronoi_cell(sha::UInt64, x::Int64, z::Int64, y::Int64)
+    voronoi_cell(sha, unsigned(x), unsigned(z), unsigned(y))
 end
-get_voronoi_cell(sha, coord::NTuple{3}) = get_voronoi_cell(sha, coord...)
+voronoi_cell(sha, coord::NTuple{3}) = voronoi_cell(sha, coord...)
 
 𝟙₀(x) = ifelse(iszero(x), zero(x), one(x))
 const OFFSETS = Tuple(Tuple(𝟙₀(i & t) for t in (4, 1, 2)) for i in 0:7)
@@ -66,21 +66,18 @@ For example we can find in some part of the biome generation source code:
 ```
 """
 function voronoi_access(sha::UInt64, coord::NTuple{3, T}) where {T}
-    coord = map(t -> t - 2, coord)
-    parent = map(t -> t >> 2, coord)
-    offset = map(t -> (t & 3) * CELL_SCALE, coord)
+    coord = coord .- 2
+    parent = coord .>> 2
+    offset = (coord .& 3) .* CELL_SCALE
 
     closest = (zero(T), zero(T), zero(T))
     min_distance_squared = typemax(UInt64)
 
     for neighbor_offset in OFFSETS
-        neighbors = map(+, parent, neighbor_offset)
-        voronoi = map(
-            adjust_voronoi_cell,
-            get_voronoi_cell(sha, neighbors), offset, neighbor_offset,
-        )
-        distance_squared = sum(t -> t * unsigned(t), voronoi)
-
+        neighbors = parent .+ neighbor_offset
+        cell = voronoi_cell(sha, neighbors)
+        voronoi = adjust_voronoi_cell.(cell, offset, neighbor_offset)
+        distance_squared = sum(voronoi .* unsigned.(voronoi))
         if distance_squared < min_distance_squared
             min_distance_squared = distance_squared
             closest = neighbors
