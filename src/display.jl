@@ -8,6 +8,8 @@ using ..BiomeGeneration: World, view2d
 
 export to_color
 
+# TODO using ColorTypes.jl instead of Colors.jl to not depend on Colors.jl only for this
+# think to remove Colors.jl from the dependencies after that
 const BIOME_COLORS = Dict(
     b.ocean => colorant"0x000070",
     b.plains => colorant"0x8db360",

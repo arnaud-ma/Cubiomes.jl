@@ -119,13 +119,13 @@ end
 
 function _set_seed!(noise::BiomeNoise, seed, sha::Val{false}, large)
     __set_seed!(noise::BiomeNoise, seed::UInt64, large)
-    noise.sha[] = nothing
+    reset!(noise.sha)
     return nothing
 end
 
 function _set_seed!(noise::BiomeNoise, seed, sha::Val{true}, large)
     __set_seed!(noise::BiomeNoise, seed::UInt64, large)
-    noise.sha[] = Utils.sha256_from_seed(seed)
+    set_seed!(noise.sha, seed)
     return nothing
 end
 
@@ -411,7 +411,7 @@ end
 
 function get_biome(
     bn::BiomeNoise, x::Real, z::Real, y::Real, ::Scale{1},
-    spline=SPLINE_STACK; skip_shift=Val(false), skip_depth=Val(false),
+    spline::Spline=SPLINE_STACK; skip_shift=Val(false), skip_depth=Val(false),
 )
     x, z, y = voronoi_access(bn.sha[], x, z, y)
     return get_biome(

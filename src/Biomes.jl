@@ -1,7 +1,7 @@
 module Biomes
 
 export Biome, isnone, biome_exists, is_overworld, mutated, category, are_similar, is_mesa,
-    is_shallow_ocean, is_deep_ocean, is_oceanic, is_snowy
+    is_shallow_ocean, is_deep_ocean, is_oceanic, is_water, is_snowy
 
 using CEnum
 using ..MCVersions
@@ -410,7 +410,6 @@ end
     ) && return nether_wastes
     return BIOME_NONE
 end
-
 
 @inline function _are_similar(version::Type{<:MCVersion}, biome1::Biome, biome2::Biome)
     biome1 == biome2 && return true

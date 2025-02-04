@@ -34,12 +34,12 @@ end
 
 function set_seed!(nn::Nether1_16Plus, seed::UInt64, ::Val{true})
     _set_temp_humid!(seed, nn.temperature, nn.humidity)
-    nn.sha[] = Utils.sha256_from_seed(seed)
+    set_seed!(nn.sha, seed)
     return nothing
 end
 function set_seed!(nn::Nether1_16Plus, seed::UInt64, ::Val{false})
     _set_temp_humid!(seed, nn.temperature, nn.humidity)
-    nn.sha[] = nothing
+    reset!(nn.sha)
     return nothing
 end
 set_seed!(nn::Nether1_16Plus, seed::UInt64) = set_seed!(nn, seed, Val(true))

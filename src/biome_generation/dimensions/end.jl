@@ -129,6 +129,41 @@ function fill_elevations!(end_noise::End1_9Plus, elevations)
     return nothing
 end
 
+"""
+    similar_expand{T}(mc_map::OffsetMatrix, expand_x::Int, expand_z::Int) where T
+
+Create an uninitialized OffsetMatrix of type `T` but with additional rows and columns
+on each side of the original matrix.
+
+# Examples
+
+```julia
+julia> arr = OffsetMatrix(zeros(3, 3))
+3×3 OffsetArray(::Matrix{Float64}, 1:3, 1:3) with eltype Float64 with indices 1:3×1:3:
+ 0  0  0
+ 0  0  0
+ 0  0  0
+
+julia> similar_expand(Float64, arr, 1, 1)
+5×5 OffsetArray(::Matrix{Float64}, 0:4, 0:4) with eltype Float64 with indices 0:4×0:4:
+ 6.90054e-310  6.90054e-310  6.90054e-310  1.0e-323      6.90054e-310
+ 6.90054e-310  6.90054e-310  6.90054e-310  6.90054e-310  5.0e-324
+ 6.90054e-310  6.90054e-310  6.90054e-310  6.90054e-310  1.56224e-319
+ 6.90054e-310  6.90054e-310  6.90054e-310  6.90054e-310  6.90054e-310
+ 6.90055e-310  6.90054e-310  1.56224e-319  6.90054e-310  6.90054e-310
+```
+"""
+function similar_expand(
+    ::Type{T}, mc_map::OffsetMatrix, expand_x::Int, expand_z::Int,
+) where {T}
+    xs, zs = first.(axes(mc_map))
+    return OffsetMatrix{T}(
+        undef,
+        (first(xs) - expand_x):(last(xs) + expand_x),
+        (first(zs) - expand_z):(last(zs) + expand_z),
+    )
+end
+
 # TODO: maybe use sparse matrix instead
 function Elevations(end_noise::End1_9Plus{V}, A::World{2}, range::Integer=12) where {V}
     #! memory allocation

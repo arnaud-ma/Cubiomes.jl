@@ -38,6 +38,9 @@ end
 ScaledWorld{S}(x::AbstractArray{Int, N}) where {S, N} = ScaledWorld{S, N, typeof(x)}(x)
 
 scale(::ScaledWorld{S, N}) where {S, N} = Scale(S)
+
+# TODO: move this outside of the BiomeArrays module and rename it to `rescale` or something
+# like that
 shift_coord(W::ScaledWorld, x) = shift_coord(scale(W), x)
 shift_coord(::Scale{1}, x::Real) = x
 for shift in 1:8
