@@ -57,7 +57,7 @@ end
 const var"@T📏_str" = typeof ∘ var"@📏_str"
 
 include("BiomeArrays.jl")
-using BiomeArrays: BiomeArrays
+using .BiomeArrays: BiomeArrays
 
 #region Dimension
 # ---------------------------------------------------------------------------- #
@@ -76,7 +76,7 @@ The concrete type `TheDim` *MUST* implement:
   - An inplace constructor `set_seed!(dim::TheDim, seed::UInt64, args...)`.
     Be aware that the seed must be constrained to `UInt64` dispatch to work.
   - get_biome(dim::TheDim, coord, scale::Scale, args...) -> Biome where
-    `coord` can be either (x::Real, z::Real, y::Real) or NTuple{3} or CartesianIndex{3}
+    `coord` can be either (x::Real, z::Real, y::Real) or NTuple{3}
   - gen_biomes!(dim::TheDim, out::World, scale::Scale, args...)
 
 See also:
@@ -94,11 +94,12 @@ The args are specific to the dimension. See the documentation of the dimension f
 
 See also: [`Nether`](@ref), [`Overworld`](@ref), [`End`](@ref)
 """
-set_seed!(dim::Dimension, seed, args...) = set_seed!(dim, Utils.u64_seed(seed), args...)
+set_seed!(dim::Dimension, seed, args...; kwargs...) =
+    set_seed!(dim, Utils.u64_seed(seed), args...; kwargs...)
 
 """
-    get_biome(dim::Dimension, x::Real, z::Real, y::Real, [scale::Scale,], args...) -> Biome
-    get_biome(dim::Dimension, coord, [scale::Scale,], args...) -> Biome
+    get_biome(dim::Dimension, x::Real, z::Real, y::Real, [scale::Scale,], args...; kwargs...) -> Biome
+    get_biome(dim::Dimension, coord, [scale::Scale,], args...; kwargs...) -> Biome
 
 Get the biome at the coordinates `(x, z, y)` in the dimension `dim`. The coordinates can be
 passed as numbers or as tuples or as `CartesianIndex` (the coords returned by
@@ -109,32 +110,30 @@ See also: [`Scale`](@ref), [`Nether`](@ref), [`Overworld`](@ref), [`End`](@ref)
 """
 function get_biome end
 
-# the default for the coordinates is:
-# x, z, y -> CartesianIndex(x, z, y) -> coord.I -> (x, z, y) -> x, z, y
-# so if none of the method is defined, it will throw a StackOverflowError because of
-# the infinite recursion
-# But the dimension *MUSt* define at least one of the methods so it will never happen
-# if the writer of the dimension is not a complete idiot (sorry my future self)
+# assuming any subtype of Dimension has a specific get_biome method with either
+# (x, z, y) or NTuple{3} as coordinates.
+# Otherwise infinite recursion
+function get_biome(dim::Dimension, x::Real, z::Real, y::Real, s::Scale, args...; kwargs...)
+    return get_biome(dim, (x, z, y), s, args...; kwargs...)
+end
+function get_biome(dim::Dimension, coord::NTuple{3}, s::Scale, args...; kwargs...)
+    return get_biome(dim, coord..., args...; kwargs...)
+end
 
-function get_biome(
-    dim::Dimension, x::Real, z::Real, y::Real, s::Scale, args::Vararg{Any, N},
-) where {N}
-    return get_biome(dim, CartesianIndex(x, z, y), s, args...)
+# default to 1:1 scale
+function get_biome(dim::Dimension, x::Real, z::Real, y::Real, args...; kwargs...)
+    return get_biome(dim, x, z, y, Scale(1), args...; kwargs...)
 end
-function get_biome(
-    dim::Dimension, x::Real, z::Real, y::Real, args::Vararg{Any, N},
-) where {N}
-    return get_biome(dim, x, z, y, Scale(1), args...)
+function get_biome(dim::Dimension, coord::NTuple{3, Real}, args...; kwargs...)
+    return get_biome(dim, coord, Scale(1), args...; kwargs...)
 end
-function get_biome(dim::Dimension, coord::NTuple{3}, args::Vararg{Any, N}) where {N}
-    return get_biome(dim, coord..., args...)
-end
-function get_biome(dim::Dimension, coord::CartesianIndex{3}, args::Vararg{Any, N}) where {N}
-    return get_biome(dim, coord.I, args...)
+
+function get_biome(dim::Dimension, coord::CartesianIndex{3}, args...; kwargs...)
+    return get_biome(dim, coord.I, args...; kwargs...)
 end
 
 """
-    gen_biomes!(dim::Dimension, world::World, [scale::Scale,], args...) -> Nothing
+    gen_biomes!(dim::Dimension, world::World, [scale::Scale,], args...; kwargs...) -> Nothing
 
 Fill the world with the biomes of the dimension `dim`. The scale is defaulted to 1:1.
 The args are specific to the dimension. See the documentation of the dimension for more
@@ -142,10 +141,8 @@ information.
 
 See also: [`World`](@ref), [`Scale`](@ref), [`Nether`](@ref), [`Overworld`](@ref), [`End`](@ref)
 """
-function gen_biomes!(
-    dim::Dimension, world::BiomeArrays.World, args::Vararg{Any, N},
-) where {N}
-    return gen_biomes!(dim, world, Scale(1), args...)
+function gen_biomes!(dim::Dimension, world::BiomeArrays.World, args...; kwargs...)
+    return gen_biomes!(dim, world, Scale(1), args...; kwargs...)
 end
 
 """

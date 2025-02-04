@@ -71,7 +71,7 @@ end
 
 function get_biome(nn::Nether1_16Plus, x::Real, z::Real, ::Scale{S}) where {S}
     scale = S >> 2
-    return get_biome(nn, x * scale, z * scale , Scale(4))
+    return get_biome(nn, x * scale, z * scale, Scale(4))
 end
 
 function get_biome(nn::Nether1_16Plus, x::Real, z::Real, ::Scale{4})
@@ -144,9 +144,9 @@ const NETHER_POINTS = (
 end
 
 """
-    fill_radius!(out::World{2}, x, z, id::Biome, radius)
+    fill_radius!(out::World{N}, center::CartesianIndex{N}, id::Biome, radius)
 
-Fills a circular area around the point `(x, z)` in `out` with the biome `id`,
+Fills a circular area around the point `center` in `out` with the biome `id`,
 within a given `radius`. Assuming `radius`>=0.
 """
 function fill_radius!(
@@ -183,7 +183,8 @@ function gen_biomes_unsafe!(
     # biomes within the noise space. Dividing this by the greatest possible
     # gradient (~0.05) gives a minimum diameter of voxels around the sample
     # cell that will have the same biome.
-    inv_grad = 1.0 / (confidence * 0.05 * 2) / scale
+    # inv_grad = 1.0 / (confidence * 0.05 * 2) / scale
+    inv_grad = inv(0.05 * 2 * confidence * scale)
 
     for coord in coordinates(map2d)
         if !isnone(map2d[coord])
@@ -214,27 +215,22 @@ function gen_biomes_unsafe!(
     return nothing
 end
 
-function gen_biomes!(
-    nn::Nether1_16Plus,
-    mc_map::World,
-    scale::Scale,
-    confidence=1,
-)
-    fill!(mc_map, BIOME_NONE)
-    gen_biomes_unsafe!(nn, mc_map, scale, confidence)
+function gen_biomes!(nn::Nether1_16Plus, world::World, scale::Scale, confidence=1)
+    fill!(world, BIOME_NONE)
+    gen_biomes_unsafe!(nn, world, scale, confidence)
 end
 
-function gen_biomes!(nn::Nether1_16Plus, map3D::World{3}, ::Scale{1}, confidence=1)
-    coords = coordinates(map3D)
+function gen_biomes!(nn::Nether1_16Plus, world3d::World{3}, ::Scale{1}, confidence=1)
+    coords = coordinates(world3d)
     # If there is only one value, simple wrapper around get_biome_unsafe
     if isone(length(coords))
         coord = first(coords)
-        map3D[coord] = get_biome(nn, coord.I..., Scale(4))
+        world3d[coord] = get_biome(nn, coord.I..., Scale(4))
         return nothing
     end
 
     # The minimal map where we are sure we can find the source coordinates at scale 4
-    biome_parent_axes = voronoi_source2d(map3D)
+    biome_parent_axes = voronoi_source2d(world3d)
     biome_parents = view_reshape_cache_like(biome_parent_axes)
     gen_biomes!(nn, biome_parents, Scale(4), confidence)
 
@@ -243,7 +239,7 @@ function gen_biomes!(nn::Nether1_16Plus, map3D::World{3}, ::Scale{1}, confidence
         # See the comment on get_biome_unsafe for the explanation
         x, z, _ = voronoi_access(sha, coord)
         result = biome_parents[x, z]
-        @inbounds map3D[coord] = result
+        @inbounds world3d[coord] = result
     end
     return nothing
 end

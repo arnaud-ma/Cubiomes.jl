@@ -410,10 +410,10 @@ end
 # TODO: get_biome for scale != (1, 4)
 
 function get_biome(
-    bn::BiomeNoise, x::Real, z::Real, y::Real, ::Scale{1},
+    bn::BiomeNoise, coord::NTuple{3, Real}, ::Scale{1},
     spline::Spline=SPLINE_STACK; skip_shift=Val(false), skip_depth=Val(false),
 )
-    x, z, y = voronoi_access(bn.sha[], x, z, y)
+    x, z, y = voronoi_access(bn.sha[], coord)
     return get_biome(
         bn,
         x, z, y,
@@ -423,45 +423,45 @@ function get_biome(
 end
 
 function get_biome(
-    bn::BiomeNoise, x::Real, z::Real, y::Real, ::Scale{S},
-    spline=SPLINE_STACK; skip_depth=Val(false),
+    bn::BiomeNoise, coord::NTuple{3, Real}, ::Scale{S},
+    spline=SPLINE_STACK; skip_shift=Val(true), skip_depth=Val(false),
 ) where {S}
     scale = S >> 2
     mid = scale >> 1
-    x4, z4, y4 = map(i -> i * scale + mid, (x, z, y))
+    coord_scale4 = coord .* scale .+ mid
     return get_biome(
-        bn, x4, z4, y4, Scale(4), spline;
-        skip_shift=Val(true), skip_depth=skip_depth,
+        bn, coord_scale4, Scale(4), spline;
+        skip_shift=skip_shift, skip_depth=skip_depth,
     )
 end
 
 function get_biome(
-    bn::BiomeNoise, x::Real, z::Real, y::Real, ::Scale{4},
+    bn::BiomeNoise, coord::NTuple{3, Real}, ::Scale{4},
     spline=SPLINE_STACK; skip_shift=Val(false), skip_depth=Val(false), old_idx=nothing,
 )
     return _get_biome(
-        bn, x, z, y, Scale(4), spline, skip_shift, skip_depth, old_idx,
+        bn, coord, Scale(4), spline, skip_shift, skip_depth, old_idx,
     )
 end
 
 function _get_biome(
-    bn::BiomeNoise, x, z, y, ::Scale{4}, spline, skip_shift, skip_depth, old_idx::Nothing,
+    bn::BiomeNoise, coord, ::Scale{4}, spline, skip_shift, skip_depth, old_idx::Nothing,
 )
-    return Biome(get_biome_int(bn, x, z, y, spline, skip_shift, skip_depth, old_idx))
+    return Biome(get_biome_int(bn, coord, spline, skip_shift, skip_depth, old_idx))
 end
 
 function _get_biome(
-    bn::BiomeNoise, x, z, y, ::Scale{4}, spline, skip_shift, skip_depth, old_idx,
+    bn::BiomeNoise, coord, ::Scale{4}, spline, skip_shift, skip_depth, old_idx,
 )
-    biome_int, old_idx = get_biome_int(bn, x, z, y, spline, skip_shift, skip_depth, old_idx)
+    biome_int, old_idx = get_biome_int(bn, coord, spline, skip_shift, skip_depth, old_idx)
     return Biome(biome_int), old_idx
 end
 
 function get_biome_int(
-    bn::BiomeNoise{V}, x, z, y, spline=SPLINE_STACK,
+    bn::BiomeNoise{V}, coord, spline=SPLINE_STACK,
     skip_shift=Val(false), skip_depth=Val(false), old_idx=nothing,
 ) where {V}
-    noiseparams = sample_biomenoises(bn, x, z, y, spline, skip_shift, skip_depth)
+    noiseparams = sample_biomenoises(bn, coord..., spline, skip_shift, skip_depth)
     return climate_to_biome(noiseparams, V, old_idx)
 end
 
@@ -600,7 +600,7 @@ function gen_biomes!(bn::BiomeNoise, map3D::World{3}, ::Scale{1})
     coords = coordinates(map3D)
     if isone(length(coords))
         coord = first(coords)
-        map3D[coord] = get_biome(bn, coord.I..., Scale(4))
+        map3D[coord] = get_biome(bn, coord, Scale(4))
     end
 
     # The minimal map where we are sure we can find the source coordinates at scale 4
@@ -618,7 +618,7 @@ end
 
 function gen_biomes!(bn::BiomeNoise, map3D::World{3}, s::Scale{4})
     for coord in coordinates(map3D)
-        map3D[coord] = get_biome(bn, coord.I..., s)
+        map3D[coord] = get_biome(bn, coord, s)
     end
     return nothing
 end
@@ -631,7 +631,7 @@ function gen_biomes!(bn::BiomeNoise, map3D::World{3}, ::Scale{S}) where {S}
     for coord in coordinates(map3D)
         coord_scale4 = coord * scale + coord_mid
         map3D[coord], old_idx = get_biome(
-            bn, coord_scale4..., Scale(4);
+            bn, coord_scale4, Scale(4);
             skip_shift=Val(true), old_idx=old_idx)
     end
 end
