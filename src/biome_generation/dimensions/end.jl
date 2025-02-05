@@ -1,4 +1,4 @@
-using StaticArrays: SizedVector
+using StaticArrays: SMatrix
 using OffsetArrays: Origin
 
 using ..Noises
@@ -106,9 +106,10 @@ end
 # Elevation / Height
 #==========================================================================================#
 
-struct Elevations{V}
-    inner::AbstractMatrix{UInt16}
+struct Elevations{V , A}
+    inner::A
 end
+Elevations{V}(a::AbstractMatrix) where V = Elevations{V, typeof(a)}(a)
 
 elevation_val(x, z) = ((abs(x) * 3439 + abs(z) * 147) % 13) + 9
 
@@ -134,29 +135,11 @@ end
 
 Create an uninitialized OffsetMatrix of type `T` but with additional rows and columns
 on each side of the original matrix.
-
-# Examples
-
-```julia
-julia> arr = OffsetMatrix(zeros(3, 3))
-3×3 OffsetArray(::Matrix{Float64}, 1:3, 1:3) with eltype Float64 with indices 1:3×1:3:
- 0  0  0
- 0  0  0
- 0  0  0
-
-julia> similar_expand(Float64, arr, 1, 1)
-5×5 OffsetArray(::Matrix{Float64}, 0:4, 0:4) with eltype Float64 with indices 0:4×0:4:
- 6.90054e-310  6.90054e-310  6.90054e-310  1.0e-323      6.90054e-310
- 6.90054e-310  6.90054e-310  6.90054e-310  6.90054e-310  5.0e-324
- 6.90054e-310  6.90054e-310  6.90054e-310  6.90054e-310  1.56224e-319
- 6.90054e-310  6.90054e-310  6.90054e-310  6.90054e-310  6.90054e-310
- 6.90055e-310  6.90054e-310  1.56224e-319  6.90054e-310  6.90054e-310
-```
 """
 function similar_expand(
     ::Type{T}, mc_map::OffsetMatrix, expand_x::Int, expand_z::Int,
 ) where {T}
-    xs, zs = first.(axes(mc_map))
+    xs, zs = axes(mc_map)
     return OffsetMatrix{T}(
         undef,
         (first(xs) - expand_x):(last(xs) + expand_x),
@@ -172,30 +155,46 @@ function Elevations(end_noise::End1_9Plus{V}, A::World{2}, range::Integer=12) wh
     return elevations
 end
 
+
+function get_cache_dist_squared()
+    row = (-25:2:25) .^ 2
+    rowpos, rowneg = row[begin:(end - 1)], row[(begin + 1):end]
+    colpos, colneg = copy(rowpos), copy(rowneg)
+    mats = (
+        (
+            rowpos .+ colpos',
+            rowpos .+ colneg',
+        ),
+        (
+            rowneg .+ colpos',
+            rowneg .+ colneg'
+        ),
+    )
+    map(twomat -> map(x -> Origin(-12, -12)(SMatrix{25, 25}(x)), twomat), mats)
+end
+const CACHE_D2_END = get_cache_dist_squared()
+
 const SMOOTH_AXE_POSITIVE, SMOOTH_AXE_NEGATIVE = let
     x = (-25:2:25) .^ 2
     Origin(-12).((x[1:(end - 1)], x[2:end]))
 end
 
 function _get_height_sample(
-    elevation_getter::Function, x, z, start_height, range::Integer=12,
+    elevation_getter, x, z, start_height, range::Integer=12,
 )
     height_sample = start_height
 
-    dist_squared_xs = x < 0 ? SMOOTH_AXE_NEGATIVE : SMOOTH_AXE_POSITIVE
-    dist_squared_zs = z < 0 ? SMOOTH_AXE_NEGATIVE : SMOOTH_AXE_POSITIVE
+    # Determine the index for the cache based on the sign of x and z
+    index_x, index_z = ifelse(x < 0, 1, 2), ifelse(z < 0, 1, 2)
+    dists_squared = CACHE_D2_END[index_x][index_z]
 
-    for z_i in (-range):range
-        dist_squared_z = dist_squared_zs[z_i]
-        for x_i in (-range):range
-            real_x, real_z = x + x_i, z + z_i
-            elevation_squared = elevation_getter(real_x, real_z)^2
-            if elevation_squared !== zero(UInt16)
-                dist_squared_x = dist_squared_xs[x_i]
-                noise = (dist_squared_z + dist_squared_x) * elevation_squared
-                if noise < height_sample
-                    height_sample = noise
-                end
+    for z_i in (-range):range, x_i in (-range):range
+        real_x, real_z = x + x_i, z + z_i
+        elevation_squared = elevation_getter(real_x, real_z)^2
+        if !iszero(elevation_squared)
+            @inbounds noise = (dists_squared[x_i, z_i]) * elevation_squared
+            if noise < height_sample
+                height_sample = noise
             end
         end
     end
@@ -294,7 +293,7 @@ end
 # scale > 16
 function gen_biomes!(end_noise::End1_9Plus, map2D::World{2}, s::Scale{S}) where {S}
     for coord in coordinates(map2D)
-        map2D[coord] = get_biome(end_noise, coord.I..., s)
+        map2D[coord] = get_biome(end_noise, coord, s)
     end
     return nothing
 end
