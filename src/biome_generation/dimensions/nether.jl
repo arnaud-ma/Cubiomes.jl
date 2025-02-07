@@ -33,7 +33,6 @@ Before version 1.16, the Nether is only composed of nether wastes. Nothing else.
   is a performance-related parameter between 0 and 1. A bit the same as the
   `scale` parameter, but it is a continuous value, and the scale is not modified.
 """
-
 abstract type Nether <: Dimension end
 
 # Nothing to do if version is <1.16. The nether is only composed of nether_wastes

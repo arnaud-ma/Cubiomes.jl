@@ -1,3 +1,10 @@
+
+"""
+    MCVersions
+
+Representation of Minecraft versions in Julia. Works like the built in `VersionNumber` type
+but for Minecraft versions, with the `mcv""` string macro and the `MCVersion` abstract type.
+"""
 module MCVersions
 
 export @mcv_str, @mcvt_str, MCVersion, MC_VERSIONS
@@ -9,6 +16,11 @@ public vNEWEST, vUNDEF
 using InteractiveUtils: subtypes
 using Base: nextminor, Fix1, Fix2
 
+"""
+    MCVersion
+
+The parent type of every Minecraft version.
+"""
 abstract type MCVersion end
 
 struct v1beta1_7 <: MCVersion end
@@ -42,36 +54,39 @@ struct v1_21 <: MCVersion end
 
 remove_first(x::AbstractString) = chop(x; head=1, tail=0)
 
-function _to_jl_version(x::Type{<:MCVersion})
-    return string(nameof(x)) |>                     # Module1.Module2.v1_8_9
+function _to_jl_version(x::MCVersion)
+    return typeof(x) |>
+           nameof |> string |>              # Module1.Module2.v1_8_9
            Fix2(split, ".") |> last |>      # v1_8_9
            remove_first |>                  # 1_8_9
            Fix2(replace, "_" => ".") |>     # 1.8.9
            VersionNumber                    # v"1.8.9"
 end
 
-const VERSIONS_DICT = Dict(_to_jl_version(x) => x for x in subtypes(MCVersion))
+const VERSIONS_DICT = Dict(_to_jl_version(x()) => x() for x in subtypes(MCVersion))
 const VERSIONS = keys(VERSIONS_DICT) |> collect |> sort |> Tuple
 const MC_VERSIONS = Tuple([VERSIONS_DICT[x] for x in VERSIONS])
 const VERSIONS_DICT_JL = Dict(zip(values(VERSIONS_DICT), keys(VERSIONS_DICT)))
 
-to_jl_version(x::Type{<:MCVersion}) = VERSIONS_DICT_JL[x]
+to_jl_version(x::MCVersion) = VERSIONS_DICT_JL[x]
 
 const vNEWEST = MC_VERSIONS[end]
 struct vUNDEF <: MCVersion end
 
 for (i, version_jl) in enumerate(VERSIONS)
-    version = VERSIONS_DICT[version_jl]
-    @eval id(::Type{$version}) = $(UInt8(i))
+    version_t = typeof(VERSIONS_DICT[version_jl])
+    @eval function id(x::$version_t)
+        $(UInt8(i))
+    end
 end
 
 for func in (:(==), :isless)
-    @eval Base.$func(x::Type{<:MCVersion}, y::Type{<:MCVersion}) =
+    @eval Base.$func(x::MCVersion, y::MCVersion) =
         $func(id(x), id(y))
 end
 
-Base.print(io::IO, v::Type{<:MCVersion}) = print(io, to_jl_version(v))
-Base.show(io::IO, v::Type{<:MCVersion}) = print(io, "mcv\"", v, "\"")
+Base.print(io::IO, v::MCVersion) = print(io, to_jl_version(v))
+Base.show(io::IO, v::MCVersion) = print(io, "mcv\"", v, "\"")
 
 function get_closest_minor_version(version, compare_versions)
     version in compare_versions && return version
@@ -119,10 +134,10 @@ function _mcvt(str)
 
     matches_sign = map(x -> x.match, eachmatch(regex_sign, str))
     if length(matches_sign) == 0
-        return :(Type{$(str_to_mcversion(str))})
+        return :($(typeof(str_to_mcversion(str))))
     end
 
-    func = x -> throw(ArgumentError("Too much comparison"))
+    func = _ -> throw(ArgumentError("Too much comparison"))
 
     if length(matches_sign) == 1
         sign = first(matches_sign)
@@ -141,7 +156,7 @@ function _mcvt(str)
         func = x -> func1(x) && func2(x)
     end
     filtered_versions = filter(func, VERSIONS)
-    return :(Union{$(map(x -> Type{to_mc_version(x)}, filtered_versions))...})
+    return :(Union{$(map(x -> typeof(to_mc_version(x)), filtered_versions))...})
 end
 
 """

@@ -1,3 +1,8 @@
+"""
+    Biomes
+
+Minecraft biome constants and functions to work with them / compare them.
+"""
 module Biomes
 
 export Biome, isnone, biome_exists, is_overworld, mutated, category, are_similar, is_mesa,
@@ -133,15 +138,22 @@ Biome = Biome
 isnone(biome::Biome) = biome == BIOME_NONE
 Base.transpose(x::Biome) = x
 
-@inline function biome_exists(::mcvt">= 1.20", biome::Biome)
-    return biome_exists(mcv"1.19", biome) || biome == cherry_grove
+
+
+"""
+    biome_exists(biome::Biome, version::MCVersion)
+
+Return `true` if the given biome exists in the given version and `false` otherwise.
+"""
+@inline function biome_exists(biome::Biome, ::mcvt">= 1.20")
+    return biome_exists(biome, mcv"1.19") || biome == cherry_grove
 end
 
-@inline function biome_exists(::mcvt"1.19<= x < 1.20", biome::Biome)
-    return biome_exists(mcv"1.18", biome) || biome == deep_dark || biome == mangrove_swamp
+@inline function biome_exists(biome::Biome, ::mcvt"1.19<= x < 1.20")
+    return biome_exists(biome, mcv"1.18") || biome == deep_dark || biome == mangrove_swamp
 end
 
-@inline function biome_exists(::mcvt"1.18 <= x < 1.19", biome::Biome)
+@inline function biome_exists(biome::Biome, ::mcvt"1.18 <= x < 1.19")
     #      nether >= 1.16
     return biome == soul_sand_valley ||
            biome == crimson_forest ||
@@ -205,7 +217,7 @@ end
            biome == modified_badlands_plateau
 end
 
-@inline function biome_exists(::mcvt"beta1.7", biome::Biome)
+@inline function biome_exists(biome::Biome, ::mcvt"beta1.7")
     return biome == plains ||
            biome == desert ||
            biome == forest ||
@@ -220,7 +232,7 @@ end
            biome == frozen_ocean
 end
 
-@inline function biome_exists(version::Type{<:MCVersion}, biome::Biome)
+@inline function biome_exists(biome::Biome, version::MCVersion)
     if version <= mcv"beta1.8"
         biome == frozen_ocean ||
             biome == frozen_river ||
@@ -280,7 +292,27 @@ end
     return false
 end
 
-@inline function is_overworld(version::Type{<:MCVersion}, biome::Biome)::Bool
+"""
+    is_overworld(biome::Biome, version::MCVersion)
+
+Return `true` if the given biome is an overworld biome and `false`
+otherwise. If the biome does not exist in the given version, return `false`.
+
+# Examples
+```julia
+julia> is_overworld(Biomes.ocean, mcv"1.16",)
+true
+
+julia> [biome for biome in instances(Biome) if is_overworld(biome, mcv"1.16")]
+90-element Vector{Biome}:
+ ocean::Biome = 0x00
+ plains::Biome = 0x01
+ desert::Biome = 0x02
+ ...
+
+```
+"""
+@inline function is_overworld(biome::Biome, version::MCVersion)
     if !biome_exists(biome, version)
         return false
     end
@@ -296,7 +328,13 @@ end
     return true
 end
 
-@inline function mutated(biome::Biome, version::Type{<:MCVersion})::Biome
+"""
+    mutated(biome::Biome, version::MCVersion)
+
+Return the mutated variant of the given biome in the given version. If the biome does
+not have a mutated variant, return `BIOME_NONE`.
+"""
+@inline function mutated(biome::Biome, version::MCVersion)
     biome == plains && return sunflower_plains
     biome == desert && return desert_lakes
     biome == mountains && return gravelly_mountains
@@ -326,7 +364,31 @@ end
     return BIOME_NONE
 end
 
-@inline function category(version::Type{<:MCVersion}, biome::Biome)
+
+"""
+    category(biome::Biome, version::MCVersion)
+
+Return the category of the given biome in the given version. The categories are:
+- `beach`
+- `desert`
+- `mountains`
+- `forest`
+- `snowy_tundra`
+- `jungle`
+- `mesa`
+- `mushroom_fields`
+- `stone_shore`
+- `ocean`
+- `plains`
+- `river`
+- `savanna`
+- `swamp`
+- `taiga`
+- `nether_wastes`
+
+If the biome does not belong to any of these categories, return `BIOME_NONE`.
+"""
+@inline function category(biome::Biome, version::MCVersion)
     (biome == beach || biome == snowy_beach) && return beach
     (biome == desert || biome == desert_hills || biome == desert_lakes) && return desert
     (
@@ -411,19 +473,19 @@ end
     return BIOME_NONE
 end
 
-@inline function _are_similar(version::Type{<:MCVersion}, biome1::Biome, biome2::Biome)
+@inline function _are_similar(version::MCVersion, biome1::Biome, biome2::Biome)
     biome1 == biome2 && return true
-    return category(version, biome1) == category(version, biome2)
+    return category(biome1, version) == category(biome2, version)
 end
 
 """
-    are_similar(V::Type{MCVersion}, B1::Type{Biome}, B2::Type{Biome})::Bool
+    are_similar(version::MCVersion, biome1::Biome, biome2::Biome)
 
 For a given version, check if two biomes have the same category.
 `wooded_badlands_plateau` and `badlands_plateau` are considered similar even though
 they have a different category in `version <= 1.15`.
 """
-@inline function are_similar(version::Type{<:MCVersion}, biome1::Biome, biome2::Biome)
+@inline function are_similar(version::MCVersion, biome1::Biome, biome2::Biome)
     return _are_similar(version, biome1, biome2)
 end
 

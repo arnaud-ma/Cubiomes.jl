@@ -27,7 +27,7 @@ include("1_19.jl")
 include("1_20.jl")
 include("1_19_2.jl")
 
-function get_biome_tree(::Type{<:MCVersion})
+function get_biome_tree(::MCVersion)
     msg = "Biome tree not implemented for this version. Trying to get a biome for a version < 1.18 but
     you used something that is only available for 1.18+"
     throw(ArgumentError(msg))

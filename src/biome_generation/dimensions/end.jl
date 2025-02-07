@@ -8,6 +8,12 @@ using .BiomeArrays: World, coordinates
 using ..MCVersions
 using ..Biomes: the_end, end_highlands, end_midlands, end_barrens, small_end_islands
 
+
+"""
+    End(::UndefInitializer, version::MCVersion)
+
+The Minecraft End dimension.
+"""
 abstract type End <: Dimension end
 
 function End(::UndefInitializer, ::mcvt"<1.0")

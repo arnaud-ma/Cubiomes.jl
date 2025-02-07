@@ -15,7 +15,7 @@ overflow_int32(x::Int64) = signed(UInt32(x & typemax(UInt32))) < zero(Int32)
 """
     has_bug_mc159283(version::MCVersion, x::Int64, z::Int64)
 
-See https://bugs.mojang.com/browse/MC-159283 for more information.
+See [MC-159283](https://bugs.mojang.com/browse/MC-159283) for more information.
 """
 has_bug_mc159283(version, x::Int64, z::Int64) = false
 function has_bug_mc159283(::mcvt">=1.14", x::Int64, z::Int64)

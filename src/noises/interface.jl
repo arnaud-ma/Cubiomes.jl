@@ -50,7 +50,7 @@ Initialize the noise in place with the given random number generator (of type Ab
 
 !!! warning
     `N` represents the number of octaves, each associated with a non-zero amplitude.
-    Therefore, `N` *MUST* be equal to the number of non-zero values in amplitudes.
+    Therefore, `N` **MUST** be equal to the number of non-zero values in amplitudes.
     This number can be obtained with `Cubiomes.length_filter(!iszero, amplitudes)`.
     For performance reasons, it is possible to lower `N` and completely ignore the last
     amplitudes using [`unsafe_set_rng!🎲`](@ref).

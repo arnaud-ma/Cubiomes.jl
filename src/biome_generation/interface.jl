@@ -15,15 +15,31 @@ using ..Biomes: BIOME_NONE
 """
     Scale{N}
     Scale(N::Integer)
+    📏"1:N"
 
 The scale of a map. It represents the ratio between the size of the map an the real world.
 For example, a 1:4 scale map means that each block in the map represents a 4x4 area
 in the real world. So the coordinates (5, 5) are equal to the real world coordinates
 (20, 20).
 
-`N` *MUST* ne to the form 4^n with n >= 0. So the more common scales are 1:1, 1:4, 1:16,
+`N` **MUST** ne to the form ``4^n, n \\geq 0``. So the more common scales are 1:1, 1:4, 1:16,
 1:64, 1:256. The support for big scales is not guaranteed and depends on the function that
 uses it. Read the documentation of the function that uses it to know the supported values.
+
+It is possible to use the alternative syntax `📏"1:N"`. The emoji name is `:straight_ruler:`.
+
+# Examples
+```julia
+julia> Scale(4)
+Scale{4}()
+
+julia> Scale(5)
+ERROR: ArgumentError: The scale must be to the form 4^n. Got 1:5. The closest valid scales are 1:4 and 1:16.
+
+julia> 📏"1:4" === Scale(4) === Scale{4}()
+true
+
+```
 """
 struct Scale{N}
     function Scale{N}() where {N}
@@ -136,7 +152,7 @@ The scale is defaulted to 1:1, i.e. the exact coordinates. The args are specific
 dimension. See the documentation of the dimension for more information.
 
 See also:
-    - [`Scale`](@ref), [`gen_biomes`](@ref), [`Dimension`](@ref)
+    - [`Scale`](@ref), [`gen_biomes!`](@ref), [`Dimension`](@ref)
 """
 function get_biome end
 
