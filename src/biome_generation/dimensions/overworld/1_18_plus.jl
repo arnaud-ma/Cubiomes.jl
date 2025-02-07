@@ -414,7 +414,7 @@ function get_biome(
 )
     return get_biome(
         bn,
-        voronoi_access(bn.sha[], coord)...,
+        voronoi_access(bn.sha[], coord),
         Scale(4), spline;
         skip_shift, skip_depth,
     )

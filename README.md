@@ -13,7 +13,7 @@ A rewrite of [Cubiomes](https://github.com/Cubitect/cubiomes) but in [Julia](htt
 
 - **Readability and ease of use**: Julia is a high-level language, which makes the code easier to read and understand. Of course to be fast, it is sometimes necessary to write more complex code, but if it is simply to use an API (like the one of Cubiomes), it a very easy Python-like language.
 
-- **Performance**: Julia is almost as fast as C. For this case, it is in fact faster because is it very easy to parallelize the code or to easily know where the bottlenecks are with the built-in profiler.
+- **Performance**: Julia is almost as fast as C. For this case, it is in fact faster because uh so actually I don't know why lol but i always measure 2-3x speedup.
 
 ## Installation
 
@@ -25,29 +25,76 @@ julia> ] add github.com/arnaud-ma/cubiomes.jl
 
 ## Usage
 
-It is still a work in progress, so the API is not yet stable at all. The nether generation and the overworld 1.18+ generation should be working, here is an example:
+### Biome generation
+
+Let's create a simple program which tests seeds for a mushroom fields biome at a predefined location.
 
 ```julia
 using Cubiomes
+using Base.Iterators: countfrom
 
-overworld = Overworld(undef, mcv"1.20")    # (1)
-set_seed!(overworld, 42)                   # (2)
-world = World(-1000:1000, -1000:1000, 63) # (3)
-gen_biomes!(overworld, world, 📏"1:1")    # (4)
+function search_biome_at(x, z, y)
+    overworld = Overworld(undef, mcv"1.18")
 
-using FileIO  # using Pkg; Pkg.add("FileIO")
-save("world.png", to_color(world))        # (5)
+    for seed in countfrom(zero(UInt64))
+        set_seed!(overworld, seed)
+        biome = get_biome(overworld, x, z, y)
+
+        if biome == Biomes.mushroom_fields
+            println("Seed $(signed(seed)) has a Mmushroom Fields at $((x, z, y))")
+            break
+        end
+    end
+end
+
+search_biome_at(0, 0, 63)
 ```
 
-Let's explain step by step:
+Notice:
 
-1. We need to create a dimension object with a given version, which will serve as a generator. `undef` means that it is an empty object at the moment. The Minecraft version must **always** be prefixed with `mcv` (stands for minecraft version). It allows the code to have completely different behaviors depending on the version.
-2. We set the seed to the generator. The seed can be any valid seed as in Minecraft (a string or a number). It will automatically be converted to a `UInt64` number.
-3. We create a `World` object, that will store the biomes. It can be 2D or 3D (depending if the y coordinate is provided or not). You can access to the biomes by simply indexing with the exact same coordinates as in Minecraft (e.g. `world[0, 0, 0]` will give you the biome at the origin of the world). At the moment of the code, the map is full of `BIOME_NONE` values because we did not generate the biomes yet. The syntax `a:b` in Julia means any integer between `a` and `b` (inclusive).
-4. We generate the biomes with the `gen_biomes!` function. It will fill the world with the biomes. The argument with a `📏` (a ruler) is the scale of the biomes, i.e. how many blocks in the world correspond to one biome value in the map. For example, with a scale of 4, one biome value in the map corresponds to a square of 4x4 blocks in the world. The only supported values are `📏"1:1"`, `📏"1:4"`, `📏"1:16"` and `📏"1:64"`. The symbol name is ":straight_ruler:". You can use `Scale(1)` or `Scale(4)` instead if you don't like emojis.
-5. We can visualize / save the map using other Julia packages (such as FileIO to save into an image file) and `to_color` to transform the biomes into nice colors.
+- The order of the coordinates is `(x, z, y)` and **never** `(x, y, z)` in the entire package.
+- The syntax `mcv"1.18"` represent the Minecraft version.
+- The `!` at the end of the function `set_seed!` is a Julia convention to indicate that the function modifies the object inplace. In this case, it modifies the overworld object to set the seed. This is more import in the next example, when we are dealing with containers of biomes.
 
-## TODO
+### World map generation
+
+To generate a map of biomes, you need to create a `World` object that is simply a 3D / 2D array of biomes, with the real coordinates of the world as indices. Use `gen_biomes!`
+to fill the world with the biomes. It can be much faster than calling `get_biome` for each block.
+Here is an example that generate the biomes and save the map as an image:
+
+```julia
+using Cubiomes
+using FileIO
+
+const overworld1_18 = Overworld(undef, mcv"1.18")
+const worldmap = World(x=-1000:1000, z=-1000:1000, y=63)
+
+function save_as_img!(worldmap, seed, path)
+    set_seed!(overworld1_18, seed)
+    gen_biomes!(overworld1_18, worldmap, 📏"1:16")
+
+    world2d = view2d(worldmap)
+    save(path, to_color(world2d))
+end
+
+save_as_img!(worldmap, 42, "world.png")
+```
+
+<details>
+<summary>show world.png</summary>
+<img src="docs/src/assets/world.png" alt="World map"/>
+</details>
+
+Some comments:
+
+- In Julia, constants global variables must be declared with `const` to avoid performance penalties.
+- The emoji `📏` is an optional argument used to represent the scale of the biomes. For example here, `📏"1:16"` means that one biome value in the map corresponds to a square of 16x16 blocks in the world, so we are in fact generating from -16000 to 16000 in each direction.
+- The emoji name is ":straight_ruler:". You can use `Scale(N)` instead of `📏"1:N"` if you don't like emojis.
+- In many cases (here to save as an image), the map need to be in 2D. Here, even if the size of the `y` coordinate is 1, it is
+  still considered as a 3D map. This is why we use the `view2d` function to have a 2D view of the world. ⚠ It is only a view, so if you modify the 2D map, it will also modify the 3D map.
+- Like the first example, the `!` at the end of function names indicates that the function modifies the object inplace. Here our function modifies in fact two objects: the `overworld1_18` object and the `worldmap` object.
+
+## TODOs
 
 ### Java implementation of rng
 
@@ -94,16 +141,19 @@ Let's explain step by step:
 
 Java >= 17 is required to run the tests.
 You can run the tests with:
+
 ```julia
 julia> ] test Cubiomes
 ```
 
 To not include [Aqua.jl](https://github.com/JuliaTesting/Aqua.jl) tests:
+
 ```julia
 julia> using Pkg; Pkg.test("Cubiomes"; test_args=["not_aqua"])
 ```
 
 To run the tests with the coverage:
+
 ```julia
 julia> using Cubiomes, LocalCoverage
 
