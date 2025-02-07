@@ -24,7 +24,7 @@ octave_min(::NoiseParameter, large) = throw(MethodError(octave_min, (NoiseParame
 trimmed_amplitudes(::NoiseParameter) = throw(MethodError(trimmed_amplitudes, (NoiseParameter,)))
 trimmed_end_amplitudes(::NoiseParameter) = throw(MethodError(trimmed_end_amplitudes, (NoiseParameter,)))
 nb_octaves(::NoiseParameter) = throw(MethodError(nb_octaves, (NoiseParameter,)))
-create_octaves(::NoiseParameter, n::Val) =  throw(MethodError(create_octaves, (NoiseParameter, typeof(n))))
+create_octaves(::NoiseParameter, ::Val) =  throw(MethodError(create_octaves, (NoiseParameter, typeof(n))))
 magic_xlo(::NoiseParameter, large) = throw(MethodError(magic_xlo, (NoiseParameter, typeof(large))))
 magic_xhi(::NoiseParameter, large) = throw(MethodError(magic_xhi, (NoiseParameter, typeof(large))))
 #! format: on
@@ -407,18 +407,16 @@ end
 # ---------------------------------------------------------------------------- #
 #                                 Biome Getter                                 #
 # ---------------------------------------------------------------------------- #
-# TODO: get_biome for scale != (1, 4)
 
 function get_biome(
     bn::BiomeNoise, coord::NTuple{3, Real}, ::Scale{1},
-    spline::Spline=SPLINE_STACK; skip_shift=Val(false), skip_depth=Val(false),
+    spline=SPLINE_STACK; skip_shift=Val(false), skip_depth=Val(false),
 )
-    x, z, y = voronoi_access(bn.sha[], coord)
     return get_biome(
         bn,
-        x, z, y,
+        voronoi_access(bn.sha[], coord)...,
         Scale(4), spline;
-        skip_shift=skip_shift, skip_depth=skip_depth,
+        skip_shift, skip_depth,
     )
 end
 
@@ -431,7 +429,7 @@ function get_biome(
     coord_scale4 = coord .* scale .+ mid
     return get_biome(
         bn, coord_scale4, Scale(4), spline;
-        skip_shift=skip_shift, skip_depth=skip_depth,
+        skip_shift, skip_depth,
     )
 end
 
@@ -461,15 +459,15 @@ function get_biome_int(
     bn::BiomeNoise{V}, coord, spline=SPLINE_STACK,
     skip_shift=Val(false), skip_depth=Val(false), old_idx=nothing,
 ) where {V}
-    noiseparams = sample_biomenoises(bn, coord..., spline, skip_shift, skip_depth)
+    noiseparams = sample_biomenoises(bn, coord..., skip_shift, skip_depth, spline)
     return climate_to_biome(noiseparams, V, old_idx)
 end
 
 function sample_biomenoises(
     bn::BiomeNoise,
     x, z, y,
-    spline=SPLINE_STACK,
     skip_shift=Val(false), skip_depth=Val(false),
+    spline=SPLINE_STACK,
 )
     px, pz = sample_shift(bn, x, z, skip_shift)
     continentalness::Float32 = sample_noise(bn.climate[Continentalness], px, pz)
@@ -596,7 +594,7 @@ end
 #                               Biome Generation                               #
 # ---------------------------------------------------------------------------- #
 
-function gen_biomes!(bn::BiomeNoise, map3D::World{3}, ::Scale{1})
+function gen_biomes!(bn::BiomeNoise, map3D::World{3}, ::Scale{1}; kwargs...)
     coords = coordinates(map3D)
     if isone(length(coords))
         coord = first(coords)
@@ -606,7 +604,7 @@ function gen_biomes!(bn::BiomeNoise, map3D::World{3}, ::Scale{1})
     # The minimal map where we are sure we can find the source coordinates at scale 4
     biome_parent_axes = voronoi_source(map3D)
     biome_parents = view_reshape_cache_like(biome_parent_axes)
-    gen_biomes!(bn, biome_parents, Scale(4))
+    gen_biomes!(bn, biome_parents, Scale(4); kwargs...)
 
     sha = bn.sha[]
     for coord in coords
@@ -616,14 +614,16 @@ function gen_biomes!(bn::BiomeNoise, map3D::World{3}, ::Scale{1})
     end
 end
 
-function gen_biomes!(bn::BiomeNoise, map3D::World{3}, s::Scale{4})
+function gen_biomes!(bn::BiomeNoise, map3D::World{3}, s::Scale{4}; kwargs...)
     for coord in coordinates(map3D)
-        map3D[coord] = get_biome(bn, coord, s)
+        map3D[coord] = get_biome(bn, coord, s; kwargs...)
     end
     return nothing
 end
 
-function gen_biomes!(bn::BiomeNoise, map3D::World{3}, ::Scale{S}) where {S}
+function gen_biomes!(
+    bn::BiomeNoise, map3D::World{3}, ::Scale{S}; skip_depth=Val(false),
+) where {S}
     scale = S >> 2
     mid = scale >> 1
     coord_mid = CartesianIndex(mid, mid, 0)
@@ -632,6 +632,7 @@ function gen_biomes!(bn::BiomeNoise, map3D::World{3}, ::Scale{S}) where {S}
         coord_scale4 = coord * scale + coord_mid
         map3D[coord], old_idx = get_biome(
             bn, coord_scale4, Scale(4);
-            skip_shift=Val(true), old_idx=old_idx)
+            skip_depth, skip_shift=Val(true), old_idx,
+        )
     end
 end

@@ -1,6 +1,6 @@
 module BiomeArrays
 
-export World, ScaledWorld, view2d, scale, coordinates, true_coordinates
+export World, view2d, coordinates, true_coordinates
 
 using Base: @propagate_inbounds
 using OffsetArrays
@@ -9,6 +9,19 @@ using ..BiomeGeneration: Scale
 
 World{N} =  AbstractArray{Biome, N}
 
+"""
+    World{N} where N (N = 2, 3)
+    World(xrange::UnitRange, zrange::UnitRange, yrange::UnitRange)
+    World(xrange::UnitRange, zrange::UnitRange, y::Number)
+    World(xrange::UnitRange, zrange::UnitRange)
+    World(;x, z, y)
+
+A 2D or 3D array of biomes. It is the main data structure used to store the biomes of a
+Minecraft world. It is a simple wrapper around `AbstractArray{Biome, N}`. So anything that
+works with arrays should work with `World`.
+
+See also: [`view2d`](@ref), [`coordinates`](@ref)
+"""
 function World(range::Vararg{UnitRange, N}) where {N}
     N != 2 && N != 3 && throw(ArgumentError("Only 2D and 3D worlds are supported. Got $N."))
     return fill(BIOME_NONE, range...)
@@ -17,6 +30,17 @@ end
 World(x, z, y::Number) = World(x, z, y:y)
 World(;x, z, y) = World(x, z, y)
 
+"""
+    view2d(W::World{3}) -> World{2}
+
+View a 3D world as a 2D world. Only works if the y size is 1. Otherwise, it throws an error.
+Useful for functions that only work with 2D worlds, even if the y size is 1, like 2d
+visualization.
+
+!!! warning
+    The returned object is a view, so modifying it will also modify the original world. Use
+    `copy` to get a new independent world.
+"""
 function view2d(W::World{3})
     size_y = size(W)[3]
     if size_y != 1
@@ -29,6 +53,12 @@ end
 view2d(x::World{2}) = x
 
 
+"""
+    coordinates(M::World) -> CartesianIndices
+
+Wrapper around `CartesianIndices` to get the coordinates of the biomes in the world. Useful
+to iterate over the coordinates of the world.
+"""
 coordinates(M::World) = CartesianIndices(M)
 true_coordinates(M::World) = coordinates(M)
 

@@ -278,14 +278,14 @@ function gen_biomes!(end_noise::End1_9Plus, map2D::World{2}, s::Scale{16})
     # TODO: remove this allocation
     elevations = Elevations(end_noise, map2D, 12)
     for coord in coordinates(map2D)
-        map2D[coord] = get_biome(elevations, coord.I..., s)
+        map2D[coord] = get_biome(elevations, coord.I, s)
     end
     return nothing
 end
 
 function gen_biomes!(::End1_9Plus, ::World{2}, ::Scale{4})
     throw(ArgumentError(
-        "4:16 end generation is the same as 1:16 but simply rescaled by 4. \
+        "1:4 end generation is the same as 1:16 but simply rescaled by 4. \
         Use 1:16 scale instead. The scale 1:4 could be supported in the future."
     ))
 end
@@ -303,106 +303,9 @@ end
 # #==========================================================================================#
 
 function get_biome(end_::End1_9Plus, x::Real, z::Real, ::Scale{1})
-    throw(ArgumentError("1:1 end generation is not implemented yet."))
+    error("scale 1:1 end generation is not implemented yet.")
 end
 
 function gen_biomes!(end_noise::End1_9Plus, map2D::World{2}, ::Scale{1})
-    throw(ArgumentError("1:1 end generation is not implemented yet."))
+    error("scale 1:1 end generation is not implemented yet.")
 end
-
-# #==========================================================================================#
-# # End Height ⚠ STILL DRAFT # TODO
-# #==========================================================================================#
-
-# #TODO: scale 1
-
-# # function sample_column_end!(
-# #     columns::AbstractVector{Float64}, height_getter::T, surface_noise::SurfaceNoise, x, z
-# # ) where {T}
-# #     depth = get_height(height_getter, x, z) - 8.0f0
-# #     for y in axes(columns, 1)
-# #         noise = sample(surface_noise, x, y, z) + depth
-# #         noise = clamped_lerp((32 + 46 - y) / 64, -3000, noise)
-# #         noise = clamped_lerp((y - 1) / 7, -30, noise)
-# #         columns[y] = noise
-# #     end
-# # end
-
-# # const END_NOISE_COL_YMIN = 2
-# # const END_NOISE_COL_YMAX = 18
-# # const END_NOISE_COL_SIZE = END_NOISE_COL_YMAX - END_NOISE_COL_YMIN + 1
-# # const UPPER_DROP = Tuple(clamp.([(32 + 46 - y) / 64 for y in 0:32], 0, 1))
-# # const LOWER_DROP = Tuple(clamp.([(y - 1) / 7 for y in 0:32], 0, 1))
-
-# # FullColumnType = OffsetVector{
-# #     Float64,SizedVector{END_NOISE_COL_SIZE,Float64,Vector{Float64}}
-# # }
-
-# # function create_full_column_end(vec::Vector{Float64})::FullColumnType
-# #     return Origin(END_NOISE_COL_YMIN)(SizedVector{END_NOISE_COL_SIZE}(vec))
-# # end
-
-# # function sample_column_end!(
-# #     column::FullColumnType, surface_noise::SurfaceNoiseEnd, height_getter::T, x, z
-# # ) where {T}
-# #     # depth is between [-108, +72]
-# #     # noise is between [-128, +128]
-# #     # for a sold block we need the upper drop as:
-# #     #  (72 + 128) * u - 3000 * (1-u) > 0 => upper_drop = u < 15/16
-# #     # which occurs at y = 18 for the highest relevant noise cell
-# #     # for the lower drop we need:
-# #     #  (72 + 128) * l - 30 * (1-l) > 0 => lower_drop = l > 3/23
-# #     # which occurs at y = 3 for the lowest relevant noise cell
-
-# #     # in terms of the depth this becomes:
-# #     #  l > 30 / (103 + depth)
-
-# #     depth = get_height(height_getter, x, z) - 8
-# #     for y in axes(column, 1)
-# #         lower_drop = LOWER_DROP[y]
-# #         if lower_drop * (103 + depth) < 30
-# #             column[y] = -30
-# #             continue
-# #         end
-# #         upper_drop = UPPER_DROP[y]
-# #         noise = sample(surface_noise, x, y, z) + depth
-# #         noise = clamped_lerp(upper_drop, -3000, noise)
-# #         noise = clamped_lerp(lower_drop, -30, noise)
-# #         column[y] = noise
-# #     end
-# #     return nothing
-# # end
-
-# # function sample_column_end(
-# #     height_getter::T, surface_noise::SurfaceNoise, x, z
-# # )::FullColumnType where {T<:Union{EndNoise,AbstractMatrix{UInt16}}}
-# #     column = create_full_column_end(Vector{Float64}(undef, END_NOISE_COL_SIZE))
-# #     sample_column_end!(column, surface_noise, height_getter, x, z)
-# #     return column
-# # end
-
-# # function surface_height(column00, column01, column10, column11, scale, dx, dz)
-
-# #     # equivalent to for y_cell in reverse(eachindex(column00)) but
-# #     # without the first element (the top)
-# #     y_axis = axes(column00, 1)
-# #     first_y, last_y = first(y_axis), last(y_axis)
-# #     @inbounds for y_cell in (last_y - 1):-1:first_y
-# #         v000 = column00[y_cell]
-# #         v001 = column01[y_cell]
-# #         v100 = column10[y_cell]
-# #         v101 = column11[y_cell]
-# #         v010 = column00[y_cell + 1]
-# #         v011 = column01[y_cell + 1]
-# #         v110 = column10[y_cell + 1]
-# #         v111 = column11[y_cell + 1]
-
-# #         for y in (scale - 1):-1:0
-# #             dy = y / scale
-# #             # Note: not dx, dy, dz
-# #             noise = lerp3(dy, dx, dz, v000, v100, v010, v110, v001, v101, v011, v111)
-# #             noise > 0 && return y_cell * scale + y
-# #         end
-# #     end
-# #     return 0
-# # end

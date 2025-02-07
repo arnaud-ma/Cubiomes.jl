@@ -215,7 +215,7 @@ Interpolate the Perlin noise at the given coordinates.
 - The `d1`, `d2`, and `d3` parameters are the fractional parts of the `x`, `y`, and `z`
  coordinates.
 - The `h1`, `h2`, and `h3` parameters are the integer parts of the `x`, `y`, and `z`
- coordinates.
+ coordinates. They **MUST** be between 0 and 255.
 - The `t1`, `t2`, and `t3` parameters are the smoothstep values of the fractional parts
  of the `x`, `y`, and `z` coordinates.
 
@@ -227,25 +227,28 @@ Base.@propagate_inbounds function interpolate_perlin(
     h1, h2, h3,
     t1, t2, t3,
 )
-    # TODO: "@inbounds begin" once we are sure that the code is correct
-    a1 = idx[h1] + h2
-    b1 = idx[h1 + 1] + h2
+    #! big use of @inbounds here. But we have to because it save a lot of time,
+    # this is a very hot function
+    @inbounds begin
+        a1 = idx[h1] + h2
+        b1 = idx[h1 + 1] + h2
 
-    a2 = idx[a1] + h3
-    b2 = idx[b1] + h3
-    a3 = idx[a1 + 1] + h3
-    b3 = idx[b1 + 1] + h3
+        a2 = idx[a1] + h3
+        b2 = idx[b1] + h3
+        a3 = idx[a1 + 1] + h3
+        b3 = idx[b1 + 1] + h3
 
-    #! format: off
-    l1 = indexed_lerp(idx[a2],     d1    , d2    , d3    )
-    l2 = indexed_lerp(idx[b2],     d1 - 1, d2    , d3    )
-    l3 = indexed_lerp(idx[a3],     d1    , d2 - 1, d3    )
-    l4 = indexed_lerp(idx[b3],     d1 - 1, d2 - 1, d3    )
-    l5 = indexed_lerp(idx[a2 + 1], d1    , d2    , d3 - 1)
-    l6 = indexed_lerp(idx[b2 + 1], d1 - 1, d2    , d3 - 1)
-    l7 = indexed_lerp(idx[a3 + 1], d1    , d2 - 1, d3 - 1)
-    l8 = indexed_lerp(idx[b3 + 1], d1 - 1, d2 - 1, d3 - 1)
-    #! format: on
+        #! format: off
+        l1 = indexed_lerp(idx[a2],     d1    , d2    , d3    )
+        l2 = indexed_lerp(idx[b2],     d1 - 1, d2    , d3    )
+        l3 = indexed_lerp(idx[a3],     d1    , d2 - 1, d3    )
+        l4 = indexed_lerp(idx[b3],     d1 - 1, d2 - 1, d3    )
+        l5 = indexed_lerp(idx[a2 + 1], d1    , d2    , d3 - 1)
+        l6 = indexed_lerp(idx[b2 + 1], d1 - 1, d2    , d3 - 1)
+        l7 = indexed_lerp(idx[a3 + 1], d1    , d2 - 1, d3 - 1)
+        l8 = indexed_lerp(idx[b3 + 1], d1 - 1, d2 - 1, d3 - 1)
+        #! format: on
+    end
 
     l1 = lerp(t1, l1, l2)
     l3 = lerp(t1, l3, l4)
@@ -261,7 +264,7 @@ get_y_coord_values(noise, y) = init_coord_values(y + noise.y)
 function get_y_coord_values(noise, ::Missing)
     noise.const_y, noise.const_index_y, noise.const_smooth_y
 end
-mod
+
 
 function adjust_y(y, yamp, ymin)
     yclamp = min(ymin, y)
@@ -277,8 +280,6 @@ function _sample_noise(noise::Perlin, x::Real, z::Real, y, yamp, ymin)
     z, index_z, smooth_z = init_coord_values(z + noise.z)
     y = adjust_y(y, yamp, ymin)
 
-    # TODO: check if we can safely add @inbounds here just before the return
-    # to save something like 10% of the time
     return interpolate_perlin(
         noise.permutations,
         x, y, z,

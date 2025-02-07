@@ -13,6 +13,27 @@ using Base.Iterators
 #                               Nether definition                              #
 # ---------------------------------------------------------------------------- #
 
+"""
+    Nether(::UndefInitializer, V::MCVersion)
+
+The Nether dimension. See [`Dimension`](@ref) for general usage.
+
+# Minecraft version <1.16
+
+Before version 1.16, the Nether is only composed of nether wastes. Nothing else.
+
+# Minecraft version >= 1.16 specificities
+
+- If the 1:1 scale will never be used, adding `sha=Val(false)` to `set_seed!` will
+  save a very small amount of time (of the order of 100ns up to 1µs). The sha
+  is a precomputed value only used for the 1:1 scale. But the default behavior is
+  to compute the sha at each seed change for simplicity.
+
+- In the biome generation functions, a last paramter `confidence` can be passed. It
+  is a performance-related parameter between 0 and 1. A bit the same as the
+  `scale` parameter, but it is a continuous value, and the scale is not modified.
+"""
+
 abstract type Nether <: Dimension end
 
 # Nothing to do if version is <1.16. The nether is only composed of nether_wastes
@@ -143,26 +164,30 @@ const NETHER_POINTS = (
     return sum(abs2, (coord1 - coord2).I)
 end
 
+
+# We could generalize this function to any dimension, but not necessary for now
+# and may make the code less readable.
 """
-    fill_radius!(out::World{N}, center::CartesianIndex{N}, id::Biome, radius)
+    fill_radius!(out::World{N}, center::CartesianIndex{2}, id::Biome, radius)
 
 Fills a circular area around the point `center` in `out` with the biome `id`,
-within a given `radius`. Assuming `radius`>=0.
+within a given `radius`. Assuming `radius`>=0. If `center` is outside the `out`
+coordinates, nothing is done.
 """
 function fill_radius!(
-    out::World{N}, center::CartesianIndex{N}, id::Biome, radius,
+    out::World{N}, center::CartesianIndex{2}, id::Biome, radius,
 ) where {N}
     r = floor(Int, radius)
     r_square = r^2
 
     # optimizations:
-    # we know that u is a coord to be filled implies:
-    # - u is in the array axes (coordinates)
-    # - u is in the n dimension cube of center `center` and edges of the same size `r`
+    # we know that (x, z) is a coord to be filled implies:
+    # - (x, z) is in the array coordinates (axes(out, 1) for x, axes(out, 2) for z)
+    # - (x, z) is in the square of center `center` and edges of the same size `r`
     # so we can simply iterate over the intersection coordinates.
-    coords = CartesianIndices(ntuple(
-        dim -> ((center[dim] - r):(center[dim] + r)) ∩ axes(out, dim),
-        Val(N),
+    coords = CartesianIndices((
+        range(center[1] - r, center[1] + r) ∩ axes(out, 1),
+        range(center[2] - r, center[2] + r) ∩ axes(out, 2),
     ))
 
     for coord in coords
@@ -175,7 +200,7 @@ end
 
 # Assume out is filled with BIOME_NONE
 function gen_biomes_unsafe!(
-    nn::Nether1_16Plus, map2d::World{2}, ::Scale{S}, confidence=1,
+    nn::Nether1_16Plus, map2d::World{2}, ::Scale{S}; confidence=1,
 ) where {S}
     scale = S >> 2
 
@@ -201,13 +226,13 @@ function gen_biomes_unsafe!(
 end
 
 function gen_biomes_unsafe!(
-    nn::Nether1_16Plus, map3d::World{3}, scale::Scale{S}, confidence=1,
+    nn::Nether1_16Plus, map3d::World{3}, scale::Scale{S}; confidence=1,
 ) where {S}
     # At scale != 1, the biome does not change with the y coordinate
     # So we simply take the first y coordinate and fill the other ones with the same biome
     ys = axes(map3d, 3)
     first_square_y = @view map3d[:, :, first(ys)]
-    gen_biomes_unsafe!(nn, first_square_y, scale, confidence)
+    gen_biomes_unsafe!(nn, first_square_y, scale; confidence)
 
     for y in Iterators.drop(ys, 1) # skip the first y coordinate
         copyto!(map3d[:, :, y], first_square_y)
@@ -215,28 +240,27 @@ function gen_biomes_unsafe!(
     return nothing
 end
 
-function gen_biomes!(nn::Nether1_16Plus, world::World, scale::Scale, confidence=1)
+function gen_biomes!(nn::Nether1_16Plus, world::World, scale::Scale; confidence=1)
     fill!(world, BIOME_NONE)
-    gen_biomes_unsafe!(nn, world, scale, confidence)
+    gen_biomes_unsafe!(nn, world, scale; confidence)
 end
 
-function gen_biomes!(nn::Nether1_16Plus, world3d::World{3}, ::Scale{1}, confidence=1)
+function gen_biomes!(nn::Nether1_16Plus, world3d::World{3}, ::Scale{1}; confidence=1)
     coords = coordinates(world3d)
     # If there is only one value, simple wrapper around get_biome_unsafe
     if isone(length(coords))
         coord = first(coords)
-        world3d[coord] = get_biome(nn, coord.I..., Scale(4))
+        world3d[coord] = get_biome(nn, coord.I, Scale(4))
         return nothing
     end
 
     # The minimal map where we are sure we can find the source coordinates at scale 4
     biome_parent_axes = voronoi_source2d(world3d)
     biome_parents = view_reshape_cache_like(biome_parent_axes)
-    gen_biomes!(nn, biome_parents, Scale(4), confidence)
+    gen_biomes!(nn, biome_parents, Scale(4); confidence)
 
     sha = nn.sha[]
     for coord in coords
-        # See the comment on get_biome_unsafe for the explanation
         x, z, _ = voronoi_access(sha, coord)
         result = biome_parents[x, z]
         @inbounds world3d[coord] = result
