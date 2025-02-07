@@ -111,8 +111,8 @@ Some comments:
 
 ### Features
 
-- [ ] Nether generation
-- [ ] Overworld 1.18+ generation
+- [X] Nether generation
+- [X] Overworld 1.18+ generation
 - [ ] Overworld beta generation
 - [ ] Overworld generation
 - [ ] End generation
