@@ -67,7 +67,7 @@ using Cubiomes
 using FileIO
 
 const overworld1_18 = Overworld(undef, mcv"1.18")
-const worldmap = World(x=-1000:1000, z=-1000:1000, y=63)
+const worldmap = WorldMap(x=-1000:1000, z=-1000:1000, y=63)
 
 function save_as_img!(worldmap, seed, path)
     set_seed!(overworld1_18, seed)

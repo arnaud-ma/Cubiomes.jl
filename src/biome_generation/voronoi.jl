@@ -1,12 +1,12 @@
 module Voronoi
 
-using ..BiomeArrays: World
+using ..BiomeArrays: WorldMap
 using ...SeedUtils: mc_step_seed
 
 firsts(coord, ::Val{2}) = coord[1], coord[2]
 firsts(coord, ::Val{3}) = coord[1], coord[2], coord[3]
 voronoi_source(ax::AbstractUnitRange) = range((first(ax) - 2) >> 2, (last(ax) - 1) >> 2 + 1)
-function voronoi_source(W::World{N}, dim::Val{D}=Val(N)) where {N, D}
+function voronoi_source(W::WorldMap{N}, dim::Val{D}=Val(N)) where {N, D}
     return map(voronoi_source, firsts(axes(W), dim))
 end
 voronoi_source2d(W) = voronoi_source(W, Val(2))

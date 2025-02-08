@@ -4,10 +4,9 @@ using OffsetArrays: Origin
 using ..Noises
 using ..JavaRNG: JavaRandom, randjump🎲
 using ..MCBugs: has_bug_mc159283
-using .BiomeArrays: World, coordinates
+using .BiomeArrays: WorldMap, coordinates
 using ..MCVersions
 using ..Biomes: the_end, end_highlands, end_midlands, end_barrens, small_end_islands
-
 
 """
     End(::UndefInitializer, version::MCVersion)
@@ -24,7 +23,7 @@ struct End1_9Minus <: End end
 End(::UndefInitializer, ::mcvt"1.0 <= x < 1.9") = End1_9Minus()
 set_seed!(::End1_9Minus, seed::UInt64) = nothing
 get_biome(::End1_9Minus, x::Real, z::Real, y::Real, ::Scale) = the_end
-gen_biomes!(::End1_9Minus, out::World) = fill!(out, the_end)
+gen_biomes!(::End1_9Minus, out::WorldMap) = fill!(out, the_end)
 
 struct End1_9Plus{V} <: End
     perlin::Perlin
@@ -112,10 +111,10 @@ end
 # Elevation / Height
 #==========================================================================================#
 
-struct Elevations{V , A}
+struct Elevations{V, A}
     inner::A
 end
-Elevations{V}(a::AbstractMatrix) where V = Elevations{V, typeof(a)}(a)
+Elevations{V}(a::AbstractMatrix) where {V} = Elevations{V, typeof(a)}(a)
 
 elevation_val(x, z) = ((abs(x) * 3439 + abs(z) * 147) % 13) + 9
 
@@ -154,13 +153,12 @@ function similar_expand(
 end
 
 # TODO: maybe use sparse matrix instead
-function Elevations(end_noise::End1_9Plus{V}, A::World{2}, range::Integer=12) where {V}
+function Elevations(end_noise::End1_9Plus{V}, A::WorldMap{2}, range::Integer=12) where {V}
     #! memory allocation
     elevations = Elevations{V}(similar_expand(UInt16, A, range, range))
     fill_elevations!(end_noise, elevations)
     return elevations
 end
-
 
 function get_cache_dist_squared()
     row = (-25:2:25) .^ 2
@@ -173,7 +171,7 @@ function get_cache_dist_squared()
         ),
         (
             rowneg .+ colpos',
-            rowneg .+ colneg'
+            rowneg .+ colneg',
         ),
     )
     map(twomat -> map(x -> Origin(-12, -12)(SMatrix{25, 25}(x)), twomat), mats)
@@ -279,7 +277,7 @@ function get_biome(end_::End1_9Plus, x::Real, z::Real, ::Scale{S}, range=4) wher
     return get_biome(end_, x * scale, z * scale, Scale(16), range)
 end
 
-function gen_biomes!(end_noise::End1_9Plus, map2D::World{2}, s::Scale{16})
+function gen_biomes!(end_noise::End1_9Plus, map2D::WorldMap{2}, s::Scale{16})
     #! memory allocation
     # TODO: remove this allocation
     elevations = Elevations(end_noise, map2D, 12)
@@ -289,7 +287,7 @@ function gen_biomes!(end_noise::End1_9Plus, map2D::World{2}, s::Scale{16})
     return nothing
 end
 
-function gen_biomes!(::End1_9Plus, ::World{2}, ::Scale{4})
+function gen_biomes!(::End1_9Plus, ::WorldMap{2}, ::Scale{4})
     throw(ArgumentError(
         "1:4 end generation is the same as 1:16 but simply rescaled by 4. \
         Use 1:16 scale instead. The scale 1:4 could be supported in the future."
@@ -297,7 +295,7 @@ function gen_biomes!(::End1_9Plus, ::World{2}, ::Scale{4})
 end
 
 # scale > 16
-function gen_biomes!(end_noise::End1_9Plus, map2D::World{2}, s::Scale{S}) where {S}
+function gen_biomes!(end_noise::End1_9Plus, map2D::WorldMap{2}, s::Scale{S}) where {S}
     for coord in coordinates(map2D)
         map2D[coord] = get_biome(end_noise, coord, s)
     end
@@ -312,6 +310,6 @@ function get_biome(end_::End1_9Plus, x::Real, z::Real, ::Scale{1})
     error("scale 1:1 end generation is not implemented yet.")
 end
 
-function gen_biomes!(end_noise::End1_9Plus, map2D::World{2}, ::Scale{1})
+function gen_biomes!(end_noise::End1_9Plus, map2D::WorldMap{2}, ::Scale{1})
     error("scale 1:1 end generation is not implemented yet.")
 end

@@ -3,7 +3,7 @@ using ..JavaRNG: JavaRandom, set_seed🎲
 using ..Utils: Utils
 using ..MCVersions
 using ..Biomes: Biomes, BIOME_NONE, Biome, isnone
-using .BiomeArrays: World, coordinates
+using .BiomeArrays: WorldMap, coordinates
 using .Voronoi: voronoi_access, voronoi_source2d
 
 using Base.Iterators
@@ -40,7 +40,7 @@ struct Nether1_16Minus end
 Nether(::UndefInitializer, ::mcvt"<1.16") = Nether1_16Minus()
 set_seed!(::Nether1_16Minus, seed::UInt64) = nothing
 get_biome(::Nether1_16Minus, x::Real, z::Real, y::Real, ::Scale) = Biomes.nether_wastes
-gen_biomes!(::Nether1_16Minus, out::World, ::Scale) = fill!(out, Biomes.nether_wastes)
+gen_biomes!(::Nether1_16Minus, out::WorldMap, ::Scale) = fill!(out, Biomes.nether_wastes)
 
 struct Nether1_16Plus <: Nether
     temperature::DoublePerlin{2}
@@ -163,18 +163,17 @@ const NETHER_POINTS = (
     return sum(abs2, (coord1 - coord2).I)
 end
 
-
 # We could generalize this function to any dimension, but not necessary for now
 # and may make the code less readable.
 """
-    fill_radius!(out::World{N}, center::CartesianIndex{2}, id::Biome, radius)
+    fill_radius!(out::WorldMap{N}, center::CartesianIndex{2}, id::Biome, radius)
 
 Fills a circular area around the point `center` in `out` with the biome `id`,
 within a given `radius`. Assuming `radius`>=0. If `center` is outside the `out`
 coordinates, nothing is done.
 """
 function fill_radius!(
-    out::World{N}, center::CartesianIndex{2}, id::Biome, radius,
+    out::WorldMap{N}, center::CartesianIndex{2}, id::Biome, radius,
 ) where {N}
     r = floor(Int, radius)
     r_square = r^2
@@ -199,7 +198,7 @@ end
 
 # Assume out is filled with BIOME_NONE
 function gen_biomes_unsafe!(
-    nn::Nether1_16Plus, map2d::World{2}, ::Scale{S}; confidence=1,
+    nn::Nether1_16Plus, map2d::WorldMap{2}, ::Scale{S}; confidence=1,
 ) where {S}
     scale = S >> 2
 
@@ -225,7 +224,7 @@ function gen_biomes_unsafe!(
 end
 
 function gen_biomes_unsafe!(
-    nn::Nether1_16Plus, map3d::World{3}, scale::Scale{S}; confidence=1,
+    nn::Nether1_16Plus, map3d::WorldMap{3}, scale::Scale{S}; confidence=1,
 ) where {S}
     # At scale != 1, the biome does not change with the y coordinate
     # So we simply take the first y coordinate and fill the other ones with the same biome
@@ -239,12 +238,12 @@ function gen_biomes_unsafe!(
     return nothing
 end
 
-function gen_biomes!(nn::Nether1_16Plus, world::World, scale::Scale; confidence=1)
+function gen_biomes!(nn::Nether1_16Plus, world::WorldMap, scale::Scale; confidence=1)
     fill!(world, BIOME_NONE)
     gen_biomes_unsafe!(nn, world, scale; confidence)
 end
 
-function gen_biomes!(nn::Nether1_16Plus, world3d::World{3}, ::Scale{1}; confidence=1)
+function gen_biomes!(nn::Nether1_16Plus, world3d::WorldMap{3}, ::Scale{1}; confidence=1)
     coords = coordinates(world3d)
     # If there is only one value, simple wrapper around get_biome_unsafe
     if isone(length(coords))
@@ -267,7 +266,7 @@ function gen_biomes!(nn::Nether1_16Plus, world3d::World{3}, ::Scale{1}; confiden
     return nothing
 end
 
-function gen_biomes!(::Nether1_16Plus, ::World{2}, ::Scale{1}, confidence=1)
+function gen_biomes!(::Nether1_16Plus, ::WorldMap{2}, ::Scale{1}, confidence=1)
     msg = "generate the nether biomes at scale 1 requires a 3D map because \
             the biomes depend on the y coordinate. You can create a 3D map with \
             a single y coordinate with `MCMap(x_coords, z_coords, y)`"

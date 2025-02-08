@@ -4,7 +4,7 @@ using InteractiveUtils: subtypes
 using ..Utils: Utils, @only_float32, md5_to_uint64, lerp
 using ..JavaRNG: JavaXoroshiro128PlusPlus, next🎲
 using ..Noises: Noise, DoublePerlin
-using .BiomeArrays: World, coordinates
+using .BiomeArrays: WorldMap, coordinates
 using .Voronoi: voronoi_access, voronoi_source
 using ..MCVersions
 
@@ -594,7 +594,7 @@ end
 #                               Biome Generation                               #
 # ---------------------------------------------------------------------------- #
 
-function gen_biomes!(bn::BiomeNoise, map3D::World{3}, ::Scale{1}; kwargs...)
+function gen_biomes!(bn::BiomeNoise, map3D::WorldMap{3}, ::Scale{1}; kwargs...)
     coords = coordinates(map3D)
     if isone(length(coords))
         coord = first(coords)
@@ -614,7 +614,7 @@ function gen_biomes!(bn::BiomeNoise, map3D::World{3}, ::Scale{1}; kwargs...)
     end
 end
 
-function gen_biomes!(bn::BiomeNoise, map3D::World{3}, s::Scale{4}; kwargs...)
+function gen_biomes!(bn::BiomeNoise, map3D::WorldMap{3}, s::Scale{4}; kwargs...)
     for coord in coordinates(map3D)
         map3D[coord] = get_biome(bn, coord, s; kwargs...)
     end
@@ -622,7 +622,7 @@ function gen_biomes!(bn::BiomeNoise, map3D::World{3}, s::Scale{4}; kwargs...)
 end
 
 function gen_biomes!(
-    bn::BiomeNoise, map3D::World{3}, ::Scale{S}; skip_depth=Val(false),
+    bn::BiomeNoise, map3D::WorldMap{3}, ::Scale{S}; skip_depth=Val(false),
 ) where {S}
     scale = S >> 2
     mid = scale >> 1

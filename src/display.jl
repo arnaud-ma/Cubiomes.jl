@@ -3,8 +3,7 @@ module Display
 using Colors
 using RecipesBase
 import ..Biomes as b
-using ..BiomeGeneration: World, view2d
-
+using ..BiomeGeneration: WorldMap, view2d
 
 export to_color
 
@@ -110,7 +109,7 @@ const BIOME_COLORS = Dict(
 )
 
 to_color(x::b.Biome) = BIOME_COLORS[x]
-to_color(x::World) = to_color.(view2d(x))
+to_color(x::WorldMap) = to_color.(view2d(x))
 
 # function Plots.plot(map::MCMap{2})#, widen_factor=0.05)
 #     colors = to_color.(map)

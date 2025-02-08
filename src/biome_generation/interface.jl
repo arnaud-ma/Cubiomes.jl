@@ -100,7 +100,7 @@ dark_forest::Biome = 0x1d
 
 julia> set_seed!(overworld, "I love cats")
 
-julia> world = World(x=-100:100, z=-100:100, y=63);
+julia> world = WorldMap(x=-100:100, z=-100:100, y=63);
 
 julia> gen_biomes!(overworld, world, scale=📏"1:4")
 ```
@@ -108,7 +108,7 @@ julia> gen_biomes!(overworld, world, scale=📏"1:4")
 See also:
   - [`Nether`](@ref), [`Overworld`](@ref), [`End`](@ref)
   - [`set_seed!`](@ref), [`get_biome`](@ref), [`gen_biomes!`](@ref)
-  - [`World`](@ref), [`Scale`](@ref)
+  - [`WorldMap`](@ref), [`Scale`](@ref)
 
 # Extended help
 
@@ -120,7 +120,7 @@ The concrete type `TheDim` *MUST* implement:
     Be aware that the seed must be constrained to `UInt64` dispatch to work.
   - get_biome(dim::TheDim, coord, scale::Scale, args...) -> Biome where
     `coord` can be either (x::Real, z::Real, y::Real) or NTuple{3}
-  - gen_biomes!(dim::TheDim, out::World, scale::Scale, args...)
+  - gen_biomes!(dim::TheDim, out::WorldMap, scale::Scale, args...)
 """
 abstract type Dimension end
 
@@ -178,15 +178,15 @@ function get_biome(dim::Dimension, coord::CartesianIndex{3}, s::Scale=Scale(1); 
 end
 
 """
-    gen_biomes!(dim::Dimension, world::World, [scale::Scale,], args...; kwargs...) -> Nothing
+    gen_biomes!(dim::Dimension, world::WorldMap, [scale::Scale,], args...; kwargs...) -> Nothing
 
-Fill the world with the biomes of the dimension `dim`. The scale is defaulted to 1:1.
+Fill the world map with the biomes of the dimension `dim`. The scale is defaulted to 1:1.
 The args are specific to the dimension. See the documentation of the dimension for more
 information.
 
-See also: [`World`](@ref), [`Scale`](@ref), [`Dimension`](@ref), [`get_biome`](@ref)
+See also: [`WorldMap`](@ref), [`Scale`](@ref), [`Dimension`](@ref), [`get_biome`](@ref)
 """
-function gen_biomes!(dim::Dimension, world::BiomeArrays.World; kwargs...)
+function gen_biomes!(dim::Dimension, world::BiomeArrays.WorldMap; kwargs...)
     return gen_biomes!(dim, world, Scale(1); kwargs...)
 end
 
