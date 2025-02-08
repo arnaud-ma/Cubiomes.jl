@@ -1,5 +1,8 @@
 [deps]
 Cubiomes = "e720158a-9490-4262-afb0-b6410688564f"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+ImageIO = "82e4d734-157c-48bb-816b-45c225c6df19"
+ImageMagick = "6218d12a-5da1-5696-b52f-db25d2ecc6d1"
 ImageShow = "4e3cecfd-b093-5904-9786-8bbb286a6a31"
 Literate = "98b081ad-f1c9-55d3-8b20-4c87d4299306"
+OpenCV = "f878e3a2-a245-4720-8660-60795d644f2a"
