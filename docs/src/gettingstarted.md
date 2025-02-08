@@ -1,12 +1,12 @@
-# Getting started
+# Getting Started
 
-If you are already familiar, with Julia, you can skip this section and go directly to the [guide](literate_generated/guide.md).
+If you are already familiar with Julia, you can skip this section and go directly to the [guide](literate_generated/guide.md).
 
-To install Julia and know how to run a Julia code, refer to the [Getting started](https://docs.julialang.org/en/v1/manual/getting-started/) section of the Julia documentation.
+To install Julia and learn how to run Julia code, refer to the [Getting Started](https://docs.julialang.org/en/v1/manual/getting-started/) section of the Julia documentation.
 
 ## Installation
 
-To install [Cubiomes.jl](https://github.com/arnaud-ma/Cubiomes.jl), start up Julia and type the following code into the REPL:
+To install [Cubiomes.jl](https://github.com/arnaud-ma/Cubiomes.jl), start up Julia and enter the following command in the REPL:
 
 ```julia-repl
 julia> ] add github.com/arnaud-ma/Cubiomes.jl

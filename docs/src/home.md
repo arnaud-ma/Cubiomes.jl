@@ -1,8 +1,6 @@
 # Cubiomes.jl
 
-Cubiomes.jl is a Julia port of the [Cubiomes](https://github.com/Cubitect/cubiomes) C library. It allows to imitate the structure and biome generation of Minecraft worlds very fast and efficiently. Compared to the original C library, `Cubiomes.jl` is faster and much easier to use thanks to Julia.
-
-Julia can be run in a script using `julia script.jl`, in the REPL by typing `julia` and then writing the code, in a jupyter notebook, in a pluto notebook, etc.
+Cubiomes.jl is a Julia port of the [Cubiomes](https://github.com/Cubitect/cubiomes) C library. It allows for fast and efficient imitation of Minecraft's world structure and biome generation. Compared to the original C library, `Cubiomes.jl` is both faster and significantly easier to use, thanks to Julia.
 
 ## Examples
 
@@ -20,7 +18,7 @@ function search_biome_at(x, z, y)
         biome = get_biome(overworld, x, z, y)
 
         if biome == Biomes.mushroom_fields
-            println("Seed $(signed(seed)) has a Mmushroom Fields at $((x, z, y))")
+            println("Seed $(signed(seed)) has a Mushroom Fields at $((x, z, y))")
             break
         end
     end

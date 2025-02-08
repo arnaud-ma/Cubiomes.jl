@@ -37,7 +37,7 @@ makedocs(;
     #     repo="https://github.com/arnaud-ma/Cubiomes.jl"
     # ),
     pages=[
-        "Home" => "index.md",
+        "Home" => "home.md",
         "Getting Started" => "gettingstarted.md",
         "Guide" => "literate_generated/guide.md",
         "API Reference" => [
