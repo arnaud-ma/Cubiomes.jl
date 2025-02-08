@@ -88,8 +88,7 @@ save_as_img!(worldmap, 42, "world.png")
 Some comments:
 
 - In Julia, constants global variables must be declared with `const` to avoid performance penalties.
-- The emoji `📏` is an optional argument used to represent the scale of the biomes. For example here, `📏"1:16"` means that one biome value in the map corresponds to a square of 16x16 blocks in the world, so we are in fact generating from -16000 to 16000 in each direction.
-- The emoji name is ":straight_ruler:". You can use `Scale(N)` instead of `📏"1:N"` if you don't like emojis.
+- The emoji `📏` is an optional argument used to represent the scale of the biomes. For example here, `📏"1:16"` means that one biome value in the map corresponds to a square of 16x16 blocks in the world, so we are in fact generating from -16000 to 16000 in each direction. The emoji name is ":straight_ruler:". You can use `Scale(N)` instead of `📏"1:N"` if you don't like emojis.
 - In many cases (here to save as an image), the map need to be in 2D. Here, even if the size of the `y` coordinate is 1, it is
   still considered as a 3D map. This is why we use the `view2d` function to have a 2D view of the world. ⚠ It is only a view, so if you modify the 2D map, it will also modify the 3D map.
 - Like the first example, the `!` at the end of function names indicates that the function modifies the object inplace. Here our function modifies in fact two objects: the `overworld1_18` object and the `worldmap` object.
