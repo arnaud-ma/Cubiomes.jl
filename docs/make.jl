@@ -7,10 +7,7 @@ makedocs(;
     sitename="Cubiomes.jl",
     modules=[Cubiomes],
     repo=Remotes.GitHub("arnaud-ma", "Cubiomes.jl"),
-    format=Documenter.HTML(;
-        canonical="https://arnaud-ma.github.io/Cubiomes.jl/stable/",
-        warn_outdated=true,
-    ),
+    format=Documenter.HTML(),
     # format=MarkdownVitepress(
     #     repo="https://github.com/arnaud-ma/Cubiomes.jl"
     # ),
