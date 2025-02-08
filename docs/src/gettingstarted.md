@@ -4,7 +4,7 @@ In this section we will provide a condensed overview of the package. In order to
 
 ## Installation
 
-To install [Cubiomes.jl](github.com/arnaud-ma/Cubiomes.jl), start up Julia and type the following code into the REPL:
+To install [Cubiomes.jl](https://github.com/arnaud-ma/Cubiomes.jl), start up Julia and type the following code into the REPL:
 
 ```julia-repl
 julia> ] add github.com/arnaud-ma/Cubiomes.jl

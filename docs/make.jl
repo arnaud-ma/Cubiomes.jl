@@ -1,6 +1,7 @@
 using Documenter
 using Cubiomes
-# using Documenter.Remotes
+# using DocumenterVitepress
+# try run(`pkill -f vitepress`) catch end
 
 makedocs(;
     sitename="Cubiomes.jl",
@@ -10,8 +11,13 @@ makedocs(;
         canonical="https://arnaud-ma.github.io/Cubiomes.jl/stable/",
         warn_outdated=true,
     ),
+    # format=MarkdownVitepress(
+    #     repo="https://github.com/arnaud-ma/Cubiomes.jl"
+    # ),
     pages=[
         "Home" => "index.md",
+        "Getting Started" => "gettingstarted.md",
+        "Guide" => "guide.md",
         "API Reference" => [
             "Biomes" => "api/Biomes.md",
             "BiomeGeneration" => "api/BiomeGeneration.md",
