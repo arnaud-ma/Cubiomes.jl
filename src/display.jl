@@ -1,3 +1,8 @@
+"""
+    Display
+
+Module for visualization of results
+"""
 module Display
 
 using Colors
@@ -10,6 +15,7 @@ export to_color
 # TODO using ColorTypes.jl instead of Colors.jl to not depend on Colors.jl only for this
 # think to remove Colors.jl from the dependencies after that
 const BIOME_COLORS = Dict(
+    b.BIOME_NONE => colorant"black",
     b.ocean => colorant"0x000070",
     b.plains => colorant"0x8db360",
     b.desert => colorant"0xfa9418",
@@ -108,6 +114,13 @@ const BIOME_COLORS = Dict(
     b.cherry_grove => colorant"0xff91c8",
 )
 
+"""
+    to_color(b::Biome)
+    to_color(w::WorldMap)
+
+Return a color / an array of colors corresponding to a biome. It should only be used for
+visualization, since two biomes can have the same color.
+"""
 to_color(x::b.Biome) = BIOME_COLORS[x]
 to_color(x::WorldMap) = to_color.(view2d(x))
 

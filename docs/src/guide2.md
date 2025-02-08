@@ -82,4 +82,19 @@ The `WorldMap` object is an alias for any 3D / 2D array (depending if `y` is pas
 
 Same as for the `Dimension` object, the "!" at the end of the function name indicates that the function modifies the world map inplace. So no need to create a new world map each time you want to generate the biomes where a parameter is different (except for the map size of course).
 
-## More about performance: scales
+## The Scale object
+
+In `get_biome` and `gen_biomes!`, there is a last optional argument: the `Scale` object. If the world is a 2d map,
+the world is divided into regions of scale×scale blocks, and the coordinates are the coordinates of this region NOT the coordinates of the block. For example, a scale of 4 corresponds to the chunk coordinates in Minecraft.
+
+A scale can be constructed with `📏"1:N"` or `Scale(N)` if you don't like emojis. the scale **MUST** be a power of 4. So the first ones are:
+
+- `📏"1:1"` the block scale
+- `📏"1:4"` the chunk scale
+- `📏"1:16"`, `📏"1:64"`, `📏"1:256"`, `📏"1:1024"`, ...
+
+In some versions / dimensions, it can be much faster than simply rescaling the coordinates before calling `get_biome` or `gen_biomes!`, because the original Minecraft biome generation divides the world into regions multiple times until the scale is 1.
+
+```julia-repl
+julia>
+```

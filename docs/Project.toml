@@ -1,3 +1,5 @@
 [deps]
 Cubiomes = "e720158a-9490-4262-afb0-b6410688564f"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+ImageShow = "4e3cecfd-b093-5904-9786-8bbb286a6a31"
+Literate = "98b081ad-f1c9-55d3-8b20-4c87d4299306"

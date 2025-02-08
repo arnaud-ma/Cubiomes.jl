@@ -1,6 +1,8 @@
 # Getting started
 
-In this section we will provide a condensed overview of the package. In order to keep this overview concise, we will not cover the possible options and parameters of the functions. But this overview should be enough for 90% of the use cases.
+If you are already familiar, with Julia, you can skip this section and go directly to the [guide](literate_generated/guide.md).
+
+To install Julia and know how to run a Julia code, refer to the [Getting started](https://docs.julialang.org/en/v1/manual/getting-started/) section of the Julia documentation.
 
 ## Installation
 

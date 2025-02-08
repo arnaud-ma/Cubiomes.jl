@@ -124,6 +124,8 @@ The concrete type `TheDim` *MUST* implement:
 """
 abstract type Dimension end
 
+Base.broadcastable(d::Dimension) = Ref(d)
+
 """
     set_seed!(dim::Dimension, seed; kwargs...)
 
