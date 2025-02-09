@@ -12,6 +12,7 @@
 # First of all, do not forget to import Cubiomes
 using Cubiomes
 using ImageShow # hide
+using DisplayAs # hide
 
 # ## Minecraft versions
 
@@ -92,6 +93,7 @@ worldmap = WorldMap(-200:200, -200:200, 63)
 # To visualize our map:
 
 to_color(worldmap)
+DisplayAs.PNG(to_color(worldmap)) # hide
 
 # !!! note
 #     If you see a bunch of numbers instead of an image, nothing is wrong.
@@ -100,19 +102,33 @@ to_color(worldmap)
 #     - Save the image using `FileIO`:
 #       `using FileIO; save("worldmap.png", to_color(worldmap))`
 
-# The map is currently empty. To populate it with biomes from our `overworld` object:
+# The map is currently empty. To populate it with biomes from our `overworld` object, we
+# would think about simply iterating over all coordinates and assigning the biome to each.
 
-for coord in coordinates(worldmap)
-    worldmap[coord] = get_biome(overworld, coord)
+function populate_map!(overworld, worldmap)
+    for coord in coordinates(worldmap)
+        worldmap[coord] = get_biome(overworld, coord)
+    end
 end
+populate_map!(overworld, worldmap)
 to_color(worldmap)
+DisplayAs.PNG(to_color(worldmap)) # hide
 
 # And it works! However, it is inefficient. Because of how Minecraft generation works,
-# we can optimize the process by leveraging a global world view. For certain dimensions/versions,
-# this can be significantly faster. That's what [`gen_biomes!`](@ref) is for.
+# we can optimize the process using algorthims that take advanatage of a global world view.
+# For certain dimensions/versions, this can be significantly faster. That's what
+# [`gen_biomes!`](@ref) is for.
 
 gen_biomes!(overworld, worldmap)
 to_color(worldmap)
+DisplayAs.PNG(to_color(worldmap)) # hide
+
+# Let's see the performance difference:
+
+# @b populate_map!(overworld, worldmap) # hide
+@time populate_map!(overworld, worldmap)
+#
+@time gen_biomes!(overworld, worldmap)
 
 # A world map acts like a standard array; the only difference is that its indices correspond to Minecraft coordinates.
 worldmap[-55, 45]
@@ -128,6 +144,7 @@ worldmap[-155, 45] # show_error
 worldmap2 = WorldMap(-50:50, -50:50, 16)
 gen_biomes!(overworld, worldmap2, 📏"1:4")
 to_color(worldmap2)
+DisplayAs.PNG(to_color(worldmap2)) # hide
 
 # The scale determines the size of square/cube regions where only one block from each region
 # is "sampled" and displayed as one pixel. A larger scale results in a more zoomed-out map.
