@@ -122,7 +122,12 @@ Return a color / an array of colors corresponding to a biome. It should only be 
 visualization, since two biomes can have the same color.
 """
 to_color(x::b.Biome) = BIOME_COLORS[x]
-to_color(x::WorldMap) = to_color.(view2d(x))
+function to_color(x::WorldMap)
+    if b.BIOME_NONE in x
+        @warn "The map is not fully populated, some biomes are missing"
+    end
+    to_color.(view2d(x))
+end
 
 # function Plots.plot(map::MCMap{2})#, widen_factor=0.05)
 #     colors = to_color.(map)
