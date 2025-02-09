@@ -125,7 +125,6 @@ DisplayAs.PNG(to_color(worldmap)) # hide
 
 # Let's see the performance difference:
 
-# @b populate_map!(overworld, worldmap) # hide
 @time populate_map!(overworld, worldmap)
 #
 @time gen_biomes!(overworld, worldmap)
