@@ -133,7 +133,7 @@ DisplayAs.PNG(to_color(worldmap)) # hide
 worldmap[-55, 45]
 
 #
-worldmap[-155, 45] # show_error
+worldmap[-255, 45] # show_error
 
 # ## The scale object
 
