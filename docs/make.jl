@@ -1,12 +1,14 @@
 using Documenter
 using Literate
 using Cubiomes
-# using DocumenterVitepress
-# try run(`pkill -f vitepress`) catch end
+using DocumenterVitepress
+try run(`pkill -f vitepress`) catch end
 
-const LITERATE_INPUT = joinpath(@__DIR__, "src/literate/")
-const LITERATE_OUTPUT = joinpath(@__DIR__, "src/literate_generated/")
-
+# const LITERATE_INPUT = joinpath(@__DIR__, "src/literate/")
+const LITERATE_FILES = [
+    "src/guide.jl",
+]
+const LITERATE_OUTPUTS = [replace(lit, ".jl" => ".md") for lit in LITERATE_FILES]
 function show_error(jl::String)
     return replace(
         jl,
@@ -19,27 +21,29 @@ function show_error(jl::String)
     )
 end
 
-for (root, dirs, files) in walkdir(LITERATE_INPUT), file in files
-    !endswith(file, ".jl") && continue   # ignore non .jl files
-    ifile = joinpath(root, file) # full path to the file
-    out = splitdir(replace(ifile, LITERATE_INPUT => LITERATE_OUTPUT))[1]  # output directory
-    Literate.markdown(ifile, out, preprocess=show_error)  # generate the markdown file
+for (jlfile, mdfile) in zip(LITERATE_FILES, LITERATE_OUTPUTS)
+    Literate.markdown(jlfile, dirname(mdfile), preprocess=show_error)  # generate the markdown file
 end
 
 makedocs(;
     sitename="Cubiomes.jl",
     modules=[Cubiomes],
     repo=Remotes.GitHub("arnaud-ma", "Cubiomes.jl"),
-    format=Documenter.HTML(
-        size_threshold=2_000_000,
-    ),
-    # format=MarkdownVitepress(
-    #     repo="https://github.com/arnaud-ma/Cubiomes.jl"
+    # format=Documenter.HTML(
+    #     size_threshold=2_000_000,
     # ),
+    format=MarkdownVitepress(
+        repo="https://github.com/arnaud-ma/Cubiomes.jl",
+        # md_output_path=".",
+        # build_vitepress=false,
+    ),
+    # clean=false,
     pages=[
-        "Home" => "index.md",
-        "Getting Started" => "gettingstarted.md",
-        "Guide" => "literate_generated/guide.md",
+        "Cubiomes.jl" => "index.md",
+        "Manual" => [
+            "Getting started" => "gettingstarted.md",
+            "Guide" => "guide.md",
+        ],
         "API Reference" => [
             "Biomes" => "api/Biomes.md",
             "BiomeGeneration" => "api/BiomeGeneration.md",
@@ -61,4 +65,4 @@ deploydocs(
 
 
 # using LiveServer
-# servedocs(literate_dir=LITERATE_INPUT, skip_dir=LITERATE_OUTPUT)
+# servedocs(literate_dir=, skip_fikes=LITERATE_OUTPUTS)

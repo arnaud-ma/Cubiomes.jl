@@ -1,19 +1,55 @@
-# Cubiomes.jl
+```@raw html
+---
+# https://vitepress.dev/reference/default-theme-home-page
 
-Cubiomes.jl is a Julia port of the [Cubiomes](https://github.com/Cubitect/cubiomes) C library. It allows for fast and efficient imitation of Minecraft's world structure and biome generation. Compared to the original C library, `Cubiomes.jl` is both faster and significantly easier to use, thanks to Julia.
+layout: home
+
+hero:
+  title: Cubiomes.jl Docs
+  text: Imitation of Minecraft's world generation in Julia.
+  tagline: Julia port of Cubiomes C library
+  image:
+    src: /assets/world.png
+    alt: world map
+  actions:
+    - theme: brand
+      text: Getting Started
+      link: /gettingstarted.md
+    - theme: alt
+      text: Guide 📖
+      link: /guide.md
+    - theme: alt
+      text: API Reference 📚
+      link: /api/
+features:
+  - icon: ⚡
+    title: Fast
+    details: Fully optimized for speed and efficiency. Multithreaded by default. Faster the the original Cubiomes C library, even in single-threaded mode.
+  - icon: 😋
+    title: Easy to Use
+    details: Simple and intuitive API. No need to worry about memory management or complex data structures. Elegant code thanks to Julia's high-level syntax.
+  - title: Modular
+    icon: 🧩
+    details: Designed to be modular and extensible. Easily add new features or modify existing ones.
+---
+```
+
+## New to Julia?
+
+Read the [Getting Started](gettingstarted.md) page to learn how to install Julia and Cubiomes.jl and run your first program.
 
 ## Examples
 
 Find a mushroom fields biome at a predefined location:
 
-```julia
+```@example language=julia
 using Cubiomes
 using Base.Iterators: countfrom
 
 function search_biome_at(x, z, y)
     overworld = Overworld(undef, mcv"1.18")
 
-    for seed in countfrom(zero(UInt64))
+    for seed in countfrom(0)
         set_seed!(overworld, seed)
         biome = get_biome(overworld, x, z, y)
 
@@ -47,5 +83,4 @@ end
 save_as_img!(worldmap, 42, "world.png")
 ```
 
-The image `world.png`:
 ![world.png](assets/world.png)

@@ -1,3 +1,6 @@
 build/
 site/
-src/literate_generated/
+src/guide.md
+node_modules/
+package-lock.json
+Manifest.toml

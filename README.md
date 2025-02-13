@@ -1,6 +1,6 @@
 # Cubiomes.jl
 
-<!--- [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://arnaud-ma.github.io/Cubiomes.jl/stable/) 
+<!--- [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://arnaud-ma.github.io/Cubiomes.jl/stable/)
 --->
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://arnaud-ma.github.io/Cubiomes.jl/dev/)
 [![Build Status](https://github.com/arnaud-ma/cubiomes.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/arnaud-ma/cubiomes.jl/actions/workflows/CI.yml?query=branch%3Amain)
@@ -121,12 +121,18 @@ Some comments:
 
 ### Performance
 
-- [ ] Threading for the biome generation
+- [ ] Threading for the biome generation. `Polyester.jl` with `@batch` macro would be a nice option. But
+there is [#24(Polyester)](https://github.com/JuliaSIMD/Polyester.jl/issues/24) that only enable threading for the outer loop, in our case it's the y coord that is very often.. only 1. I think the only option
+is to do everything by hand by following [this](https://discourse.julialang.org/t/how-can-i-arrange-to-only-use-threads-if-the-number-of-iteration-is-higher-than-minimum/68177/16)
 - [ ] GPU acceleration for the biome generation
 
 ### Infrastructure changes
 
 - [X] Make the Minecraft version types instead of enums and dispatch the functions instead of if checks.
+- [ ] Make a type `World(dimension, version)` similar to each dimension objects, with `set_seed!`, etc. But would act
+more like an immutable array of biomes, implementing `getindex` instead of the current `get_biome(dim, coord)`. For slices,
+it would return a array WorldMap. So the current `gen_biomes!` should still exist to allow inplace generation, with a buffer
+`WorldMap` to store the biomes.
 
 ## Contributing
 

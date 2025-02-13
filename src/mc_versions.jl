@@ -172,8 +172,8 @@ The syntax is:
     - `mcvt"1.0.0<=x<=1.8.9` -> expands to Union{...} on every version such that 1.0.0<=version<=1.8.9.
       The place holder `x` can be anything, can even be empty. The supported operations are **only** `<, <=`.
 
-# Example
-```
+# Examples
+```julia-repl
 julia> end_type(::mcvt"<1.0.0") = nothing
 end_type (generic function with 3 methods)
 
@@ -185,8 +185,10 @@ end_type (generic function with 3 methods)
 
 julia> end_type(mcv"1.13")
 :new
+```
 """
 macro mcvt_str(str)
     return _mcvt(str)
 end
+
 end # module

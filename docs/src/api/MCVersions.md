@@ -14,7 +14,7 @@ Modules = [Cubiomes.MCVersions]
 
 ```@autodocs
 Modules = [Cubiomes.MCVersions]
-Order =  [:constant, :type, :function, :macro]
+Order = [:constant, :type, :function, :macro]
 Private = false
 ```
 
@@ -22,6 +22,6 @@ Private = false
 
 ```@autodocs
 Modules = [Cubiomes.MCVersions]
-Order =  [:constant, :type, :function, :macro]
+Order = [:constant, :type, :function, :macro]
 Public = false
 ```

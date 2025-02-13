@@ -148,7 +148,7 @@ end
 Compute ``6x^5 - 15x^4 + 10x^3``, the smoothstep function used in Perlin noise. See
 https://en.wikipedia.org/wiki/Smoothstep#Variations for more details.
 
-This function is unsafe because it is assuming that 0 <= x <= 1 (it does not clamp the input).
+This function is unsafe because it is assuming that ``0 \\leq x \\leq 1`` (it does not clamp the input).
 """
 smoothstep_perlin_unsafe(x) = x^3 * muladd(x, muladd(6, x, -15), 10)
 
