@@ -5,9 +5,12 @@ using DocumenterVitepress
 try run(`pkill -f vitepress`) catch end
 
 # const LITERATE_INPUT = joinpath(@__DIR__, "src/literate/")
-const LITERATE_FILES = [
-    "src/guide.jl",
-]
+LITERATE_FILES = map(p -> joinpath(@__DIR__, p),
+    [
+        "src/guide.jl",
+    ]
+)
+
 const LITERATE_OUTPUTS = [replace(lit, ".jl" => ".md") for lit in LITERATE_FILES]
 function show_error(jl::String)
     return replace(
