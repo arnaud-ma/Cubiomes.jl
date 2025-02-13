@@ -11,7 +11,18 @@ LITERATE_FILES = map(p -> joinpath(@__DIR__, p),
     ]
 )
 
-const LITERATE_OUTPUTS = [replace(f, r"\.jl$" => ".md") for f in LITERATE_FILES]
+# const LITERATE_OUTPUTS = [replace(f, r"\.jl$" => ".md") for f in LITERATE_FILES]
+const LITERATE_OUTPUTS = map(LITERATE_FILES) do f
+    paths = splitpath(f)
+    last_ = last(paths)
+    if endswith(paths[end], ".jl")
+        paths[end] = paths[end][1:end-3] * ".md"
+    else
+        @warn "File extension is not .jl: $last_"
+    end
+    joinpath(paths...)
+end
+
 function show_error(jl::String)
     return replace(
         jl,
