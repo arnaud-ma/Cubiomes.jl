@@ -11,7 +11,7 @@ LITERATE_FILES = map(p -> joinpath(@__DIR__, p),
     ]
 )
 
-const LITERATE_OUTPUTS = [replace(lit, ".jl" => ".md") for lit in LITERATE_FILES]
+const LITERATE_OUTPUTS = [replace(f, r"\.jl$" => ".md") for f in LITERATE_FILES]
 function show_error(jl::String)
     return replace(
         jl,
