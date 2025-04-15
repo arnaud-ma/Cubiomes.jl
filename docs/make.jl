@@ -4,14 +4,12 @@ using Cubiomes
 using DocumenterVitepress
 try run(`pkill -f vitepress`) catch end
 
-# const LITERATE_INPUT = joinpath(@__DIR__, "src/literate/")
 LITERATE_FILES = map(p -> joinpath(@__DIR__, p),
     [
         "src/guide.jl",
     ]
 )
 
-# const LITERATE_OUTPUTS = [replace(f, r"\.jl$" => ".md") for f in LITERATE_FILES]
 const LITERATE_OUTPUTS = map(LITERATE_FILES) do f
     paths = splitpath(f)
     last_ = last(paths)
@@ -76,7 +74,3 @@ makedocs(;
 deploydocs(
     repo = "github.com/arnaud-ma/Cubiomes.jl.git",
 )
-
-
-# using LiveServer
-# servedocs(literate_dir=, skip_fikes=LITERATE_OUTPUTS)

@@ -46,30 +46,30 @@ struct Nether1_16Plus <: Nether
     temperature::DoublePerlin{2}
     humidity::DoublePerlin{2}
     sha::SomeSha
+    rng_temp::JavaRandom
 end
 
 function Nether(::UndefInitializer, ::mcvt">=1.16")
-    return Nether1_16Plus(DoublePerlin{2}(undef), DoublePerlin{2}(undef), SomeSha(nothing))
+    return Nether1_16Plus(
+        DoublePerlin{2}(undef),
+        DoublePerlin{2}(undef),
+        SomeSha(nothing),
+        JavaRandom(undef),
+    )
 end
 
-function set_seed!(nn::Nether1_16Plus, seed::UInt64, ::Val{true})
-    _set_temp_humid!(seed, nn.temperature, nn.humidity)
-    set_seed!(nn.sha, seed)
-    return nothing
-end
-function set_seed!(nn::Nether1_16Plus, seed::UInt64, ::Val{false})
-    _set_temp_humid!(seed, nn.temperature, nn.humidity)
-    reset!(nn.sha)
-    return nothing
-end
-set_seed!(nn::Nether1_16Plus, seed::UInt64) = set_seed!(nn, seed, Val(true))
-
-function _set_temp_humid!(seed, temperature, humidity)
-    rng_temp = JavaRandom(seed)
+function set_seed!(nn::Nether1_16Plus, seed::UInt64; sha=true)
+    set_seed🎲(nn.rng_temp, seed)
     set_rng!🎲(temperature, rng_temp, -7)
 
-    set_seed🎲(rng_temp, seed + 1)
+    set_seed🎲(nn.rng_temp, seed + 1)
     set_rng!🎲(humidity, rng_temp, -7)
+
+    if sha
+        set_seed!(nn.sha, seed)
+    else
+        reset!(nn.sha)
+    end
     return nothing
 end
 #endregion

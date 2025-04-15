@@ -28,30 +28,23 @@ gen_biomes!(::End1_9Minus, out::WorldMap) = fill!(out, the_end)
 struct End1_9Plus{V} <: End
     perlin::Perlin
     sha::SomeSha
+    rng_temp::JavaRandom
 end
 
 function End(::UndefInitializer, version::mcvt">=1.9")
-    return End1_9Plus{version}(Perlin(undef), SomeSha(nothing))
+    return End1_9Plus{version}(Perlin(undef), SomeSha(nothing), JavaRandom(undef))
 end
 
-function set_seed!(nn::End1_9Plus, seed::UInt64, ::Val{true})
-    _set_perlin_end!(seed, nn.perlin)
-    nn.sha[] = Utils.sha256_from_seed(seed)
-    return nothing
-end
-
-function set_seed!(nn::End1_9Plus, seed::UInt64, ::Val{false})
-    _set_perlin_end!(seed, nn.perlin)
-    nn.sha[] = nothing
-    return nothing
-end
-
-set_seed!(nn::End1_9Plus, seed::UInt64) = set_seed!(nn, seed, Val(true))
-
-function _set_perlin_end!(seed, perlin)
-    rng = JavaRandom(seed)
-    randjump🎲(rng, Int32, 17_292)
+function set_seed!(nn::End1_9Plus, seed::UInt64; sha=true)
+    set_seed🎲(nn.rng_temp, seed)
+    randjump🎲(nn.rng_temp, Int32, 17_292)
     set_rng!🎲(perlin, rng)
+
+    if sha
+        set_seed!(nn.sha, seed)
+    else
+        reset!(nn.sha)
+    end
     return nothing
 end
 

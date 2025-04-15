@@ -90,7 +90,7 @@ worldmap = WorldMap(-200:200, -200:200, 63)
 #   modifying one also modifies the other. Use `copy` to create an independent map.
 # - [`to_color`](@ref): creates a new map with colors representing biomes (e.g., green for forests).
 #
-# To visualize our map:
+# To visualize our map (completely empty at the moment):
 
 to_color(view2d(worldmap))
 DisplayAs.PNG(to_color(view2d(worldmap)))# hide
@@ -99,7 +99,7 @@ DisplayAs.PNG(to_color(view2d(worldmap)))# hide
 #     If you see a bunch of numbers instead of an image, nothing is wrong.
 #     The colors are just not displayed in your environment. You can either:
 #     - Use a Jupyter notebook
-#     - Save the image using `FileIO`:
+#     - Save the image using `FileIO` and `ImageIO`:
 #       `using FileIO; save("worldmap.png", to_color(worldmap))`
 
 # The map is currently empty. To populate it with biomes from our `overworld` object, we
@@ -114,8 +114,8 @@ populate_map!(overworld, worldmap)
 to_color(view2d(worldmap))
 DisplayAs.PNG(to_color(view2d(worldmap))) # hide
 
-# And it works! However, it is inefficient. Because of how Minecraft generation works,
-# we can optimize the process using algorthims that take advanatage of a global world view.
+# And it works! However, it could be inefficient. Because of how Minecraft generation works,
+# we can optimize the process using algorithms that take advantage of a global world view.
 # For certain dimensions/versions, this can be significantly faster. That's what
 # [`gen_biomes!`](@ref) is for.
 
@@ -148,8 +148,9 @@ DisplayAs.PNG(to_color(view2d(worldmap2))) # hide
 # The scale determines the size of square/cube regions where only one block from each region
 # is "sampled" and displayed as one pixel. A larger scale results in a more zoomed-out map.
 #
-# ⚠ When using a scale, **the indices no longer match Minecraft coordinates**.
-# Instead, for example, with scale 📏"1:4", they correspond to chunk coordinates.
+# !!! warning
+#     When using a scale, **the indices no longer match Minecraft coordinates**.
+#     Instead, for example, with scale 📏"1:4", they correspond to chunk coordinates.
 
 # The first scales are:
 # - `📏"1:1"` — Block scale

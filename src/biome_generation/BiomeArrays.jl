@@ -27,7 +27,10 @@ function WorldMap(range::Vararg{UnitRange, N}) where {N}
     return fill(BIOME_NONE, range...)
 end
 
-WorldMap(x, z, y::Number) = WorldMap(x, z, y:y)
+to_unit_range(coord::Number) = range(coord, coord)
+to_unit_range(coord::UnitRange) = coord
+
+WorldMap(x, z, y) = WorldMap(to_unit_range(x), to_unit_range(z), to_unit_range(y))
 WorldMap(; x, z, y) = WorldMap(x, z, y)
 
 """

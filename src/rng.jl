@@ -89,6 +89,8 @@ mutable struct JavaRandom <: AbstractJavaRNG
     JavaRandom(seed) = new(_new_seed(seed))
 end
 
+JavaRandom(::UndefInitializer) = JavaRandom(UInt64(0))
+
 function Base.copy!(dst::JavaRandom, src::JavaRandom)
     dst.seed = src.seed
     return dst
@@ -181,6 +183,10 @@ A pseudo-random number generator that mimics the behavior of Java's implementati
 mutable struct JavaXoroshiro128PlusPlus <: AbstractJavaRNG
     lo::UInt64
     hi::UInt64
+end
+
+function JavaXoroshiro128PlusPlus(::UndefInitializer)
+    JavaXoroshiro128PlusPlus(zero(UInt64), zero(UInt64))
 end
 
 function _get_lo_hi(seed::UInt64)

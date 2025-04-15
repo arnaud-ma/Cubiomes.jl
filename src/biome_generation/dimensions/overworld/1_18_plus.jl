@@ -1,5 +1,8 @@
-using StaticArrays: SVector
 using InteractiveUtils: subtypes
+using Base.Cartesian: @nexprs
+
+using StaticArrays: SVector
+using OhMyThreads: tforeach
 
 using ..Utils: Utils, @only_float32, md5_to_uint64, lerp
 using ..JavaRNG: JavaXoroshiro128PlusPlus, next🎲
@@ -99,6 +102,8 @@ Base.getindex(tc::TypeTupleClimate, np::Type{<:NoiseParameter}) = @inbounds tc[I
 struct BiomeNoise{V} <: Overworld
     climate::TypeTupleClimate
     sha::SomeSha
+    rng_temp1::JavaXoroshiro128PlusPlus
+    rng_temp2::JavaXoroshiro128PlusPlus
 end
 
 @inline function create_noise(noise_param::Type{<:NoiseParameter})
@@ -109,48 +114,48 @@ end
         Val(true), # tell the constructor it is already trimmed
     )
 end
+
 function BiomeNoise{V}(::UndefInitializer) where {V}
-    return BiomeNoise{V}(map(create_noise, NOISE_PARAMETERS), SomeSha(nothing))
+    return BiomeNoise{V}(
+        map(create_noise, NOISE_PARAMETERS),
+        SomeSha(nothing),
+        JavaXoroshiro128PlusPlus(undef),
+        JavaXoroshiro128PlusPlus(undef),
+    )
 end
 
-function set_seed!(noise::BiomeNoise, seed::UInt64; sha=Val(true), large=Val(false))
-    return _set_seed!(noise, seed, sha, large)
-end
-
-function _set_seed!(noise::BiomeNoise, seed, sha::Val{false}, large)
-    __set_seed!(noise::BiomeNoise, seed::UInt64, large)
-    reset!(noise.sha)
-    return nothing
-end
-
-function _set_seed!(noise::BiomeNoise, seed, sha::Val{true}, large)
-    __set_seed!(noise::BiomeNoise, seed::UInt64, large)
-    set_seed!(noise.sha, seed)
-    return nothing
-end
-
-function __set_seed!(noise::BiomeNoise, seed, large)
-    rng = JavaXoroshiro128PlusPlus(seed)
+# @eval needed for $(length(NOISE_PARAMETERS)) to be understand
+# as an integer by @nexprs instead of an expression
+@eval function set_seed!(noise::BiomeNoise, seed::UInt64; sha=true, large=false)
+    rng, param_rng = noise.rng_temp1, noise.rng_temp2
+    set_seed🎲(rng, seed)
     xlo = next🎲(rng, UInt64)
     xhi = next🎲(rng, UInt64)
 
-    for (clim, noise_param) in zip(noise.climate, NOISE_PARAMETERS)
-        set_seed!(clim, xlo, xhi, noise_param, large)
-    end
-    return nothing
-end
+    # Next line is the Julia syntax to unroll a "for i in 1:length(NOISE_PARAMETERS)"
+    # This is needed because otherwise the specific type of each clim and noise_param
+    # is not known at compile time and this is crucial to dispatch at compile time
+    # set_rng!🎲 and magic_xlo
+    @nexprs $(length(NOISE_PARAMETERS)) i -> begin
+        clim, noise_param = noise.climate[i], NOISE_PARAMETERS[i]
+        param_rng.lo = xlo ⊻ magic_xlo(noise_param, Val(large))
+        param_rng.hi = xhi ⊻ magic_xhi(noise_param, Val(large))
 
-function set_seed!(dp::DoublePerlin, xlo, xhi, noise_param, large=Val(false))
-    xlo ⊻= magic_xlo(noise_param, large)
-    xhi ⊻= magic_xhi(noise_param, large)
-    rng = JavaXoroshiro128PlusPlus(xlo, xhi)
-    set_rng!🎲(
-        dp,
-        rng,
-        trimmed_end_amplitudes(noise_param),
-        octave_min(noise_param, large),
-        length(amplitudes(noise_param)),
-    )
+        set_rng!🎲(
+            clim,
+            param_rng,
+            trimmed_end_amplitudes(noise_param),
+            octave_min(noise_param, Val(large)),
+            length(amplitudes(noise_param)),
+        )
+    end
+
+    if sha
+        set_seed!(noise.sha, seed)
+    else
+        reset!(noise.sha)
+    end
+
     return nothing
 end
 
@@ -599,9 +604,13 @@ function gen_biomes!(bn::BiomeNoise, map3D::WorldMap{3}, ::Scale{1}; kwargs...)
     if isone(length(coords))
         coord = first(coords)
         map3D[coord] = get_biome(bn, coord, Scale(4))
+        return nothing
     end
 
     # The minimal map where we are sure we can find the source coordinates at scale 4
+    # TODO: for some cases (e.g. length(coords) is small, or big for one axes and small
+    # for the others), biome_parents is too big and it is cheaper to simply do like above
+    # when length(coords) == 1.
     biome_parent_axes = voronoi_source(map3D)
     biome_parents = view_reshape_cache_like(biome_parent_axes)
     gen_biomes!(bn, biome_parents, Scale(4); kwargs...)
@@ -609,13 +618,21 @@ function gen_biomes!(bn::BiomeNoise, map3D::WorldMap{3}, ::Scale{1}; kwargs...)
     sha = bn.sha[]
     for coord in coords
         x, z, y = voronoi_access(sha, coord)
-        result = biome_parents[x, z, y]
+        result = biome_parents[x, z, y]  # ? use of @inbounds here ?
         @inbounds map3D[coord] = result
     end
 end
 
-function gen_biomes!(bn::BiomeNoise, map3D::WorldMap{3}, s::Scale{4}; kwargs...)
-    for coord in coordinates(map3D)
+
+# TODO: find a better api for the threading options
+function gen_biomes!(
+    bn::BiomeNoise,
+    map3D::WorldMap{3},
+    s::Scale{4};
+    threading_options=(;),
+    kwargs...,
+)
+    tforeach(coordinates(map3D); threading_options...) do coord
         map3D[coord] = get_biome(bn, coord, s; kwargs...)
     end
     return nothing
@@ -627,6 +644,9 @@ function gen_biomes!(
     scale = S >> 2
     mid = scale >> 1
     coord_mid = CartesianIndex(mid, mid, 0)
+    # TODO: mesure performance and know when multithreading is better than using the
+    # cache old_idx optimization. Use a Val flag to dispatch between this two modes if
+    # the two are relevant (imo old_idx could be an irrelevant optimization)
     old_idx = zero(UInt64)
     for coord in coordinates(map3D)
         coord_scale4 = coord * scale + coord_mid
