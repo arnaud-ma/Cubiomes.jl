@@ -415,67 +415,50 @@ end
 
 # Scale 1 -> rescaling scale 4 with voronoi noise
 function get_biome(
-    bn::BiomeNoise, coord::NTuple{3, Real}, ::Scale{1},
-    spline=SPLINE_STACK; skip_shift=Val(false), skip_depth=Val(false),
+    bn::BiomeNoise, coord::NTuple{3, Real}, ::Scale{1};
+    skip_shift=false, skip_depth=false, spline=SPLINE_STACK,
 )
     return get_biome(
-        bn,
-        voronoi_access(bn.sha[], coord),
-        Scale(4), spline;
-        skip_shift, skip_depth,
+        bn, voronoi_access(bn.sha[], coord), Scale(4);
+        skip_shift, skip_depth, spline,
     )
 end
 
 # Scale anything except 1 and 4 -> shift the coordinates to scale 4
 function get_biome(
-    bn::BiomeNoise, coord::NTuple{3, Real}, ::Scale{S},
-    spline=SPLINE_STACK; skip_shift=Val(true), skip_depth=Val(false),
+    bn::BiomeNoise, coord::NTuple{3, Real}, ::Scale{S};
+    skip_shift=false, skip_depth=false, spline=SPLINE_STACK,
 ) where {S}
     scale = S >> 2
     mid = scale >> 1
     coord_scale4 = coord .* scale .+ mid
     return get_biome(
-        bn, coord_scale4, Scale(4), spline;
-        skip_shift, skip_depth,
+        bn, coord_scale4, Scale(4);
+        skip_shift, skip_depth, spline,
     )
 end
 
 # Scale 4 (the main one)
 function get_biome(
-    bn::BiomeNoise, coord::NTuple{3, Real}, ::Scale{4},
-    spline=SPLINE_STACK; skip_shift=Val(false), skip_depth=Val(false), old_idx=nothing,
+    bn::BiomeNoise, coord::NTuple{3, Real}, ::Scale{4};
+    skip_shift=false, skip_depth=false, spline=SPLINE_STACK,
 )
-    return _get_biome(
-        bn, coord, Scale(4), spline, skip_shift, skip_depth, old_idx,
-    )
-end
-
-function _get_biome(
-    bn::BiomeNoise, coord, ::Scale{4}, spline, skip_shift, skip_depth, old_idx::Nothing,
-)
-    return Biome(get_biome_int(bn, coord, spline, skip_shift, skip_depth, old_idx))
-end
-
-function _get_biome(
-    bn::BiomeNoise, coord, ::Scale{4}, spline, skip_shift, skip_depth, old_idx,
-)
-    biome_int, old_idx = get_biome_int(bn, coord, spline, skip_shift, skip_depth, old_idx)
-    return Biome(biome_int), old_idx
+    result = get_biome_int(bn, coord; spline, skip_shift, skip_depth)
+    return Biome(result)
 end
 
 function get_biome_int(
-    bn::BiomeNoise{V}, coord, spline=SPLINE_STACK,
-    skip_shift=Val(false), skip_depth=Val(false), old_idx=nothing,
+    bn::BiomeNoise{V}, coord;
+    spline=SPLINE_STACK, skip_shift=false, skip_depth=false,
 ) where {V}
-    noiseparams = sample_biomenoises(bn, coord..., skip_shift, skip_depth, spline)
-    return climate_to_biome(noiseparams, V, old_idx)
+    noiseparams = sample_biomenoises(bn, coord...; skip_shift, skip_depth, spline)
+    return climate_to_biome(noiseparams, V)
 end
 
 function sample_biomenoises(
     bn::BiomeNoise,
-    x, z, y,
-    skip_shift=Val(false), skip_depth=Val(false),
-    spline=SPLINE_STACK,
+    x, z, y;
+    skip_shift=false, skip_depth=false, spline=SPLINE_STACK,
 )
     px, pz = sample_shift(bn, x, z, skip_shift)
     continentalness::Float32 = sample_noise(bn.climate[Continentalness], px, pz)
@@ -492,41 +475,29 @@ function sample_biomenoises(
     )
 end
 
-function sample_shift(bn::BiomeNoise, x, z, skip_shift::Val{false})
+function sample_shift(bn::BiomeNoise, x, z, skip_shift::Bool)
+    skip_shift && return x, z
     px = sample_noise(bn.climate[Shift], x, z) * 4.0
     pz = sample_noise(bn.climate[Shift], z, 0, x) * 4.0
     return x + px, z + pz
 end
-sample_shift(bn::BiomeNoise, x, z, skip_shift::Val{true}) = x, z
-sample_shift(bn, x, z, skip_shift::Bool) = sample_shift(bn, x, z, Val(skip_shift))
 
 @only_float32 eval_weirdness(x) = -3 * (abs(abs(x) - 2 / 3) - 1 / 3)
 
-@only_float32 function sample_depth(spline, c, e, w, y, skip_depth::Val{false})
+@only_float32 function sample_depth(spline, c, e, w, y, skip_depth::Bool)
+    skip_depth && return 0
     vals = (c, e, eval_weirdness(w), w)
     off = get_spline(spline, vals) + 0.015
     return 1 - (y * 4) / 128 - 83 / 160 + off
 end
-sample_depth(spline, c, e, w, y, skip_depth::Val{true}) = 0.0f0
-function sample_depth(spline, c, e, w, y, skip_depth::Bool)
-    sample_depth(spline, c, e, w, y, Val(skip_depth))
+
+function climate_to_biome(noise_parameters::NTuple{6}, version::mcvt">=1.18")
+    return climate_to_biome(noise_parameters, get_biome_tree(version))
 end
 
-function climate_to_biome(
-    noise_parameters::NTuple{6}, version::mcvt">=1.18", old_idx=nothing,
-)
-    return climate_to_biome(noise_parameters, get_biome_tree(version), old_idx)
-end
-
-climate_to_biome(np::NTuple{6}, bt::BiomeTree, ::Nothing) = climate_to_biome(np, bt)
 function climate_to_biome(noise_parameters::NTuple{6}, biome_tree::BiomeTree)
     idx = get_resulting_node(noise_parameters, biome_tree)
     return extract_biome_index(biome_tree, idx)
-end
-function climate_to_biome(noise_parameters::NTuple{6}, biome_tree::BiomeTree, old_idx)
-    dist = noise_params_distance(noise_parameters, biome_tree, old_idx)
-    idx = get_resulting_node(noise_parameters, biome_tree, old_idx, dist)
-    return extract_biome_index(biome_tree, idx), idx
 end
 
 extract_biome_index(biome_tree::BiomeTree, idx) = (biome_tree.nodes[idx + 1] >> 48) & 0xFF
@@ -606,7 +577,7 @@ function gen_biomes!(
     bn::BiomeNoise,
     map3D::WorldMap{3},
     ::Scale{1};
-    scheduler=StaticScheduler(minchunksize=Threads.nthreads()),
+    scheduler=StaticScheduler(; minchunksize=Threads.nthreads()),
     kwargs...,
 )
     tforeach(coordinates(map3D); scheduler) do coord
@@ -619,7 +590,7 @@ function gen_biomes!(
     bn::BiomeNoise,
     map3D::WorldMap{3},
     s::Scale{4};
-    scheduler=StaticScheduler(minchunksize=Threads.nthreads()),
+    scheduler=StaticScheduler(; minchunksize=Threads.nthreads()),
     kwargs...,
 )
     tforeach(coordinates(map3D); scheduler) do coord
@@ -628,21 +599,28 @@ function gen_biomes!(
     return nothing
 end
 
-@inline function gen_biomes!(
-    bn::BiomeNoise, map3D::WorldMap{3}, ::Scale{S}, skip_depth=Val(false),
+function gen_biomes!(
+    bn::BiomeNoise, map3D::WorldMap{3}, ::Scale{S};
+    scheduler=StaticScheduler(; minchunksize=Threads.nthreads()),
+    skip_depth=false, skip_shift=true,
 ) where {S}
+    # Since with scale higher than 4 accruacy is not needed, there is a possible
+    # optimization that involves caching an old_idx variable, that can be passed to the function
+    # and return the new one (in addition to the biome) to be used in the next call
+    # but it depends on the order of the coordinates iteration. The good order is not the one
+    # of coordinates(map3D) so loss of performance is expected
+    # (https://docs.julialang.org/en/v1/manual/performance-tips/#man-performance-column-major)
+    # furthermore it is obviously not thread safe, and it seems like with >=3 threads
+    # it is better to use multithreading than this cache optimization
+
     scale = S >> 2
     mid = scale >> 1
     coord_mid = CartesianIndex(mid, mid, 0)
-    # TODO: mesure performance and know when multithreading is better than using the
-    # cache old_idx optimization. Use a Val flag to dispatch between this two modes if
-    # the two are relevant (imo old_idx could be an irrelevant optimization)
-    old_idx = zero(UInt64)
-    for coord in coordinates(map3D)
-        coord_scale4 = coord * scale + coord_mid
-        map3D[coord], old_idx = get_biome(
-            bn, coord_scale4, Scale(4);
-            skip_depth, skip_shift=Val(true), old_idx,
+    tforeach(coordinates(map3D); scheduler) do coord
+        coord_scale4 = coord .* scale .+ coord_mid
+        map3D[coord] = get_biome(
+            bn, coord_scale4.I, Scale(4);
+            skip_depth, skip_shift,
         )
     end
 end
