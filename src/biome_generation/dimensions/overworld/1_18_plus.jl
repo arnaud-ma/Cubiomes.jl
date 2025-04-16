@@ -2,7 +2,7 @@ using InteractiveUtils: subtypes
 using Base.Cartesian: @nexprs
 
 using StaticArrays: SVector
-using OhMyThreads: tforeach
+using OhMyThreads: tforeach, StaticScheduler
 
 using ..Utils: Utils, @only_float32, md5_to_uint64, lerp
 using ..JavaRNG: JavaXoroshiro128PlusPlus, next🎲
@@ -413,6 +413,7 @@ end
 #                                 Biome Getter                                 #
 # ---------------------------------------------------------------------------- #
 
+# Scale 1 -> rescaling scale 4 with voronoi noise
 function get_biome(
     bn::BiomeNoise, coord::NTuple{3, Real}, ::Scale{1},
     spline=SPLINE_STACK; skip_shift=Val(false), skip_depth=Val(false),
@@ -425,6 +426,7 @@ function get_biome(
     )
 end
 
+# Scale anything except 1 and 4 -> shift the coordinates to scale 4
 function get_biome(
     bn::BiomeNoise, coord::NTuple{3, Real}, ::Scale{S},
     spline=SPLINE_STACK; skip_shift=Val(true), skip_depth=Val(false),
@@ -438,6 +440,7 @@ function get_biome(
     )
 end
 
+# Scale 4 (the main one)
 function get_biome(
     bn::BiomeNoise, coord::NTuple{3, Real}, ::Scale{4},
     spline=SPLINE_STACK; skip_shift=Val(false), skip_depth=Val(false), old_idx=nothing,
@@ -599,47 +602,34 @@ end
 #                               Biome Generation                               #
 # ---------------------------------------------------------------------------- #
 
-function gen_biomes!(bn::BiomeNoise, map3D::WorldMap{3}, ::Scale{1}; kwargs...)
-    coords = coordinates(map3D)
-    if isone(length(coords))
-        coord = first(coords)
-        map3D[coord] = get_biome(bn, coord, Scale(4))
-        return nothing
-    end
-
-    # The minimal map where we are sure we can find the source coordinates at scale 4
-    # TODO: for some cases (e.g. length(coords) is small, or big for one axes and small
-    # for the others), biome_parents is too big and it is cheaper to simply do like above
-    # when length(coords) == 1.
-    biome_parent_axes = voronoi_source(map3D)
-    biome_parents = view_reshape_cache_like(biome_parent_axes)
-    gen_biomes!(bn, biome_parents, Scale(4); kwargs...)
-
-    sha = bn.sha[]
-    for coord in coords
-        x, z, y = voronoi_access(sha, coord)
-        result = biome_parents[x, z, y]  # ? use of @inbounds here ?
-        @inbounds map3D[coord] = result
-    end
-end
-
-
-# TODO: find a better api for the threading options
 function gen_biomes!(
     bn::BiomeNoise,
     map3D::WorldMap{3},
-    s::Scale{4};
-    threading_options=(;),
+    ::Scale{1};
+    scheduler=StaticScheduler(minchunksize=Threads.nthreads()),
     kwargs...,
 )
-    tforeach(coordinates(map3D); threading_options...) do coord
-        map3D[coord] = get_biome(bn, coord, s; kwargs...)
+    tforeach(coordinates(map3D); scheduler) do coord
+        @inbounds map3D[coord] = get_biome(bn, coord, Scale(1); kwargs...)
     end
     return nothing
 end
 
 function gen_biomes!(
-    bn::BiomeNoise, map3D::WorldMap{3}, ::Scale{S}; skip_depth=Val(false),
+    bn::BiomeNoise,
+    map3D::WorldMap{3},
+    s::Scale{4};
+    scheduler=StaticScheduler(minchunksize=Threads.nthreads()),
+    kwargs...,
+)
+    tforeach(coordinates(map3D); scheduler) do coord
+        map3D[coord] = get_biome(bn, coord, s; kwargs...)
+    end
+    return nothing
+end
+
+@inline function gen_biomes!(
+    bn::BiomeNoise, map3D::WorldMap{3}, ::Scale{S}, skip_depth=Val(false),
 ) where {S}
     scale = S >> 2
     mid = scale >> 1

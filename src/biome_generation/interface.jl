@@ -226,7 +226,6 @@ Create a view of the cache with the same shape as the axes.
 !!! warning
     This function is not thread-safe and should not be used in a multithreaded context.
 
-This is a TODO: maybe use of @init from Floops.jl to create a thread-safe cache
 """
 function view_reshape_cache_like(axes, cache=CACHE_VECTOR_BIOMES)
     size_axes = length.(axes)
