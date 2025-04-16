@@ -173,3 +173,47 @@ end
 
 # TODO: sample_octave_beta17_biome
 # TODO: sample_octave_beta17_terrain
+
+
+# ---------------------------------------------------------------------------- #
+#                                     Show                                     #
+# ---------------------------------------------------------------------------- #
+
+function Base.show(io::IO, o::Octaves{N}) where {N}
+    is_undef(o) && return print(io, "Octaves{$N}(uninitialized)")
+
+    print(io, "Octaves{$N}(")
+    for (i, octave) in enumerate(o.octaves)
+        i > 1 && print(io, ", ")
+        amp = round(octave.amplitude; digits=2)
+        lac = round(octave.lacunarity; digits=2)
+        print(io, "a=$(amp),l=$(lac)")
+    end
+    print(io, ")")
+end
+
+function Base.show(io::IO, mime::MIME"text/plain", o::Octaves{N}) where {N}
+    if is_undef(o)
+        println(io, "Perlin Noise Octaves{$N} (uninitialized)")
+        return
+    end
+
+    println(io, "Perlin Noise Octaves{$N}:")
+
+    # Calculate the total amplitude (normalization factor)
+    total_amplitude = sum(octave.amplitude for octave in o.octaves)
+    println(io, "├ Total amplitude: $(round(total_amplitude; digits=4))")
+
+    # Show individual octaves
+    for (i, octave) in enumerate(o.octaves)
+        if i < length(o.octaves)
+            prefix = "├"
+        else
+            prefix = "└"
+        end
+        amp = round(octave.amplitude; digits=4)
+        lac = round(octave.lacunarity; digits=4)
+        weight = round(100 * octave.amplitude / total_amplitude; digits=1)
+        println(io, "$prefix Octave $i: amplitude=$(amp) ($(weight)%), lacunarity=$(lac)")
+    end
+end

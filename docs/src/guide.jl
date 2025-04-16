@@ -47,7 +47,9 @@ overworld = Overworld(undef, mcv"1.18")
 # We need to assign it a seed.
 
 set_seed!(overworld, 999)
-overworld
+
+# Just retype `overworld` to see the initialized object. Not shown here because it is
+# quite long.
 
 # The seed can be any valid Minecraft seed, i.e., a string or an integer. However, for
 # performance reasons, integers are preferred.
@@ -55,7 +57,9 @@ overworld
 # The "!" at the end of [`set_seed!`](@ref) follows Julia’s convention, indicating that the
 # function modifies the object (`overworld`) in place. This prevents the creation of a new
 # object each time a seed is set, allowing reuse of the same `overworld` instance.
-# The only constant requirement in a dimension is its version.
+# The only thing that cannot be changed is the version. Think of it like the game starting
+# with a specific version, and then you can load different worlds (seeds) in that version
+# as long as you want.
 
 # ## Biome generation
 
@@ -160,3 +164,5 @@ DisplayAs.PNG(to_color(view2d(worldmap2))) # hide
 # In some versions and dimensions, this approach is much faster than simply dividing the
 # coordinates by the scale, since Minecraft's biome generation algorithm inherently divides
 # the world into regions multiple times until reaching scale `📏"1:1"`.
+
+Threads.nthreads() # hide

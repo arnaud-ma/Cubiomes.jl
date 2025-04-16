@@ -265,7 +265,6 @@ function get_y_coord_values(noise, ::Missing)
     noise.const_y, noise.const_index_y, noise.const_smooth_y
 end
 
-
 function adjust_y(y, yamp, ymin)
     yclamp = min(ymin, y)
     y -= floor(yclamp / yamp) * yamp
@@ -385,3 +384,45 @@ function sample_simplex(noise::Perlin, x, y, z=0.0, scaling=70, d=0.5)
     return scaling * t
 end
 #endregion
+
+# ---------------------------------------------------------------------------- #
+#                                     Show                                     #
+# ---------------------------------------------------------------------------- #
+
+function Base.show(io::IO, p::Perlin)
+    is_undef(p) && return print(io, "Perlin(uninitialized)")
+
+    print(io, "Perlin(")
+    print(io, "x=", round(p.x; digits=2), ", ")
+    print(io, "y=", round(p.y; digits=2), ", ")
+    print(io, "z=", round(p.z; digits=2), ", ")
+    print(io, "const_y=", round(p.const_y; digits=2), ", ")
+    print(io, "const_index_y=", p.const_index_y, ", ")
+    print(io, "const_smooth_y=", round(p.const_smooth_y; digits=2), ", ")
+    print(io, "amplitude=", round(p.amplitude; digits=2), ", ")
+    print(io, "lacunarity=", round(p.lacunarity; digits=2), ", ")
+    print(io, "permutations=")
+    show(io, p.permutations)
+end
+
+function Base.show(io::IO, mime::MIME"text/plain", p::Perlin)
+    if is_undef(p)
+        println(io, "Perlin Noise (uninitialized)")
+        return
+    end
+    #! format: off
+    println(io, "Perlin Noise:")
+    println(io, "├ Coordinates: (x=$(round(p.x, digits=2)), y=$(round(p.y, digits=2)), z=$(round(p.z, digits=2)))")
+    println(io, "├ Amplitude: $(p.amplitude)")
+    println(io, "├ Lacunarity: $(p.lacunarity)")
+    println(io, "├ Constant Y: y=$(round(p.const_y, digits=4)), index=$(p.const_index_y), smooth=$(round(p.const_smooth_y, digits=4))")
+
+    # Show just the first few and last few permutation values
+    perms = p.permutations
+    if length(perms) > 8
+        perm_str = "[$(perms[0]), $(perms[1]), $(perms[2]), $(perms[3]), ..., $(perms[254]), $(perms[255]), $(perms[256])]"
+    else
+        perm_str = string(perms)
+    end
+    print(io, "└ Permutation table: $perm_str")
+end

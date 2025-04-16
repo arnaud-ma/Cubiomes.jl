@@ -60,10 +60,10 @@ end
 
 function set_seed!(nn::Nether1_16Plus, seed::UInt64; sha=true)
     set_seed🎲(nn.rng_temp, seed)
-    set_rng!🎲(temperature, rng_temp, -7)
+    set_rng!🎲(nn.temperature, nn.rng_temp, -7)
 
     set_seed🎲(nn.rng_temp, seed + 1)
-    set_rng!🎲(humidity, rng_temp, -7)
+    set_rng!🎲(nn.humidity, nn.rng_temp, -7)
 
     if sha
         set_seed!(nn.sha, seed)
@@ -272,3 +272,69 @@ function gen_biomes!(::Nether1_16Plus, ::WorldMap{2}, ::Scale{1}, confidence=1)
             a single y coordinate with `MCMap(x_coords, z_coords, y)`"
     throw(ArgumentError(msg))
 end
+#endregion
+#region show
+# ---------------------------------------------------------------------------- #
+#                                     Show                                     #
+# ---------------------------------------------------------------------------- #
+
+Base.show(io::IO, n::Nether1_16Minus) = print(io, "Nether(<1.16)")
+
+function Base.show(io::IO, mime::MIME"text/plain", n::Nether1_16Minus)
+    println(io, "Nether Dimension (<1.16):")
+    println(io, "└ Only contains nether_wastes biome")
+end
+
+function Base.show(io::IO, n::Nether1_16Plus)
+    is_initialized = !is_undef(n.temperature) && !is_undef(n.humidity)
+    if !is_initialized
+        print(io, "Nether(≥1.16, uninitialized)")
+        return
+    end
+
+    sha_status = isnothing(n.sha[]) ? "unset" : "set"
+    print(io, "Nether(≥1.16, SHA ", sha_status, ")")
+end
+
+function Base.show(io::IO, mime::MIME"text/plain", n::Nether1_16Plus)
+    if is_undef(n.temperature) || is_undef(n.humidity)
+        println(io, "Nether Dimension (≥1.16, uninitialized)")
+        return
+    end
+
+    println(io, "Nether Dimension (≥1.16):")
+
+    # Display SHA status
+    sha_status = isnothing(n.sha[]) ? "not set" : "set"
+    println(io, "├ SHA: ", sha_status)
+
+    # Display temperature noise
+    println(io, "├ Temperature noise:")
+    io_temp = IOBuffer()
+    show(IOContext(io_temp, :compact => true), mime, n.temperature)
+    temp_lines = split(String(take!(io_temp)), '\n')
+    for (i, line) in enumerate(temp_lines)
+        if i == 1
+            continue  # Skip the title line
+        elseif i < length(temp_lines)
+            println(io, "│ ", line)
+        else
+            println(io, "│ ", line)
+        end
+    end
+
+    # Display humidity noise
+    println(io, "└ Humidity noise:")
+    io_humid = IOBuffer()
+    show(IOContext(io_humid, :compact => true), mime, n.humidity)
+    humid_lines = split(String(take!(io_humid)), '\n')
+    for (i, line) in enumerate(humid_lines)
+        if i == 1
+            continue  # Skip the title line
+        else
+            println(io, "  ", line)
+        end
+    end
+end
+
+#endregion

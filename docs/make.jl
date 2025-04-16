@@ -46,10 +46,10 @@ makedocs(;
     # ),
     format=MarkdownVitepress(
         repo="https://github.com/arnaud-ma/Cubiomes.jl",
-        # md_output_path=".",
-        # build_vitepress=false,
+        md_output_path=".",
+        build_vitepress=false,
     ),
-    # clean=false,
+    clean=false,
     pages=[
         "Cubiomes.jl" => "index.md",
         "Manual" => [

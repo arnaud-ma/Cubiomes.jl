@@ -94,3 +94,54 @@ function sample_noise(noise::DoublePerlin, x::Real, z::Real, y=missing)
         sample_noise(noise.octave_B, x * f, z * f, y * f)
     return v * noise.amplitude
 end
+
+# ---------------------------------------------------------------------------- #
+#                                     Show                                     #
+# ---------------------------------------------------------------------------- #
+
+function Base.show(io::IO, dp::DoublePerlin{N}) where {N}
+    is_undef(dp) && return print(io, "DoublePerlin{$N}(uninitialized)")
+
+    print(io, "DoublePerlin{$N}(")
+    print(io, "amplitude=", round(dp.amplitude; digits=2))
+    print(io, ")")
+end
+
+function Base.show(io::IO, mime::MIME"text/plain", dp::DoublePerlin{N}) where {N}
+    if is_undef(dp)
+        println(io, "Double Perlin Noise{$N} (uninitialized)")
+        return
+    end
+
+    println(io, "Double Perlin Noise{$N}:")
+    println(io, "├ Global amplitude: $(round(dp.amplitude; digits=4))")
+    println(io, "├ Move factor: $(round(MOVE_FACTOR; digits=4))")
+
+    # Display first octave group
+    println(io, "├ Octave Group A:")
+    io_octave_a = IOBuffer()
+    show(IOContext(io_octave_a, :compact => true), mime, dp.octave_A)
+    octave_a_lines = split(String(take!(io_octave_a)), '\n')
+    for (i, line) in enumerate(octave_a_lines)
+        if i == 1
+            continue  # Skip the first line which is the title
+        elseif i == length(octave_a_lines)
+            println(io, "│ └$(line[3:end])")  # Replace the last prefix
+        else
+            println(io, "│ $(line)")
+        end
+    end
+
+    # Display second octave group
+    println(io, "└ Octave Group B:")
+    io_octave_b = IOBuffer()
+    show(IOContext(io_octave_b, :compact => true), mime, dp.octave_B)
+    octave_b_lines = split(String(take!(io_octave_b)), '\n')
+    for (i, line) in enumerate(octave_b_lines)
+        if i == 1
+            continue  # Skip the first line which is the title
+        else
+            println(io, "  $(line)")
+        end
+    end
+end
