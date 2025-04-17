@@ -48,7 +48,7 @@ search_biome_at(gen, 0, 0, 63)
 
 Generate a map of biomes and save it as an image:
 
-```@example language=julia
+```julia
 using Cubiomes
 using FileIO
 
