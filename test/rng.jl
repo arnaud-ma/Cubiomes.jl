@@ -1,45 +1,60 @@
-using Cubiomes: JavaRNG
-using Supposition: @check, @composed, Data
-using Test: @testset, @test_throws
-using JavaCall: @jimport, jcall, jlong, jint, jfloat, jdouble, JString
+@testsnippet TRNG begin
+    using Cubiomes.JavaRNG
+    using Supposition: @check, @composed, Data
 
-const java_random_factory = @jimport "java.util.random.RandomGeneratorFactory"
-const java_rng = @jimport "java.util.random.RandomGenerator"
+    using JavaCall: @jimport, jcall, jlong, jint, jfloat, jdouble, JString, JavaCall
 
-# need to use a macro instead of a higher-order function
-# because Supposition want the generator not to be nested
-macro rng_gen(algorithm::String, rng_jl_type, seed_gen)
-    quote
-        @composed function rng_gen(seed=$seed_gen)
-            rng_factory = jcall(
-                java_random_factory, "of", java_random_factory, (JString,), $algorithm,
-            )
-            rng = jcall(rng_factory, "create", java_rng, (jlong,), seed)
-            rng_jl = $rng_jl_type(seed)
-            return (java=rng, jl=rng_jl, seed=seed)
+    try
+        JavaCall.init()
+    catch e
+        if isa(e, JavaCall.JavaCallError)
+            @warn "JavaCall already initialized."
+        else
+            rethrow(e)
         end
     end
-end
 
-macro rng_gen_jl(algorithm::String, rng_jl_type, seed_gen)
-    quote
-        @composed rng_gen(seed=$seed_gen) = $rng_jl_type(seed)
+    const java_random_factory = @jimport "java.util.random.RandomGeneratorFactory"
+    const java_rng = @jimport "java.util.random.RandomGenerator"
+
+    # need to use a macro instead of a higher-order function
+    # because Supposition want the generator not to be nested
+    macro rng_gen(algorithm::String, rng_jl_type, seed_gen)
+        quote
+            @composed function rng_gen(seed=$seed_gen)
+                rng_factory = jcall(
+                    java_random_factory, "of", java_random_factory, (JString,),
+                    $algorithm,
+                )
+                rng = jcall(rng_factory, "create", java_rng, (jlong,), seed)
+                rng_jl = $rng_jl_type(seed)
+                return (java=rng, jl=rng_jl, seed=seed)
+            end
+        end
+    end
+
+    macro rng_gen_jl(algorithm::String, rng_jl_type, seed_gen)
+        quote
+            @composed rng_gen(seed=$seed_gen) = $rng_jl_type(seed)
+        end
+    end
+
+    start_stop_int32_gen = @composed function ordered_int32(
+        x=Data.Pairs(Data.Integers{Int32}(), Data.Integers{Int32}())
+    )
+        sort(abs.([x...]))
     end
 end
 
-start_stop_int32_gen = @composed function ordered_int32(
-    x=Data.Pairs(Data.Integers{Int32}(), Data.Integers{Int32}())
-)
-    sort(abs.([x...]))
-end
 
-@testset "Interface" begin
+
+@testitem "Interface" setup=[TRNG] begin
     struct TestRNG <: JavaRNG.AbstractJavaRNG end
     @test_throws MethodError JavaRNG.next🎲(TestRNG(), Int32)
     @test_throws MethodError JavaRNG.randjump🎲(TestRNG(), Int32, 1)
 end
 
-@testset "Random" begin
+@testitem "Random" setup=[TRNG] begin
     rng_gen = @rng_gen("Random", JavaRNG.JavaRandom, Data.Integers{Int64}())
 
     @check function set_seed(seed=Data.Integers{Int64}())
@@ -79,7 +94,7 @@ end
     end
 end
 
-@testset "Xoroshiro128PlusPlus" begin
+@testitem "Xoroshiro128PlusPlus" setup=[TRNG] begin
     rng_gen = @rng_gen(
         "Xoroshiro128PlusPlus",
         JavaRNG.JavaXoroshiro128PlusPlus,

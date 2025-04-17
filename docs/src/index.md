@@ -1,38 +1,23 @@
-```@raw html
----
-# https://vitepress.dev/reference/default-theme-home-page
+# Cubiomes.jl Docs
 
-layout: home
+**Imitation of Minecraft's world generation in Julia.**
 
-hero:
-  title: Cubiomes.jl Docs
-  text: Imitation of Minecraft's world generation in Julia.
-  tagline: Julia port of Cubiomes C library
-  image:
-    src: /assets/world.png
-    alt: world map
-  actions:
-    - theme: brand
-      text: Getting Started
-      link: /gettingstarted.md
-    - theme: alt
-      text: Guide 📖
-      link: /guide.md
-    - theme: alt
-      text: API Reference 📚
-      link: /api/
-features:
-  - icon: ⚡
-    title: Fast
-    details: Fully optimized for speed and efficiency. Multithreaded by default. Faster the the original Cubiomes C library, even in single-threaded mode.
-  - icon: 😋
-    title: Easy to Use
-    details: Simple and intuitive API. No need to worry about memory management or complex data structures. Elegant code thanks to Julia's high-level syntax.
-  - title: Modular
-    icon: 🧩
-    details: Designed to be modular and extensible. Easily add new features or modify existing ones.
----
-```
+*Julia port of Cubiomes C library*
+
+Cubiomes.jl provides a powerful and efficient implementation of Minecraft's world generation algorithms in the Julia programming language. Built as a port of the popular Cubiomes C library, this package offers superior performance while maintaining an elegant and approachable API.
+
+## Audience
+
+You should be familiar with programming. That's all. If you are not familiar with Julia, the syntax is quite easy (similar to Python in some ways). You can learn it by working with this package. Look at the [Examples](#examples) or [Getting Started](gettingstarted.md) pages to see how to use it.
+
+There are already a lot of tools for Minecraft seed generation. Maybe Cubiomes.jl is not the best choice.
+The goal of this package is to provide more than just a tool to generate Minecraft worlds, with a focus on performance. So it involves writing code, but an easy code thanks to Julia's high-level syntax. An example would be doing some statistics, or very specific seed searches.
+
+## Quick Links
+
+- [**Getting Started**](gettingstarted.md)
+- [**Guide 📖**](guide.md)
+- [**API Reference 📚**](api/main.md)
 
 ## New to Julia?
 
@@ -63,7 +48,7 @@ search_biome_at(gen, 0, 0, 63)
 
 Generate a map of biomes and save it as an image:
 
-```julia
+```@example language=julia
 using Cubiomes
 using FileIO
 

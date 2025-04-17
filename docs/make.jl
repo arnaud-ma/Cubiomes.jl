@@ -1,8 +1,6 @@
 using Documenter
 using Literate
 using Cubiomes
-using DocumenterVitepress
-try run(`pkill -f vitepress`) catch end
 
 LITERATE_FILES = map(p -> joinpath(@__DIR__, p),
     [
@@ -34,22 +32,22 @@ function show_error(jl::String)
 end
 
 for (jlfile, mdfile) in zip(LITERATE_FILES, LITERATE_OUTPUTS)
-    Literate.markdown(jlfile, dirname(mdfile), preprocess=show_error)  # generate the markdown file
+    Literate.markdown(jlfile, dirname(mdfile), preprocess=show_error, documenter=true)  # generate the markdown file
 end
 
 makedocs(;
     sitename="Cubiomes.jl",
     modules=[Cubiomes],
     repo=Remotes.GitHub("arnaud-ma", "Cubiomes.jl"),
-    # format=Documenter.HTML(
-    #     size_threshold=2_000_000,
-    # ),
-    format=MarkdownVitepress(
-        repo="https://github.com/arnaud-ma/Cubiomes.jl",
-        # md_output_path=".",
-        # build_vitepress=false,
+    format=Documenter.HTML(
+        size_threshold=2_000_000,
     ),
-    # clean=false,
+    # format=MarkdownVitepress(
+    #     repo="https://github.com/arnaud-ma/Cubiomes.jl",
+    #     # md_output_path=".",
+    #     # build_vitepress=false,
+    # ),
+    # # clean=false,
     pages=[
         "Cubiomes.jl" => "index.md",
         "Manual" => [

@@ -112,15 +112,18 @@ See also:
 
 # Extended help
 
-This section is for developers that want to implement a new dimension.
+!!! details "Extended help"
 
-The concrete type `TheDim` *MUST* implement:
-  - An uninitialized constructor `TheDim(::UndefInitializer, ::MCVersion, args...)`
-  - An inplace constructor `set_seed!(dim::TheDim, seed::UInt64, args...)`.
-    Be aware that the seed must be constrained to `UInt64` dispatch to work.
-  - get_biome(dim::TheDim, coord, scale::Scale, args...) -> Biome where
-    `coord` can be either (x::Real, z::Real, y::Real) or NTuple{3}
-  - gen_biomes!(dim::TheDim, out::WorldMap, scale::Scale, args...)
+    This section is for developers that want to implement a new dimension.
+
+    The concrete type `TheDim` *MUST* implement:
+    - An uninitialized constructor `TheDim(::UndefInitializer, ::MCVersion, args...)`
+    - An inplace constructor `set_seed!(dim::TheDim, seed::UInt64, args...)`.
+        Be aware that the seed must be constrained to `UInt64` dispatch to work.
+    - get_biome(dim::TheDim, coord, scale::Scale, args...) -> Biome where
+        `coord` can be either (x::Real, z::Real, y::Real) or NTuple{3}
+    - gen_biomes!(dim::TheDim, out::WorldMap, scale::Scale, args...)
+
 """
 abstract type Dimension end
 

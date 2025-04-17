@@ -13,13 +13,13 @@
 using Cubiomes.Noises
 using Cubiomes.JavaRNG: JavaRandom, JavaXoroshiro128PlusPlus
 
-using Test: @test, @testset, @test_throws
+using Test: @test, @test_throws
 using Test: Test
 include("data.jl")
 
 const atol_f64 = 1e-15
 
-@testset "Perlin" begin
+@testitem "Perlin" begin
     function test_perlin_creation(perlin_test, rng)
         rng2 = copy(rng)
         perlin = Noise🎲(Perlin, rng)
@@ -35,25 +35,25 @@ const atol_f64 = 1e-15
         @test sample_noise(noise, args...) ≈ result atol = atol_f64
     end
 
-    @testset "is_undef" begin
+    @testitem "is_undef" begin
         @test is_undef(Noise(Perlin, undef))
         @test !is_undef(Noise🎲(Perlin, JavaRandom(42)))
     end
 
-    @testset "creation with JavaRandom rng" begin
+    @testitem "creation with JavaRandom rng" begin
         for (seed, perlin_test) in PERLIN_JAVA_RANDOM
             rng = JavaRandom(seed)
             test_perlin_creation(perlin_test, rng)
         end
     end
-    @testset "creation with JavaXoroshiro rng" begin
+    @testitem "creation with JavaXoroshiro rng" begin
         for (seed, perlin_test) in PERLIN_XOROSHIRO
             rng = JavaXoroshiro128PlusPlus(seed)
             test_perlin_creation(perlin_test, rng)
         end
     end
 
-    @testset "sample noise with JavaRandom rng" begin
+    @testitem "sample noise with JavaRandom rng" begin
 
         # only x, z, y
         test_perlin_sample(
@@ -91,7 +91,7 @@ const atol_f64 = 1e-15
         )
     end
 
-    @testset "sample noise with JavaXoroshiro rng" begin
+    @testitem "sample noise with JavaXoroshiro rng" begin
 
         # only x, z, y
         test_perlin_sample(
@@ -115,7 +115,7 @@ const atol_f64 = 1e-15
         )
     end
 
-    @testset "sample simplex" begin
+    @testitem "sample simplex" begin
         seed = 0xad47b40a1754efa5
         noise = Noise🎲(Perlin, JavaRandom(seed))
         @test sample_simplex(noise, -17177.694758836762, 59022.880344655736) ≈
@@ -123,14 +123,14 @@ const atol_f64 = 1e-15
     end
 end
 
-@testset "Octaves" begin
+@testitem "Octaves" begin
     @test_throws "at least one octave" Noise(Octaves{-6}, undef)
     @test_throws "at least one octave" Noise(Octaves{0}, undef)
     @test_throws "octave_min ≤ 1 - N" Noise🎲(Octaves{6}, JavaRandom(42), -2)
     @test_throws BoundsError Noise🎲(
         Octaves{1}, JavaXoroshiro128PlusPlus(42), (1,), 1)
 
-    @testset "is_undef" begin
+    @testitem "is_undef" begin
         @test is_undef(Noise(Octaves{6}, undef))
         @test !is_undef(Noise🎲(Octaves{6}, JavaRandom(42), -6))
     end
@@ -143,14 +143,14 @@ end
         @test noise == octaves_test
         @test noise == noise2
     end
-    @testset "creation with JavaRandom rng" begin
+    @testitem "creation with JavaRandom rng" begin
         for (params, octaves_test) in OCTAVES_JAVA_RANDOM
             rng = JavaRandom(params.seed)
             test_octaves_creations(octaves_test, params.nb, rng, params.octave_min)
         end
     end
 
-    @testset "creation with Xoroshiro rng" begin
+    @testitem "creation with Xoroshiro rng" begin
         for (params, octave_test) in OCTAVES_XOROSHIRO
             rng = JavaXoroshiro128PlusPlus(params.seed)
             test_octaves_creations(
@@ -158,7 +158,7 @@ end
         end
     end
 
-    @testset "sample noise with JavaRandom rng" begin
+    @testitem "sample noise with JavaRandom rng" begin
         function test_octaves_java_sample(nb, omin, args...; result, seed)
             noise = Noise🎲(Octaves{nb}, JavaRandom(seed), omin)
             t = @test sample_noise(noise, args...) ≈ result atol = atol_f64
@@ -202,7 +202,7 @@ end
         )
     end
 
-    @testset "sample noise with Xoroshiro rng" begin
+    @testitem "sample noise with Xoroshiro rng" begin
         function test_octaves_xoroshiro_sample(nb, omin, amp, args...; result, seed)
             rng = JavaXoroshiro128PlusPlus(seed)
             noise = Noise🎲(Octaves{nb}, rng, amp, omin)
@@ -219,7 +219,7 @@ end
 
         test_octaves_xoroshiro_sample(
             2, -3,
-            (0., 3.6085191731282653, 0., 6.120582507763649),
+            (0.0, 3.6085191731282653, 0.0, 6.120582507763649),
             905.788158662778, -54162.592229314774, 16.88841898837666, ;
             result=-0.3637842988331072,
             seed=0x6905976105f4f341,
@@ -227,7 +227,7 @@ end
 
         test_octaves_xoroshiro_sample(
             2, -6,
-            (0., 3.6085191731282653, 0., 0., 6.120582507763649),
+            (0.0, 3.6085191731282653, 0.0, 0.0, 6.120582507763649),
             905.788158662778, -54162.592229314774, 16.88841898837666, ;
             result=-0.0047320120208560745,
             seed=0x62342335dd25f7ed,
@@ -235,7 +235,7 @@ end
     end
 end
 
-@testset "Double perlin" begin
+@testitem "Double perlin" begin
     function test_double_creation(double_test, nb, rng, omin)
         rng2 = copy(rng)
         noise = Noise🎲(DoublePerlin{nb}, rng, omin)
@@ -254,14 +254,14 @@ end
         @test noise == noise2
     end
 
-    @testset "creation with JavaRandom rng" begin
+    @testitem "creation with JavaRandom rng" begin
         for (params, double_test) in DOUBLE_PERLIN_JAVA_RANDOM
             rng = JavaRandom(params.seed)
             test_double_creation(double_test, params.nb, rng, params.octave_min)
         end
     end
 
-    @testset "creation with Xoroshiro rng" begin
+    @testitem "creation with Xoroshiro rng" begin
         for (params, double_test) in DOUBLE_PERLIN_XOROSHIRO
             rng = JavaXoroshiro128PlusPlus(params.seed)
             test_double_creation_xoroshiro(
@@ -269,7 +269,7 @@ end
         end
     end
 
-    @testset "sample noise with JavaRandom" begin
+    @testitem "sample noise with JavaRandom" begin
         function test_double_perlin_java_sample(nb, omin, args...; result, seed)
             noise = Noise🎲(DoublePerlin{nb}, JavaRandom(seed), omin)
             @test sample_noise(noise, args...) ≈ result atol = atol_f64
@@ -290,7 +290,7 @@ end
         )
     end
 
-    @testset "sample noise with Xoroshiro" begin
+    @testitem "sample noise with Xoroshiro" begin
         function test_double_perlin_xoroshiro_sample(nb, omin, amp, args...; result, rng)
             noise = Noise🎲(DoublePerlin{nb}, rng, amp, omin)
             @test sample_noise(noise, args...) ≈ result atol = atol_f64
