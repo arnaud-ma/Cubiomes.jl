@@ -27,7 +27,7 @@ julia> bytes2uint64([0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A,
 """
 function bytes2uint64(itr)
     hex = bytes2hex(itr)
-    return (parse(UInt64, x; base=16) for x in Iterators.partition(hex, 16))
+    return (parse(UInt64, x; base = 16) for x in Iterators.partition(hex, 16))
 end
 
 md5_to_uint64 = bytes2uint64 ∘ md5
@@ -233,7 +233,7 @@ end
 function trim_end(predicate, x)
     first, last = firstindex(x), lastindex(x)
     while predicate(x[last])
-        last -=1
+        last -= 1
         if last < first
             return x
         end
@@ -294,5 +294,3 @@ end
 # ---------------------------------------------------------------------------- #
 
 end # module
-
-

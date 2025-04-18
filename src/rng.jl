@@ -1,4 +1,3 @@
-
 """
 A module that mimics the behavior of Java's random number generators in Julia. Only
 the functionalities needed by the Minecraft Java Edition are implemented.
@@ -61,8 +60,8 @@ end
 #                         Implementation of Java Random                        #
 # ---------------------------------------------------------------------------- #
 
-const MAGIC_JAVA_INT32::UInt64 = 0x5DEECE66D
-const MAGIC_JAVA_ADDEND::UInt64 = 0xB
+const MAGIC_JAVA_INT32::UInt64 = 0x00000005DEECE66D
+const MAGIC_JAVA_ADDEND::UInt64 = 0x0B
 
 _new_seed(seed::UInt64) = (seed ⊻ MAGIC_JAVA_INT32) & ((1 << 48) - 1)
 _new_seed(seed) = _new_seed(u64_seed(seed))
@@ -186,7 +185,7 @@ mutable struct JavaXoroshiro128PlusPlus <: AbstractJavaRNG
 end
 
 function JavaXoroshiro128PlusPlus(::UndefInitializer)
-    JavaXoroshiro128PlusPlus(zero(UInt64), zero(UInt64))
+    return JavaXoroshiro128PlusPlus(zero(UInt64), zero(UInt64))
 end
 
 function _get_lo_hi(seed::UInt64)
@@ -222,7 +221,7 @@ function Base.copy!(dst::JavaXoroshiro128PlusPlus, src::JavaXoroshiro128PlusPlus
     return dst
 end
 function Base.:(==)(a::JavaXoroshiro128PlusPlus, b::JavaXoroshiro128PlusPlus)
-    (a.lo == b.lo) && (a.hi == b.hi)
+    return (a.lo == b.lo) && (a.hi == b.hi)
 end
 
 # nextLong method
@@ -262,10 +261,10 @@ function next🎲(rng::JavaXoroshiro128PlusPlus, ::Type{Int32}, stop::Integer)::
 end
 
 function randjump🎲(
-    rng::JavaXoroshiro128PlusPlus,
-    ::Type{<:Union{UInt64, Int64}},
-    n::Integer,
-)
+        rng::JavaXoroshiro128PlusPlus,
+        ::Type{<:Union{UInt64, Int64}},
+        n::Integer,
+    )
     i = zero(n)
     while i < n
         next🎲(rng, UInt64)

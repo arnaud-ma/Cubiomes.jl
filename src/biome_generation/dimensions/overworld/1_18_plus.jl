@@ -51,7 +51,7 @@ function create_noise_param(noise_param, amp, oct, id_str, oct_large)
     xlo_large, xh_large = md5_to_uint64(id_str_large)
 
     T = Type{noise_param}
-    @eval begin
+    return @eval begin
         amplitudes(::$T) = $amp
         octave_min(::$T, ::Val{false}) = $oct
         octave_min(::$T, ::Val{true}) = $oct_large
@@ -64,7 +64,7 @@ function create_noise_param(noise_param, amp, oct, id_str, oct_large)
         magic_xhi(::$T, ::Val{true}) = $xh_large
 
         function create_octaves(::$T, ::Val{N}) where {N}
-            ntuple(i -> Octaves{$nb_octaves_}(undef), Val(N))
+            return ntuple(i -> Octaves{$nb_octaves_}(undef), Val(N))
         end
     end
 end
@@ -126,7 +126,7 @@ end
 
 # @eval needed for $(length(NOISE_PARAMETERS)) to be understand
 # as an integer by @nexprs instead of an expression
-@eval function set_seed!(noise::BiomeNoise, seed::UInt64; sha=true, large=false)
+@eval function set_seed!(noise::BiomeNoise, seed::UInt64; sha = true, large = false)
     rng, param_rng = noise.rng_temp1, noise.rng_temp2
     set_seed🎲(rng, seed)
     xlo = next🎲(rng, UInt64)
@@ -184,9 +184,9 @@ Base.trunc(::Type{SplineType}, x) = SplineType(trunc(Int, x))
 # never be able to infer N.
 struct Spline
     spline_type::SplineType
-    locations::Vector{Float32}#::NTuple{N, Float32}
-    derivatives::Vector{Float32}#::NTuple{N, Float32}
-    child_splines::Vector{Spline}#::NTuple{N, Spline}
+    locations::Vector{Float32} #::NTuple{N, Float32}
+    derivatives::Vector{Float32} #::NTuple{N, Float32}
+    child_splines::Vector{Spline} #::NTuple{N, Spline}
     fix_value::Float32
 end
 
@@ -257,8 +257,8 @@ end
 end
 
 @only_float32 function spline_38219(
-    spline_type, slope, offset_pos1, offset_neg1, ::Val{true},
-)
+        spline_type, slope, offset_pos1, offset_neg1, ::Val{true},
+    )
     return Spline(
         spline_type,
         (-1, 0, 1),
@@ -268,8 +268,8 @@ end
 end
 
 @only_float32 function spline_38219(
-    spline_type, slope, offset_pos1, offset_neg1, ::Val{false},
-)
+        spline_type, slope, offset_pos1, offset_neg1, ::Val{false},
+    )
     return Spline(
         spline_type,
         (-1, 1),
@@ -342,11 +342,11 @@ end
 
 @only_float32 function world_spline()
     spline1 = land_spline(-0.15, 0, 0, 0.1, 0, -0.03, Val(false))
-    spline2 = land_spline(-0.10, 0.03, 0.1, 0.1, 0.01, -0.03, Val(false))
-    spline3 = land_spline(-0.10, 0.03, 0.1, 0.7, 0.01, -0.03, Val(true))
+    spline2 = land_spline(-0.1, 0.03, 0.1, 0.1, 0.01, -0.03, Val(false))
+    spline3 = land_spline(-0.1, 0.03, 0.1, 0.7, 0.01, -0.03, Val(true))
     spline4 = land_spline(-0.05, 0.03, 0.1, 1.0, 0.01, 0.01, Val(true))
 
-    locations = (-1.10, -1.02, -0.51, -0.44, -0.18, -0.16, -0.15, -0.10, 0.25, 1.00)
+    locations = (-1.1, -1.02, -0.51, -0.44, -0.18, -0.16, -0.15, -0.1, 0.25, 1.0)
     child_splines = (
         fixspline(0.044),
         fixspline(-0.2222),
@@ -415,9 +415,9 @@ end
 
 # Scale 1 -> rescaling scale 4 with voronoi noise
 function get_biome(
-    bn::BiomeNoise, coord::NTuple{3, Real}, ::Scale{1};
-    skip_shift=false, skip_depth=false, spline=SPLINE_STACK,
-)
+        bn::BiomeNoise, coord::NTuple{3, Real}, ::Scale{1};
+        skip_shift = false, skip_depth = false, spline = SPLINE_STACK,
+    )
     return get_biome(
         bn, voronoi_access(bn.sha[], coord), Scale(4);
         skip_shift, skip_depth, spline,
@@ -426,9 +426,9 @@ end
 
 # Scale anything except 1 and 4 -> shift the coordinates to scale 4
 function get_biome(
-    bn::BiomeNoise, coord::NTuple{3, Real}, ::Scale{S};
-    skip_shift=false, skip_depth=false, spline=SPLINE_STACK,
-) where {S}
+        bn::BiomeNoise, coord::NTuple{3, Real}, ::Scale{S};
+        skip_shift = false, skip_depth = false, spline = SPLINE_STACK,
+    ) where {S}
     scale = S >> 2
     mid = scale >> 1
     coord_scale4 = coord .* scale .+ mid
@@ -440,26 +440,26 @@ end
 
 # Scale 4 (the main one)
 function get_biome(
-    bn::BiomeNoise, coord::NTuple{3, Real}, ::Scale{4};
-    skip_shift=false, skip_depth=false, spline=SPLINE_STACK,
-)
+        bn::BiomeNoise, coord::NTuple{3, Real}, ::Scale{4};
+        skip_shift = false, skip_depth = false, spline = SPLINE_STACK,
+    )
     result = get_biome_int(bn, coord; spline, skip_shift, skip_depth)
     return Biome(result)
 end
 
 function get_biome_int(
-    bn::BiomeNoise{V}, coord;
-    spline=SPLINE_STACK, skip_shift=false, skip_depth=false,
-) where {V}
+        bn::BiomeNoise{V}, coord;
+        spline = SPLINE_STACK, skip_shift = false, skip_depth = false,
+    ) where {V}
     noiseparams = sample_biomenoises(bn, coord...; skip_shift, skip_depth, spline)
     return climate_to_biome(noiseparams, V)
 end
 
 function sample_biomenoises(
-    bn::BiomeNoise,
-    x, z, y;
-    skip_shift=false, skip_depth=false, spline=SPLINE_STACK,
-)
+        bn::BiomeNoise,
+        x, z, y;
+        skip_shift = false, skip_depth = false, spline = SPLINE_STACK,
+    )
     px, pz = sample_shift(bn, x, z, skip_shift)
     continentalness::Float32 = sample_noise(bn.climate[Continentalness], px, pz)
     erosion::Float32 = sample_noise(bn.climate[Erosion], px, pz)
@@ -503,13 +503,13 @@ end
 extract_biome_index(biome_tree::BiomeTree, idx) = (biome_tree.nodes[idx + 1] >> 48) & 0xFF
 
 function get_resulting_node(
-    noise_params::NTuple{6},
-    biome_tree::BiomeTree,
-    alt=0,
-    dist=typemax(UInt64),
-    idx=0,
-    depth=1,
-)
+        noise_params::NTuple{6},
+        biome_tree::BiomeTree,
+        alt = 0,
+        dist = typemax(UInt64),
+        idx = 0,
+        depth = 1,
+    )
     iszero(biome_tree.steps[depth]) && return idx
     # in all the code, dist refers to the square of the distance
 
@@ -574,12 +574,12 @@ end
 # ---------------------------------------------------------------------------- #
 
 function gen_biomes!(
-    bn::BiomeNoise,
-    map3D::WorldMap{3},
-    ::Scale{1};
-    scheduler=StaticScheduler(; minchunksize=Threads.nthreads()),
-    kwargs...,
-)
+        bn::BiomeNoise,
+        map3D::WorldMap{3},
+        ::Scale{1};
+        scheduler = StaticScheduler(; minchunksize = Threads.nthreads()),
+        kwargs...,
+    )
     tforeach(coordinates(map3D); scheduler) do coord
         @inbounds map3D[coord] = get_biome(bn, coord, Scale(1); kwargs...)
     end
@@ -587,12 +587,12 @@ function gen_biomes!(
 end
 
 function gen_biomes!(
-    bn::BiomeNoise,
-    map3D::WorldMap{3},
-    s::Scale{4};
-    scheduler=StaticScheduler(; minchunksize=Threads.nthreads()),
-    kwargs...,
-)
+        bn::BiomeNoise,
+        map3D::WorldMap{3},
+        s::Scale{4};
+        scheduler = StaticScheduler(; minchunksize = Threads.nthreads()),
+        kwargs...,
+    )
     tforeach(coordinates(map3D); scheduler) do coord
         map3D[coord] = get_biome(bn, coord, s; kwargs...)
     end
@@ -600,10 +600,10 @@ function gen_biomes!(
 end
 
 function gen_biomes!(
-    bn::BiomeNoise, map3D::WorldMap{3}, ::Scale{S};
-    scheduler=StaticScheduler(; minchunksize=Threads.nthreads()),
-    skip_depth=false, skip_shift=true,
-) where {S}
+        bn::BiomeNoise, map3D::WorldMap{3}, ::Scale{S};
+        scheduler = StaticScheduler(; minchunksize = Threads.nthreads()),
+        skip_depth = false, skip_shift = true,
+    ) where {S}
     # Since with scale higher than 4 accruacy is not needed, there is a possible
     # optimization that involves caching an old_idx variable, that can be passed to the function
     # and return the new one (in addition to the biome) to be used in the next call
@@ -616,7 +616,7 @@ function gen_biomes!(
     scale = S >> 2
     mid = scale >> 1
     coord_mid = CartesianIndex(mid, mid, 0)
-    tforeach(coordinates(map3D); scheduler) do coord
+    return tforeach(coordinates(map3D); scheduler) do coord
         coord_scale4 = coord .* scale .+ coord_mid
         map3D[coord] = get_biome(
             bn, coord_scale4.I, Scale(4);
@@ -638,7 +638,7 @@ function Base.show(io::IO, bn::BiomeNoise{V}) where {V}
     end
 
     sha_status = isnothing(bn.sha[]) ? "unset" : "set"
-    print(io, "Overworld(≥1.18, SHA ", sha_status, ")")
+    return print(io, "Overworld(≥1.18, SHA ", sha_status, ")")
 end
 
 function Base.show(io::IO, mime::MIME"text/plain", bn::BiomeNoise{V}) where {V}
@@ -679,6 +679,7 @@ function Base.show(io::IO, mime::MIME"text/plain", bn::BiomeNoise{V}) where {V}
             end
         end
     end
+    return
 end
 
 function Base.summary(io::IO, bn::BiomeNoise{V}) where {V}
@@ -689,11 +690,11 @@ function Base.summary(io::IO, bn::BiomeNoise{V}) where {V}
 
     print(io, "Overworld(≥1.18): ")
     print(io, "SHA: ", isnothing(bn.sha[]) ? "unset" : "set")
-    print(io, ", MC version: ", V)
+    return print(io, ", MC version: ", V)
 end
 
 function Base.:(==)(bn1::BiomeNoise{V}, bn2::BiomeNoise{V}) where {V}
     return all(n1 == n2 for (n1, n2) in zip(bn1.climate, bn2.climate)) &&
-           bn1.sha[] == bn2.sha[]
+        bn1.sha[] == bn2.sha[]
 end
 #endregion

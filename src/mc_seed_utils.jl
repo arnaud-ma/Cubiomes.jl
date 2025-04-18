@@ -1,4 +1,3 @@
-
 """
 Minecraft Seed Utilities, like the LCG algorithm used in the seed generation.
 """
@@ -34,7 +33,7 @@ the current seed and a salt.
 """
 function mc_step_seed(seed, salt)
     # salt + c1 seed + c2 seed^2
-    @evalpoly(u64_seed(seed), u64_seed(salt), MAGIC_LCG_INCREMENTOR, MAGIC_LCG_MULTIPLIER)
+    return @evalpoly(u64_seed(seed), u64_seed(salt), MAGIC_LCG_INCREMENTOR, MAGIC_LCG_MULTIPLIER)
 end
 
 function mc_first_int(seed::Signed, mod::Integer)

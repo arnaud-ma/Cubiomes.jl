@@ -17,7 +17,7 @@ struct Octaves{N} <: Noise
     # default constructor
     function Octaves{N}(x) where {N}
         N < 1 && throw(ArgumentError(lazy"We need at least one octave. Got $N"))
-        new(TypeInnerOctaves{N}(x))
+        return new(TypeInnerOctaves{N}(x))
     end
 end
 Base.length(::Octaves{N}) where {N} = N
@@ -31,7 +31,7 @@ Octaves{N}(::UndefInitializer) where {N} = Octaves{N}([Perlin(undef) for _ in 1:
 is_undef(x::Octaves{N}) where {N} = any(is_undef, x.octaves)
 
 function check_octave_min(N::Int, octave_min)
-    if octave_min > 1 - N
+    return if octave_min > 1 - N
         throw(ArgumentError(lazy"we must have octave_min ≤ 1 - N. Got $octave_min > $(1- N)"))
     end
 end
@@ -57,12 +57,12 @@ function set_rng!🎲(noise::Octaves{N}, rng::JavaRandom, octave_min) where {N}
 end
 
 function set_rng_octave!🎲(
-    octave::Perlin,
-    rng,
-    persistence::T,
-    lacunarity,
-    amp=one(T),
-) where {T}
+        octave::Perlin,
+        rng,
+        persistence::T,
+        lacunarity,
+        amp = one(T),
+    ) where {T}
     set_rng!🎲(octave, rng)
     octave.amplitude = persistence * amp
     octave.lacunarity = lacunarity
@@ -74,12 +74,12 @@ const LACUNARITY_INI = Tuple(@. 1 / 2^(0:12)) # -omin = 3:12
 const PERSISTENCE_INI = Tuple(2^n / (2^(n + 1) - 1) for n in 0:8) # len = 4:9
 
 function set_rng!🎲(
-    octaves_type::Octaves{N},
-    rng::JavaXoroshiro128PlusPlus,
-    amplitudes::NTuple{NA},
-    octave_min,
-    real_length=NA,
-) where {N, NA}
+        octaves_type::Octaves{N},
+        rng::JavaXoroshiro128PlusPlus,
+        amplitudes::NTuple{NA},
+        octave_min,
+        real_length = NA,
+    ) where {N, NA}
     if N != Utils.length_filter(!iszero, amplitudes)
         throw(ArgumentError(lazy"the number of octaves must be equal to length_filter(!iszero, amplitudes). \
                                  Got $N != $Utils.length_filter(!iszero, amplitudes)."))
@@ -92,12 +92,12 @@ end
 # it means that we skip some octaves, maybe for performance reasons
 # if N is greater, undefined behavior can occur
 function unsafe_set_rng!🎲(
-    octaves_type::Octaves{N},
-    rng::JavaXoroshiro128PlusPlus,
-    amplitudes::NTuple{N2},
-    octave_min,
-    real_length=N2,
-) where {N, N2}
+        octaves_type::Octaves{N},
+        rng::JavaXoroshiro128PlusPlus,
+        amplitudes::NTuple{N2},
+        octave_min,
+        real_length = N2,
+    ) where {N, N2}
     # Initialize lacunarity and persistence based on octave_min and amplitudes length
     lacunarity = LACUNARITY_INI[-octave_min + 1]
     persistence = PERSISTENCE_INI[real_length]
@@ -152,7 +152,7 @@ function sample_octave_noise(octave::Perlin, x, z, y, yamp, ymin)
     ay = get_ay(y, octave, lf)
     az = z * lf
     return sample_noise(octave, ax, az, ay, yamp * lf, ymin * lf) *
-           octave.amplitude
+        octave.amplitude
 end
 
 function sample_noise(octaves::Octaves, x::Real, z::Real, y, yamp, ymin)
@@ -163,7 +163,7 @@ function sample_noise(octaves::Octaves, x::Real, z::Real, y, yamp, ymin)
     return v
 end
 
-function sample_noise(octaves::Octaves, x::Real, z::Real, y=missing)
+function sample_noise(octaves::Octaves, x::Real, z::Real, y = missing)
     return sample_noise(octaves, x, z, y, missing, missing)
 end
 
@@ -185,11 +185,11 @@ function Base.show(io::IO, o::Octaves{N}) where {N}
     print(io, "Octaves{$N}(")
     for (i, octave) in enumerate(o.octaves)
         i > 1 && print(io, ", ")
-        amp = round(octave.amplitude; digits=2)
-        lac = round(octave.lacunarity; digits=2)
+        amp = round(octave.amplitude; digits = 2)
+        lac = round(octave.lacunarity; digits = 2)
         print(io, "a=$(amp),l=$(lac)")
     end
-    print(io, ")")
+    return print(io, ")")
 end
 
 function Base.show(io::IO, mime::MIME"text/plain", o::Octaves{N}) where {N}
@@ -202,7 +202,7 @@ function Base.show(io::IO, mime::MIME"text/plain", o::Octaves{N}) where {N}
 
     # Calculate the total amplitude (normalization factor)
     total_amplitude = sum(octave.amplitude for octave in o.octaves)
-    println(io, "├ Total amplitude: $(round(total_amplitude; digits=4))")
+    println(io, "├ Total amplitude: $(round(total_amplitude; digits = 4))")
 
     # Show individual octaves
     oct_str = []
@@ -212,10 +212,10 @@ function Base.show(io::IO, mime::MIME"text/plain", o::Octaves{N}) where {N}
         else
             prefix = "└"
         end
-        amp = round(octave.amplitude; digits=4)
-        lac = round(octave.lacunarity; digits=4)
-        weight = round(100 * octave.amplitude / total_amplitude; digits=1)
+        amp = round(octave.amplitude; digits = 4)
+        lac = round(octave.lacunarity; digits = 4)
+        weight = round(100 * octave.amplitude / total_amplitude; digits = 1)
         push!(oct_str, "$prefix Octave $i: amplitude=$(amp) ($(weight)%), lacunarity=$(lac)")
     end
-    print(io, join(oct_str, "\n"))
+    return print(io, join(oct_str, "\n"))
 end

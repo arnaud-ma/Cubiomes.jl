@@ -58,7 +58,7 @@ function Nether(::UndefInitializer, ::mcvt">=1.16")
     )
 end
 
-function set_seed!(nn::Nether1_16Plus, seed::UInt64; sha=true)
+function set_seed!(nn::Nether1_16Plus, seed::UInt64; sha = true)
     set_seed🎲(nn.rng_temp, seed)
     set_rng!🎲(nn.temperature, nn.rng_temp, -7)
 
@@ -109,7 +109,7 @@ end
 
 function calculate_distance_squared(nether_point, temperature, humidity)
     return (nether_point.x - temperature)^2 + (nether_point.y - humidity)^2 +
-           nether_point.z_square
+        nether_point.z_square
 end
 
 function find_closest_biome_with_dists(temperature, humidity)
@@ -146,11 +146,11 @@ function find_closest_biome(temperature, humidity)
 end
 
 const NETHER_POINTS = (
-    (x=0.0, y=0.0, z_square=0.0, biome=Biomes.nether_wastes),
-    (x=0.0, y=-0.5, z_square=0.0, biome=Biomes.soul_sand_valley),
-    (x=0.4, y=0.0, z_square=0.0, biome=Biomes.crimson_forest),
-    (x=0.0, y=0.5, z_square=0.375^2, biome=Biomes.warped_forest),
-    (x=-0.5, y=0.0, z_square=0.175^2, biome=Biomes.basalt_deltas),
+    (x = 0.0, y = 0.0, z_square = 0.0, biome = Biomes.nether_wastes),
+    (x = 0.0, y = -0.5, z_square = 0.0, biome = Biomes.soul_sand_valley),
+    (x = 0.4, y = 0.0, z_square = 0.0, biome = Biomes.crimson_forest),
+    (x = 0.0, y = 0.5, z_square = 0.375^2, biome = Biomes.warped_forest),
+    (x = -0.5, y = 0.0, z_square = 0.175^2, biome = Biomes.basalt_deltas),
 )
 #endregion
 
@@ -173,8 +173,8 @@ within a given `radius`. Assuming `radius`>=0. If `center` is outside the `out`
 coordinates, nothing is done.
 """
 function fill_radius!(
-    out::WorldMap{N}, center::CartesianIndex{2}, id::Biome, radius,
-) where {N}
+        out::WorldMap{N}, center::CartesianIndex{2}, id::Biome, radius,
+    ) where {N}
     r = floor(Int, radius)
     r_square = r^2
 
@@ -183,10 +183,12 @@ function fill_radius!(
     # - (x, z) is in the array coordinates (axes(out, 1) for x, axes(out, 2) for z)
     # - (x, z) is in the square of center `center` and edges of the same size `r`
     # so we can simply iterate over the intersection coordinates.
-    coords = CartesianIndices((
-        range(center[1] - r, center[1] + r) ∩ axes(out, 1),
-        range(center[2] - r, center[2] + r) ∩ axes(out, 2),
-    ))
+    coords = CartesianIndices(
+        (
+            range(center[1] - r, center[1] + r) ∩ axes(out, 1),
+            range(center[2] - r, center[2] + r) ∩ axes(out, 2),
+        )
+    )
 
     for coord in coords
         if distance_square(coord, center) <= r_square
@@ -198,8 +200,8 @@ end
 
 # Assume out is filled with BIOME_NONE
 function gen_biomes_unsafe!(
-    nn::Nether1_16Plus, map2d::WorldMap{2}, ::Scale{S}; confidence=1,
-) where {S}
+        nn::Nether1_16Plus, map2d::WorldMap{2}, ::Scale{S}; confidence = 1,
+    ) where {S}
     scale = S >> 2
 
     # The Δnoise is the distance between the first and second closest
@@ -224,8 +226,8 @@ function gen_biomes_unsafe!(
 end
 
 function gen_biomes_unsafe!(
-    nn::Nether1_16Plus, map3d::WorldMap{3}, scale::Scale{S}; confidence=1,
-) where {S}
+        nn::Nether1_16Plus, map3d::WorldMap{3}, scale::Scale{S}; confidence = 1,
+    ) where {S}
     # At scale != 1, the biome does not change with the y coordinate
     # So we simply take the first y coordinate and fill the other ones with the same biome
     ys = axes(map3d, 3)
@@ -238,12 +240,12 @@ function gen_biomes_unsafe!(
     return nothing
 end
 
-function gen_biomes!(nn::Nether1_16Plus, world::WorldMap, scale::Scale; confidence=1)
+function gen_biomes!(nn::Nether1_16Plus, world::WorldMap, scale::Scale; confidence = 1)
     fill!(world, BIOME_NONE)
-    gen_biomes_unsafe!(nn, world, scale; confidence)
+    return gen_biomes_unsafe!(nn, world, scale; confidence)
 end
 
-function gen_biomes!(nn::Nether1_16Plus, world3d::WorldMap{3}, ::Scale{1}; confidence=1)
+function gen_biomes!(nn::Nether1_16Plus, world3d::WorldMap{3}, ::Scale{1}; confidence = 1)
     coords = coordinates(world3d)
     # If there is only one value, simple wrapper around get_biome_unsafe
     if isone(length(coords))
@@ -266,7 +268,7 @@ function gen_biomes!(nn::Nether1_16Plus, world3d::WorldMap{3}, ::Scale{1}; confi
     return nothing
 end
 
-function gen_biomes!(::Nether1_16Plus, ::WorldMap{2}, ::Scale{1}, confidence=1)
+function gen_biomes!(::Nether1_16Plus, ::WorldMap{2}, ::Scale{1}, confidence = 1)
     msg = "generate the nether biomes at scale 1 requires a 3D map because \
             the biomes depend on the y coordinate. You can create a 3D map with \
             a single y coordinate with `MCMap(x_coords, z_coords, y)`"
@@ -282,7 +284,7 @@ Base.show(io::IO, n::Nether1_16Minus) = print(io, "Nether(<1.16)")
 
 function Base.show(io::IO, mime::MIME"text/plain", n::Nether1_16Minus)
     println(io, "Nether Dimension (<1.16):")
-    println(io, "└ Only contains nether_wastes biome")
+    return println(io, "└ Only contains nether_wastes biome")
 end
 
 function Base.show(io::IO, n::Nether1_16Plus)
@@ -293,7 +295,7 @@ function Base.show(io::IO, n::Nether1_16Plus)
     end
 
     sha_status = isnothing(n.sha[]) ? "unset" : "set"
-    print(io, "Nether(≥1.16, SHA ", sha_status, ")")
+    return print(io, "Nether(≥1.16, SHA ", sha_status, ")")
 end
 
 function Base.show(io::IO, mime::MIME"text/plain", n::Nether1_16Plus)
@@ -335,6 +337,7 @@ function Base.show(io::IO, mime::MIME"text/plain", n::Nether1_16Plus)
             println(io, "  ", line)
         end
     end
+    return
 end
 
 #endregion

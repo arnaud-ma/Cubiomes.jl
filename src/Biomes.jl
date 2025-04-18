@@ -154,80 +154,80 @@ end
 @inline function biome_exists(biome::Biome, ::mcvt"1.18 <= x < 1.19")
     #      nether >= 1.16
     return biome == soul_sand_valley ||
-           biome == crimson_forest ||
-           biome == warped_forest ||
-           biome == basalt_deltas ||
-           #      end >= 1.9
-           biome == small_end_islands ||
-           biome == end_midlands ||
-           biome == end_highlands ||
-           biome == end_barrens ||
-           #      overworld
-           biome == ocean ||
-           biome == plains ||
-           biome == desert ||
-           biome == mountains ||
-           biome == forest ||
-           biome == taiga ||
-           biome == swamp ||
-           biome == river ||
-           biome == nether_wastes ||
-           biome == the_end ||
-           biome == frozen_ocean ||
-           biome == frozen_river ||
-           biome == snowy_tundra ||
-           biome == mushroom_fields ||
-           biome == beach ||
-           biome == jungle ||
-           biome == jungle_edge ||
-           biome == deep_ocean ||
-           biome == stone_shore ||
-           biome == snowy_beach ||
-           biome == birch_forest ||
-           biome == dark_forest ||
-           biome == snowy_taiga ||
-           biome == giant_tree_taiga ||
-           biome == wooded_mountains ||
-           biome == savanna ||
-           biome == savanna_plateau ||
-           biome == badlands ||
-           biome == wooded_badlands_plateau ||
-           biome == badlands_plateau ||
-           biome == sunflower_plains ||
-           biome == desert_lakes ||
-           biome == gravelly_mountains ||
-           biome == flower_forest ||
-           biome == taiga_mountains ||
-           biome == swamp_hills ||
-           biome == ice_spikes ||
-           biome == modified_jungle ||
-           biome == modified_jungle_edge ||
-           biome == tall_birch_forest ||
-           biome == dark_forest_hills ||
-           biome == snowy_taiga_mountains ||
-           biome == giant_spruce_taiga ||
-           biome == giant_spruce_taiga_hills ||
-           biome == modified_gravelly_mountains ||
-           biome == shattered_savanna ||
-           biome == shattered_savanna_plateau ||
-           biome == eroded_badlands ||
-           biome == modified_wooded_badlands_plateau ||
-           biome == modified_badlands_plateau
+        biome == crimson_forest ||
+        biome == warped_forest ||
+        biome == basalt_deltas ||
+        #      end >= 1.9
+        biome == small_end_islands ||
+        biome == end_midlands ||
+        biome == end_highlands ||
+        biome == end_barrens ||
+        #      overworld
+        biome == ocean ||
+        biome == plains ||
+        biome == desert ||
+        biome == mountains ||
+        biome == forest ||
+        biome == taiga ||
+        biome == swamp ||
+        biome == river ||
+        biome == nether_wastes ||
+        biome == the_end ||
+        biome == frozen_ocean ||
+        biome == frozen_river ||
+        biome == snowy_tundra ||
+        biome == mushroom_fields ||
+        biome == beach ||
+        biome == jungle ||
+        biome == jungle_edge ||
+        biome == deep_ocean ||
+        biome == stone_shore ||
+        biome == snowy_beach ||
+        biome == birch_forest ||
+        biome == dark_forest ||
+        biome == snowy_taiga ||
+        biome == giant_tree_taiga ||
+        biome == wooded_mountains ||
+        biome == savanna ||
+        biome == savanna_plateau ||
+        biome == badlands ||
+        biome == wooded_badlands_plateau ||
+        biome == badlands_plateau ||
+        biome == sunflower_plains ||
+        biome == desert_lakes ||
+        biome == gravelly_mountains ||
+        biome == flower_forest ||
+        biome == taiga_mountains ||
+        biome == swamp_hills ||
+        biome == ice_spikes ||
+        biome == modified_jungle ||
+        biome == modified_jungle_edge ||
+        biome == tall_birch_forest ||
+        biome == dark_forest_hills ||
+        biome == snowy_taiga_mountains ||
+        biome == giant_spruce_taiga ||
+        biome == giant_spruce_taiga_hills ||
+        biome == modified_gravelly_mountains ||
+        biome == shattered_savanna ||
+        biome == shattered_savanna_plateau ||
+        biome == eroded_badlands ||
+        biome == modified_wooded_badlands_plateau ||
+        biome == modified_badlands_plateau
 end
 
 @inline function biome_exists(biome::Biome, ::mcvt"beta1.7")
     return biome == plains ||
-           biome == desert ||
-           biome == forest ||
-           biome == taiga ||
-           biome == swamp ||
-           biome == snowy_tundra ||
-           biome == savanna ||
-           biome == seasonal_forest ||
-           biome == rainforest ||
-           biome == shrubland ||
-           biome == ocean ||
-           biome == frozen_ocean
+        biome == desert ||
+        biome == forest ||
+        biome == taiga ||
+        biome == swamp ||
+        biome == snowy_tundra ||
+        biome == savanna ||
+        biome == seasonal_forest ||
+        biome == rainforest ||
+        biome == shrubland ||
+        biome == ocean ||
+        biome == frozen_ocean
 end
 
 @inline function biome_exists(biome::Biome, version::MCVersion)
@@ -390,38 +390,38 @@ If the biome does not belong to any of these categories, return `BIOME_NONE`.
     (biome == desert || biome == desert_hills || biome == desert_lakes) && return desert
     (
         biome == mountains ||
-        biome == mountain_edge ||
-        biome == wooded_mountains ||
-        biome == gravelly_mountains ||
-        biome == modified_gravelly_mountains
+            biome == mountain_edge ||
+            biome == wooded_mountains ||
+            biome == gravelly_mountains ||
+            biome == modified_gravelly_mountains
     ) && return mountains
     (
         biome == forest ||
-        biome == wooded_hills ||
-        biome == birch_forest ||
-        biome == birch_forest_hills ||
-        biome == dark_forest ||
-        biome == flower_forest ||
-        biome == tall_birch_forest ||
-        biome == tall_birch_hills ||
-        biome == dark_forest_hills
+            biome == wooded_hills ||
+            biome == birch_forest ||
+            biome == birch_forest_hills ||
+            biome == dark_forest ||
+            biome == flower_forest ||
+            biome == tall_birch_forest ||
+            biome == tall_birch_hills ||
+            biome == dark_forest_hills
     ) && return forest
     (biome == snowy_tundra || biome == snowy_mountains || biome == ice_spikes) &&
         return snowy_tundra
     (
         biome == jungle ||
-        biome == jungle_hills ||
-        biome == jungle_edge ||
-        biome == modified_jungle ||
-        biome == modified_jungle_edge ||
-        biome == bamboo_jungle ||
-        biome == bamboo_jungle_hills
+            biome == jungle_hills ||
+            biome == jungle_edge ||
+            biome == modified_jungle ||
+            biome == modified_jungle_edge ||
+            biome == bamboo_jungle ||
+            biome == bamboo_jungle_hills
     ) && return jungle
     (
         biome == badlands ||
-        biome == eroded_badlands ||
-        biome == modified_wooded_badlands_plateau ||
-        biome == modified_badlands_plateau
+            biome == eroded_badlands ||
+            biome == modified_wooded_badlands_plateau ||
+            biome == modified_badlands_plateau
     ) && return mesa
     (biome == wooded_badlands_plateau || biome == badlands_plateau) &&
         return version <= mcv"1.15" ? mesa : badlands_plateau
@@ -429,43 +429,43 @@ If the biome does not belong to any of these categories, return `BIOME_NONE`.
     biome == stone_shore && return stone_shore
     (
         biome == ocean ||
-        biome == frozen_ocean ||
-        biome == deep_ocean ||
-        biome == warm_ocean ||
-        biome == lukewarm_ocean ||
-        biome == cold_ocean ||
-        biome == deep_warm_ocean ||
-        biome == deep_lukewarm_ocean ||
-        biome == deep_cold_ocean ||
-        biome == deep_frozen_ocean
+            biome == frozen_ocean ||
+            biome == deep_ocean ||
+            biome == warm_ocean ||
+            biome == lukewarm_ocean ||
+            biome == cold_ocean ||
+            biome == deep_warm_ocean ||
+            biome == deep_lukewarm_ocean ||
+            biome == deep_cold_ocean ||
+            biome == deep_frozen_ocean
     ) && return ocean
     (biome == plains || biome == sunflower_plains) && return plains
     (biome == river || biome == frozen_river) && return river
     (
         biome == savanna ||
-        biome == savanna_plateau ||
-        biome == shattered_savanna ||
-        biome == shattered_savanna_plateau
+            biome == savanna_plateau ||
+            biome == shattered_savanna ||
+            biome == shattered_savanna_plateau
     ) && return savanna
     (biome == swamp || biome == swamp_hills) && return swamp
     (
         biome == taiga ||
-        biome == taiga_hills ||
-        biome == snowy_taiga ||
-        biome == snowy_taiga_hills ||
-        biome == giant_tree_taiga ||
-        biome == giant_tree_taiga_hills ||
-        biome == taiga_mountains ||
-        biome == snowy_taiga_mountains ||
-        biome == giant_spruce_taiga ||
-        biome == giant_spruce_taiga_hills
+            biome == taiga_hills ||
+            biome == snowy_taiga ||
+            biome == snowy_taiga_hills ||
+            biome == giant_tree_taiga ||
+            biome == giant_tree_taiga_hills ||
+            biome == taiga_mountains ||
+            biome == snowy_taiga_mountains ||
+            biome == giant_spruce_taiga ||
+            biome == giant_spruce_taiga_hills
     ) && return taiga
     (
         biome == nether_wastes ||
-        biome == soul_sand_valley ||
-        biome == crimson_forest ||
-        biome == warped_forest ||
-        biome == basalt_deltas
+            biome == soul_sand_valley ||
+            biome == crimson_forest ||
+            biome == warped_forest ||
+            biome == basalt_deltas
     ) && return nether_wastes
     return BIOME_NONE
 end
@@ -496,31 +496,31 @@ end
 @inline function is_mesa(biome::Biome)
     return (
         biome == badlands ||
-        biome == eroded_badlands ||
-        biome == modified_wooded_badlands_plateau ||
-        biome == modified_badlands_plateau ||
-        biome == wooded_badlands_plateau ||
-        biome == badlands_plateau
+            biome == eroded_badlands ||
+            biome == modified_wooded_badlands_plateau ||
+            biome == modified_badlands_plateau ||
+            biome == wooded_badlands_plateau ||
+            biome == badlands_plateau
     )
 end
 
 @inline function is_shallow_ocean(biome::Biome)
     return (
         biome == ocean ||
-        biome == frozen_ocean ||
-        biome == warm_ocean ||
-        biome == lukewarm_ocean ||
-        biome == cold_ocean
+            biome == frozen_ocean ||
+            biome == warm_ocean ||
+            biome == lukewarm_ocean ||
+            biome == cold_ocean
     )
 end
 
 @inline function is_deep_ocean(biome::Biome)
     return (
         biome == deep_ocean ||
-        biome == deep_warm_ocean ||
-        biome == deep_lukewarm_ocean ||
-        biome == deep_cold_ocean ||
-        biome == deep_frozen_ocean
+            biome == deep_warm_ocean ||
+            biome == deep_lukewarm_ocean ||
+            biome == deep_cold_ocean ||
+            biome == deep_frozen_ocean
     )
 end
 
@@ -530,14 +530,14 @@ end
 @inline function is_snowy(biome::Biome)
     return (
         biome == frozen_ocean ||
-        biome == frozen_river ||
-        biome == snowy_tundra ||
-        biome == snowy_mountains ||
-        biome == snowy_beach ||
-        biome == snowy_taiga ||
-        biome == snowy_taiga_hills ||
-        biome == ice_spikes ||
-        biome == snowy_taiga_mountains
+            biome == frozen_river ||
+            biome == snowy_tundra ||
+            biome == snowy_mountains ||
+            biome == snowy_beach ||
+            biome == snowy_taiga ||
+            biome == snowy_taiga_hills ||
+            biome == ice_spikes ||
+            biome == snowy_taiga_mountains
     )
 end
 

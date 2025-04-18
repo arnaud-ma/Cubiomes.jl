@@ -96,7 +96,7 @@ function ScaledWorldMap(s::Scale{S}, range::Vararg{UnitRange, N}) where {S, N}
 end
 
 # need this because of github.com/JuliaLang/julia/issues/57196
-multr(r::OrdinalRange, x::Integer) = range(first(r) * x, last(r) * x; step=step(r) * x)
+multr(r::OrdinalRange, x::Integer) = range(first(r) * x, last(r) * x; step = step(r) * x)
 
 notscaled(w::ScaledWorldMap) = w.parent
 Base.parent(w::ScaledWorldMap) = w.parent
@@ -106,21 +106,21 @@ coordinates(w::ScaledWorldMap) = CartesianIndices(w)
 true_coordinates(w::ScaledWorldMap) = CartesianIndices(true_indices(w))
 
 function Base.axes(fw::ScaledWorldMap{S}) where {S}
-    map(ax -> range(first(ax) * S, last(ax) * S), axes(fw.parent))
+    return map(ax -> range(first(ax) * S, last(ax) * S), axes(fw.parent))
 end
 Base.size(fw::ScaledWorldMap{S}) where {S} = map(length, axes(fw))
 
 @propagate_inbounds function Base.getindex(W::ScaledWorldMap, I::Vararg{Int, N}) where {N}
     @boundscheck checkbounds(W, I...)
-    W.parent[map(i -> shift_coord(W, i), I)...]
+    return W.parent[map(i -> shift_coord(W, i), I)...]
 end
 
 @propagate_inbounds function Base.setindex!(
-    W::ScaledWorldMap{S}, v, I::Vararg{Int, N},
-) where {S, N}
+        W::ScaledWorldMap{S}, v, I::Vararg{Int, N},
+    ) where {S, N}
     coords = map(i -> shift_coord(W, i), I)
     @boundscheck all(map((c, i) -> c * S == i, coords, I)) || throw(BoundsError(W, I))
-    @inbounds W.parent[coords...] = v
+    return @inbounds W.parent[coords...] = v
 end
 
 end # module

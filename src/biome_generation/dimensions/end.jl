@@ -35,7 +35,7 @@ function End(::UndefInitializer, version::mcvt">=1.9")
     return End1_9Plus{version}(Perlin(undef), SomeSha(nothing), JavaRandom(undef))
 end
 
-function set_seed!(nn::End1_9Plus, seed::UInt64; sha=true)
+function set_seed!(nn::End1_9Plus, seed::UInt64; sha = true)
     set_seed🎲(nn.rng_temp, seed)
     randjump🎲(nn.rng_temp, Int32, 17_292)
     set_rng!🎲(perlin, rng)
@@ -84,7 +84,7 @@ function original_get_biome(end_::End1_9Plus, x, z, ::Scale{4})
         real_x = scaled_x + x_i
         real_z = scaled_z + z_i
         if real_x^2 + real_z^2 > 4096 &&
-           (sample_simplex(end_.perlin, real_x, real_z) < -0.9)
+                (sample_simplex(end_.perlin, real_x, real_z) < -0.9)
             elevation = (abs(real_x) * 3439 + abs(real_z) * 147) % 13 + 9
             smooth_x = odd_x - x_i * 2
             smooth_z = odd_z - z_i * 2
@@ -112,7 +112,7 @@ Elevations{V}(a::AbstractMatrix) where {V} = Elevations{V, typeof(a)}(a)
 elevation_val(x, z) = ((abs(x) * 3439 + abs(z) * 147) % 13) + 9
 
 function get_elevation_outside_center(perlin, x, z)
-    (sample_simplex(perlin, x, z) < -0.9) ? elevation_val(x, z) : zero(UInt16)
+    return (sample_simplex(perlin, x, z) < -0.9) ? elevation_val(x, z) : zero(UInt16)
 end
 
 function get_elevation(end_::End1_9Plus, x, z)::UInt16
@@ -135,8 +135,8 @@ Create an uninitialized OffsetMatrix of type `T` but with additional rows and co
 on each side of the original matrix.
 """
 function similar_expand(
-    ::Type{T}, mc_map::OffsetMatrix, expand_x::Int, expand_z::Int,
-) where {T}
+        ::Type{T}, mc_map::OffsetMatrix, expand_x::Int, expand_z::Int,
+    ) where {T}
     xs, zs = axes(mc_map)
     return OffsetMatrix{T}(
         undef,
@@ -146,7 +146,7 @@ function similar_expand(
 end
 
 # TODO: maybe use sparse matrix instead
-function Elevations(end_noise::End1_9Plus{V}, A::WorldMap{2}, range::Integer=12) where {V}
+function Elevations(end_noise::End1_9Plus{V}, A::WorldMap{2}, range::Integer = 12) where {V}
     #! memory allocation
     elevations = Elevations{V}(similar_expand(UInt16, A, range, range))
     fill_elevations!(end_noise, elevations)
@@ -167,7 +167,7 @@ function get_cache_dist_squared()
             rowneg .+ colneg',
         ),
     )
-    map(twomat -> map(x -> Origin(-12, -12)(SMatrix{25, 25}(x)), twomat), mats)
+    return map(twomat -> map(x -> Origin(-12, -12)(SMatrix{25, 25}(x)), twomat), mats)
 end
 const CACHE_D2_END = get_cache_dist_squared()
 
@@ -177,8 +177,8 @@ const SMOOTH_AXE_POSITIVE, SMOOTH_AXE_NEGATIVE = let
 end
 
 function _get_height_sample(
-    elevation_getter, x, z, start_height, range::Integer=12,
-)
+        elevation_getter, x, z, start_height, range::Integer = 12,
+    )
     height_sample = start_height
 
     # Determine the index for the cache based on the sign of x and z
@@ -198,20 +198,20 @@ function _get_height_sample(
     return height_sample
 end
 
-function get_height_sample(elevations::Elevations, x, z, start_height, range::Integer=12)
+function get_height_sample(elevations::Elevations, x, z, start_height, range::Integer = 12)
     # TODO: know how to disable bounds checking
     return _get_height_sample((x, z) -> elevations.inner[x, z], x, z, start_height, range)
 end
 
-function get_height_sample(end_noise::End1_9Plus, x, z, start_height, range::Integer=12)
+function get_height_sample(end_noise::End1_9Plus, x, z, start_height, range::Integer = 12)
     return _get_height_sample(
         (x, z) -> get_elevation(end_noise, x, z), x, z, start_height, range,
     )
 end
 
 function get_height_sample_outside_center(
-    end_noise::End1_9Plus, x, z, start_height, range::Integer=12,
-)
+        end_noise::End1_9Plus, x, z, start_height, range::Integer = 12,
+    )
     return _get_height_sample(
         (x, z) -> get_elevation_outside_center(end_noise, x, z), x, z, start_height, range,
     )
@@ -219,7 +219,7 @@ end
 
 get_height_end(height_value) = clamp(-100 - sqrt(height_value), -100, 80)
 
-function get_height(end_noise::End1_9Plus, x, z, range::Integer=12)
+function get_height(end_noise::End1_9Plus, x, z, range::Integer = 12)
     #  64 * (x^2 + z^2) <= 14400 <=> x^2 + z^2 <= 225 (circle of radius 15)
     start = (abs(x) <= 15 && abs(z) <= 15) ? 64(x^2 + z^2) : 14_401
     return get_height_end(get_height_sample(end_noise, x, z, start, range))
@@ -250,8 +250,8 @@ end
 # below
 for type in (:End1_9Plus, :Elevations)
     @eval function get_biome(
-        eg::$type{V}, x::Real, z::Real, ::Scale{16}, range::Integer=12,
-    ) where {V}
+            eg::$type{V}, x::Real, z::Real, ::Scale{16}, range::Integer = 12,
+        ) where {V}
         x^2 + z^2 <= 4096 && return the_end
         has_bug_mc159283(V, x, z) && return small_end_islands
         return biome_from_height_sample(
@@ -259,13 +259,13 @@ for type in (:End1_9Plus, :Elevations)
         )
     end
 
-    @eval function get_biome(eg::$type, x::Real, z::Real, ::Scale{4}, range=12)
+    @eval function get_biome(eg::$type, x::Real, z::Real, ::Scale{4}, range = 12)
         return get_biome(eg, x >> 2, z >> 2, Scale(16), range)
     end
 end
 
 # For scale > 16
-function get_biome(end_::End1_9Plus, x::Real, z::Real, ::Scale{S}, range=4) where {S}
+function get_biome(end_::End1_9Plus, x::Real, z::Real, ::Scale{S}, range = 4) where {S}
     scale = S >> 3
     return get_biome(end_, x * scale, z * scale, Scale(16), range)
 end
@@ -281,10 +281,12 @@ function gen_biomes!(end_noise::End1_9Plus, map2D::WorldMap{2}, s::Scale{16})
 end
 
 function gen_biomes!(::End1_9Plus, ::WorldMap{2}, ::Scale{4})
-    throw(ArgumentError(
-        "1:4 end generation is the same as 1:16 but simply rescaled by 4. \
+    throw(
+        ArgumentError(
+            "1:4 end generation is the same as 1:16 but simply rescaled by 4. \
         Use 1:16 scale instead. The scale 1:4 could be supported in the future."
-    ))
+        )
+    )
 end
 
 # scale > 16

@@ -6,7 +6,7 @@ using ...SeedUtils: mc_step_seed
 firsts(coord, ::Val{2}) = coord[1], coord[2]
 firsts(coord, ::Val{3}) = coord[1], coord[2], coord[3]
 voronoi_source(ax::AbstractUnitRange) = range((first(ax) - 2) >> 2, (last(ax) - 1) >> 2 + 1)
-function voronoi_source(W::WorldMap{N}, dim::Val{D}=Val(N)) where {N, D}
+function voronoi_source(W::WorldMap{N}, dim::Val{D} = Val(N)) where {N, D}
     return map(voronoi_source, firsts(axes(W), dim))
 end
 voronoi_source2d(W) = voronoi_source(W, Val(2))
@@ -38,7 +38,7 @@ function voronoi_cell(sha::UInt64, x::UInt64, z::UInt64, y::UInt64)
 end
 
 function voronoi_cell(sha::UInt64, x::Int64, z::Int64, y::Int64)
-    voronoi_cell(sha, unsigned(x), unsigned(z), unsigned(y))
+    return voronoi_cell(sha, unsigned(x), unsigned(z), unsigned(y))
 end
 voronoi_cell(sha, coord::NTuple{3}) = voronoi_cell(sha, coord...)
 
@@ -49,7 +49,7 @@ const CELL_SCALE = 10240
 const NEIGHBOR_SCALE = 40 * 1024
 
 function adjust_voronoi_cell(cell, offset, neighbor_offset)
-    cell + offset - NEIGHBOR_SCALE * neighbor_offset
+    return cell + offset - NEIGHBOR_SCALE * neighbor_offset
 end
 
 """

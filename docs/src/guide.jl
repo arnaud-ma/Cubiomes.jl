@@ -97,7 +97,7 @@ worldmap = WorldMap(-200:200, -200:200, 63)
 # To visualize our map (completely empty at the moment):
 
 to_color(view2d(worldmap))
-DisplayAs.PNG(to_color(view2d(worldmap)))# hide
+DisplayAs.PNG(to_color(view2d(worldmap))) # hide
 
 # !!! note
 #     If you see a bunch of numbers instead of an image, nothing is wrong.
@@ -113,6 +113,7 @@ function populate_map!(overworld, worldmap)
     for coord in coordinates(worldmap)
         worldmap[coord] = get_biome(overworld, coord)
     end
+    return
 end
 populate_map!(overworld, worldmap)
 to_color(view2d(worldmap))

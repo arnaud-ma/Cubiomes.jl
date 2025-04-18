@@ -126,7 +126,7 @@ function to_color(x::WorldMap)
     if b.BIOME_NONE in x
         @warn "The map is not fully populated, some biomes are missing"
     end
-    to_color.(x)
+    return to_color.(x)
 end
 
 # function Plots.plot(map::MCMap{2})#, widen_factor=0.05)

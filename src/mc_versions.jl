@@ -1,4 +1,3 @@
-
 """
     MCVersions
 
@@ -52,15 +51,15 @@ struct v1_19_4 <: MCVersion end
 struct v1_20 <: MCVersion end
 struct v1_21 <: MCVersion end
 
-remove_first(x::AbstractString) = chop(x; head=1, tail=0)
+remove_first(x::AbstractString) = chop(x; head = 1, tail = 0)
 
 function _to_jl_version(x::MCVersion)
     return typeof(x) |>
-           nameof |> string |>              # Module1.Module2.v1_8_9
-           Fix2(split, ".") |> last |>      # v1_8_9
-           remove_first |>                  # 1_8_9
-           Fix2(replace, "_" => ".") |>     # 1.8.9
-           VersionNumber                    # v"1.8.9"
+        nameof |> string |>              # Module1.Module2.v1_8_9
+        Fix2(split, ".") |> last |>      # v1_8_9
+        remove_first |>                  # 1_8_9
+        Fix2(replace, "_" => ".") |>     # 1.8.9
+        VersionNumber                    # v"1.8.9"
 end
 
 const VERSIONS_DICT = Dict(_to_jl_version(x()) => x() for x in subtypes(MCVersion))
@@ -92,7 +91,7 @@ function get_closest_minor_version(version, compare_versions)
     version in compare_versions && return version
     return minimum(
         filter(x -> (version <= x <= nextminor(version)), compare_versions);
-        init=v"∞",
+        init = v"∞",
     )
 end
 
@@ -141,14 +140,14 @@ function _mcvt(str)
 
     if length(matches_sign) == 1
         sign = first(matches_sign)
-        version_str = chop(str; head=length(sign), tail=0)
+        version_str = chop(str; head = length(sign), tail = 0)
         sign = Symbol(sign)
         version = VersionNumber(strip(version_str))
         func = @eval $sign($version)
     elseif length(matches_sign) == 2
         sign1, sign2 = matches_sign
-        part1, remain = split(str, sign1; limit=2)
-        _, part2 = split(remain, sign2; limit=2)
+        part1, remain = split(str, sign1; limit = 2)
+        _, part2 = split(remain, sign2; limit = 2)
 
         v1, v2 = VersionNumber(strip(part1)), VersionNumber(strip(part2))
         func1 = @eval Base.Fix1($(Symbol(sign1)), $v1)

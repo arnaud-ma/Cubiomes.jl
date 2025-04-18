@@ -178,7 +178,7 @@ function get_biome(dim::Dimension, coord::NTuple{3, Real}; kwargs...)
     return get_biome(dim, coord..., Scale(1); kwargs...)
 end
 
-function get_biome(dim::Dimension, coord::CartesianIndex{3}, s::Scale=Scale(1); kwargs...)
+function get_biome(dim::Dimension, coord::CartesianIndex{3}, s::Scale = Scale(1); kwargs...)
     return get_biome(dim, coord.I, s; kwargs...)
 end
 
@@ -230,7 +230,7 @@ Create a view of the cache with the same shape as the axes.
     This function is not thread-safe and should not be used in a multithreaded context.
 
 """
-function view_reshape_cache_like(axes, cache=CACHE_VECTOR_BIOMES)
+function view_reshape_cache_like(axes, cache = CACHE_VECTOR_BIOMES)
     size_axes = length.(axes)
     required_size = prod(size_axes)
     if length(cache) < required_size

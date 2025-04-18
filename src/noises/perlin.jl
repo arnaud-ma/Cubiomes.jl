@@ -65,9 +65,10 @@ Perms(::UndefInitializer) = OffsetVector(MVector{257, UInt8}(undef), 0:256)
 @inline function init_perlin_noise_perm!(perms::PermsType)
     # we restrain the type to PermsType to be able to use the @inbounds macro
     # in a safe way
-    @inbounds for i in 0x0:0xFF
+    @inbounds for i in 0x00:0xFF
         perms[i] = i
     end
+    return 
 end
 
 """
@@ -90,7 +91,7 @@ mutable struct Perlin <: Noise
 end
 
 function Perlin(perms::Array, args::Vararg{Any, N}) where {N}
-    Perlin(OffsetVector(MVector{257, UInt8}(perms), 0:256), args...)
+    return Perlin(OffsetVector(MVector{257, UInt8}(perms), 0:256), args...)
 end
 
 function Perlin(::UndefInitializer)
@@ -179,23 +180,23 @@ Use the lower 4 bits of `idx` as a simple hash to combine the `x`, `y`, and `z` 
 a single number (a new index), to be used in the Perlin noise interpolation.
 """
 function indexed_lerp(idx::Integer, x, y, z)
-    lower_4bits = UInt8(idx & 0xF)
-    lower_4bits == 0x0 && return x + y
-    lower_4bits == 0x1 && return -x + y
-    lower_4bits == 0x2 && return x - y
-    lower_4bits == 0x3 && return -x - y
-    lower_4bits == 0x4 && return x + z
-    lower_4bits == 0x5 && return -x + z
-    lower_4bits == 0x6 && return x - z
-    lower_4bits == 0x7 && return -x - z
-    lower_4bits == 0x8 && return y + z
-    lower_4bits == 0x9 && return -y + z
-    lower_4bits == 0xA && return y - z
-    lower_4bits == 0xB && return -y - z
-    lower_4bits == 0xC && return x + y
-    lower_4bits == 0xD && return -y + z
-    lower_4bits == 0xE && return -x + y
-    lower_4bits == 0xF && return -y - z
+    lower_4bits = UInt8(idx & 0x0F)
+    lower_4bits == 0x00 && return x + y
+    lower_4bits == 0x01 && return -x + y
+    lower_4bits == 0x02 && return x - y
+    lower_4bits == 0x03 && return -x - y
+    lower_4bits == 0x04 && return x + z
+    lower_4bits == 0x05 && return -x + z
+    lower_4bits == 0x06 && return x - z
+    lower_4bits == 0x07 && return -x - z
+    lower_4bits == 0x08 && return y + z
+    lower_4bits == 0x09 && return -y + z
+    lower_4bits == 0x0A && return y - z
+    lower_4bits == 0x0B && return -y - z
+    lower_4bits == 0x0C && return x + y
+    lower_4bits == 0x0D && return -y + z
+    lower_4bits == 0x0E && return -x + y
+    lower_4bits == 0x0F && return -y - z
 
     error(lazy"lower 4 bits are in fact more than 4 bits ???") # COV_EXCL_LINE
 end
@@ -222,11 +223,11 @@ Interpolate the Perlin noise at the given coordinates.
 See also: [`init_coord_values`](@ref), [`sample_noise`](@ref), [`Perlin`](@ref)
 """
 Base.@propagate_inbounds function interpolate_perlin(
-    idx::PermsType,
-    d1, d2, d3,
-    h1, h2, h3,
-    t1, t2, t3,
-)
+        idx::PermsType,
+        d1, d2, d3,
+        h1, h2, h3,
+        t1, t2, t3,
+    )
     #! big use of @inbounds here. But we have to because it save a lot of time,
     # this is a very hot function
     @inbounds begin
@@ -262,7 +263,7 @@ end
 
 get_y_coord_values(noise, y) = init_coord_values(y + noise.y)
 function get_y_coord_values(noise, ::Missing)
-    noise.const_y, noise.const_index_y, noise.const_smooth_y
+    return noise.const_y, noise.const_index_y, noise.const_smooth_y
 end
 
 function adjust_y(y, yamp, ymin)
@@ -304,8 +305,8 @@ function sample_noise(noise::Perlin, x::Real, z::Real, yamp, ymin)
 end
 
 # default without yamp ymin
-function sample_noise(noise::Perlin, x::Real, z::Real, y=missing)
-    sample_noise(noise, x, z, y, missing, missing)
+function sample_noise(noise::Perlin, x::Real, z::Real, y = missing)
+    return sample_noise(noise, x, z, y, missing, missing)
 end
 # TODO: sample_perlin_beta17_terrain(noise::Perlin, v, d1, d2, d3, yLacAmp)
 
@@ -347,7 +348,7 @@ algorithm instead of the perlin one. See https://en.wikipedia.org/wiki/Simplex_n
 
 See also: [`sample_noise`](@ref), [`Perlin`](@ref)
 """
-function sample_simplex(noise::Perlin, x, y, z=0.0, scaling=70, d=0.5)
+function sample_simplex(noise::Perlin, x, y, z = 0.0, scaling = 70, d = 0.5)
     hf = (x + y) * SKEW
     hx = floor(Int, x + hf)
     hz = floor(Int, y + hf)
@@ -393,16 +394,16 @@ function Base.show(io::IO, p::Perlin)
     is_undef(p) && return print(io, "Perlin(uninitialized)")
 
     print(io, "Perlin(")
-    print(io, "x=", round(p.x; digits=2), ", ")
-    print(io, "y=", round(p.y; digits=2), ", ")
-    print(io, "z=", round(p.z; digits=2), ", ")
-    print(io, "const_y=", round(p.const_y; digits=2), ", ")
+    print(io, "x=", round(p.x; digits = 2), ", ")
+    print(io, "y=", round(p.y; digits = 2), ", ")
+    print(io, "z=", round(p.z; digits = 2), ", ")
+    print(io, "const_y=", round(p.const_y; digits = 2), ", ")
     print(io, "const_index_y=", p.const_index_y, ", ")
-    print(io, "const_smooth_y=", round(p.const_smooth_y; digits=2), ", ")
-    print(io, "amplitude=", round(p.amplitude; digits=2), ", ")
-    print(io, "lacunarity=", round(p.lacunarity; digits=2), ", ")
+    print(io, "const_smooth_y=", round(p.const_smooth_y; digits = 2), ", ")
+    print(io, "amplitude=", round(p.amplitude; digits = 2), ", ")
+    print(io, "lacunarity=", round(p.lacunarity; digits = 2), ", ")
     print(io, "permutations=")
-    show(io, p.permutations)
+    return show(io, p.permutations)
 end
 
 function Base.show(io::IO, mime::MIME"text/plain", p::Perlin)
@@ -412,13 +413,13 @@ function Base.show(io::IO, mime::MIME"text/plain", p::Perlin)
     end
     #! format: off
     println(io, "Perlin Noise:")
-    println(io, "├ Coordinates: (x=$(round(p.x, digits=2)), y=$(round(p.y, digits=2)), z=$(round(p.z, digits=2)))")
+    println(io, "├ Coordinates: (x=$(round(p.x, digits = 2)), y=$(round(p.y, digits = 2)), z=$(round(p.z, digits = 2)))")
     println(io, "├ Amplitude: $(p.amplitude)")
     println(io, "├ Lacunarity: $(p.lacunarity)")
-    println(io, "├ Constant Y: y=$(round(p.const_y, digits=4)), index=$(p.const_index_y), smooth=$(round(p.const_smooth_y, digits=4))")
+    println(io, "├ Constant Y: y=$(round(p.const_y, digits = 4)), index=$(p.const_index_y), smooth=$(round(p.const_smooth_y, digits = 4))")
 
     # Show just the first few and last few permutation values
     perms = p.permutations
     perm_str = "[$(perms[0]), $(perms[1]), $(perms[2]), $(perms[3]), ..., $(perms[254]), $(perms[255]), $(perms[256])]"
-    print(io, "└ Permutation table: $perm_str")
+    return print(io, "└ Permutation table: $perm_str")
 end
