@@ -174,7 +174,7 @@ end
     SP_EROSION
     SP_RIDGES
     SP_WEIRDNESS
-    FIXSPLINE = typemax(Int32)
+    POINT_SPLINE = typemax(Int32)
 end
 Base.trunc(::Type{SplineType}, x) = SplineType(trunc(Int, x))
 
@@ -195,7 +195,7 @@ Base.length(spline::Spline) = length(spline.locations)
 # function Spline(spline_type::SplineType, locations, derivatives, child_splines)
 #     return Spline(spline_type, locations, derivatives, child_splines, zero(Float32))
 # end
-# fixspline(value::Real) = Spline(FIXSPLINE, (), (), (), value)
+# point_spline(value::Real) = Spline(POINT_SPLINE, (), (), (), value)
 
 function Spline(spline_type::SplineType, locations, derivatives, child_splines)
     return Spline(
@@ -206,46 +206,46 @@ function Spline(spline_type::SplineType, locations, derivatives, child_splines)
         zero(Float32),
     )
 end
-fixspline(value::Real) = Spline(FIXSPLINE, Float32[], Float32[], Spline[], value)
+point_spline(value::Real) = Spline(POINT_SPLINE, Float32[], Float32[], Spline[], value)
 
-fixsplines(values...) = map(fixspline, values)
+point_splines(values...) = map(point_spline, values)
 
-@only_float32 function get_offset_value(weirdness, continentalness)
-    f1 = (continentalness - 1) * 0.5
-    f0 = 1 + f1
-    f2 = (weirdness + 1.17) * 0.46082947
-    off = muladd(f0, f2, f1)
-    weirdness < -0.7 && return max(off, -0.2222)
-    return max(off, zero(off))
+@only_float32 function moutain_continentalness(weirdness, continentalness)
+    continentalness_factor = (continentalness - 1) * 0.5
+    scale_factor = 1 + continentalness_factor
+    scaled_weirdness = (weirdness + 1.17) * 0.46082947
+    offset = muladd(scale_factor, scaled_weirdness, continentalness_factor)
+    weirdness < -0.7 && return max(offset, -0.2222)
+    return max(offset, zero(offset))
 end
 
 # we really need to constraint coeff to Float2 here otherwise we need to have a
 # tuple full of Float32 and not of Float64
-@only_float32 function spline_38219(coeff::Float32, bl::Val{BL}) where {BL}
+@only_float32 function mountain_ridge_spline(coeff::Float32, bl::Val{BL}) where {BL}
     spline_type = SP_RIDGES
-    offset_neg1 = get_offset_value(-1, coeff)
-    offset_pos1 = get_offset_value(1, coeff)
+    offset_neg1 = moutain_continentalness(-1, coeff)
+    offset_pos1 = moutain_continentalness(1, coeff)
     half_factor = 0.5 * (1 - coeff)
     λ = half_factor / (0.46082947 * (1 - half_factor)) - 1.17
     if -0.65 <= λ <= 1
-        return spline_38219(spline_type, coeff, offset_pos1, offset_neg1, λ)
+        return mountain_ridge_spline(spline_type, coeff, offset_pos1, offset_neg1, λ)
     end
     slope = (offset_pos1 - offset_neg1) * 0.5
-    return spline_38219(spline_type, slope, offset_pos1, offset_neg1, bl)
+    return mountain_ridge_spline(spline_type, slope, offset_pos1, offset_neg1, bl)
 end
 
-@only_float32 function spline_38219(spline_type, coeff, offset_pos1, offset_neg1, λ::Real)
-    offset_neg065 = get_offset_value(-0.65, coeff)
-    offset_neg075 = get_offset_value(-0.75, coeff)
+@only_float32 function mountain_ridge_spline(spline_type, coeff, offset_pos1, offset_neg1, λ::Real)
+    offset_neg065 = moutain_continentalness(-0.65, coeff)
+    offset_neg075 = moutain_continentalness(-0.75, coeff)
     scaled_diff = (offset_neg075 - offset_neg1) * 4
-    offset_adjusted = get_offset_value(λ, coeff)
+    offset_adjusted = moutain_continentalness(λ, coeff)
     slope = (offset_pos1 - offset_adjusted) / (1.0f0 - λ)
 
     return Spline(
         spline_type,
         (-1, -0.75, -0.65, λ - 0.01, λ, 1),
         (scaled_diff, 0, 0, 0, slope, slope),
-        fixsplines(
+        point_splines(
             offset_neg1,
             offset_neg075,
             offset_neg065,
@@ -256,29 +256,29 @@ end
     )
 end
 
-@only_float32 function spline_38219(
+@only_float32 function mountain_ridge_spline(
         spline_type, slope, offset_pos1, offset_neg1, ::Val{true},
     )
     return Spline(
         spline_type,
         (-1, 0, 1),
         (0, slope, slope),
-        fixsplines(max(offset_neg1, 0.2), lerp(0.5, offset_neg1, offset_pos1), offset_pos1),
+        point_splines(max(offset_neg1, 0.2), lerp(0.5, offset_neg1, offset_pos1), offset_pos1),
     )
 end
 
-@only_float32 function spline_38219(
+@only_float32 function mountain_ridge_spline(
         spline_type, slope, offset_pos1, offset_neg1, ::Val{false},
     )
     return Spline(
         spline_type,
         (-1, 1),
         (slope, slope),
-        fixsplines(max(offset_neg1, 0.2), lerp(0.5, offset_neg1, offset_pos1)),
+        point_splines(max(offset_neg1, 0.2), lerp(0.5, offset_neg1, offset_pos1)),
     )
 end
 
-@only_float32 function flat_offset_spline(x1, x2, x3, x4, x5, x6)
+@only_float32 function ridge_spline(x1, x2, x3, x4, x5, x6)
     spline_type = SP_RIDGES
     x7 = max(0.5 * (x2 - x1), x6)
     x8 = 5 * (x3 - x2)
@@ -286,85 +286,87 @@ end
         spline_type,
         (-1, -0.4, 0, 0.4, 1),
         (x7, min(x7, x8), x8, 2 * (x4 - x3), 0.7 * (x5 - x4)),
-        fixsplines(x1, x2, x3, x4, x5),
+        point_splines(x1, x2, x3, x4, x5),
     )
 end
 
-@only_float32 function additional_values_land_spline(x1, x2, x3, x5, spline_6, ::Val{true})
+@only_float32 function additional_ridge_splines(x1, x2, x3, x5, spline6, ::Val{true})
     # add additional splines if bl is true
-    spline_7 = flat_offset_spline(x1, x5, x5, x2, x3, 0.5)
-    spline_8 = Spline(
+    spline7 = ridge_spline(x1, x5, x5, x2, x3, 0.5)
+    spline8 = Spline(
         SP_RIDGES,
         (-1.0, -0.4, 0),
         (0, 0, 0),
-        (fixspline(x1), spline_6, fixspline(x3 + 0.07)),
+        (point_spline(x1), spline6, point_spline(x3 + 0.07)),
     )
 
     locations = (0.4, 0.45, 0.55, 0.58)
-    child_splines = (spline_7, spline_8, spline_8, spline_7)
+    child_splines = (spline7, spline8, spline8, spline7)
     # 11 child splines if bl is true
     return locations, child_splines
 end
+additional_ridge_splines(x1, x2, x3, x5, spline_6, ::Val{false}) = (), ()
 
-additional_values_land_spline(x1, x2, x3, x5, spline_6, ::Val{false}) = (), ()
+zerolike(::NTuple{N, T}) where {N, T} = ntuple(i -> zero(T), Val{N}())
+zerolike(x::Tuple{}) = x
 
-zero_like(::NTuple{N, T}) where {N, T} = ntuple(i -> zero(T), Val{N}())
-zero_like(x::Tuple{}) = x
+@only_float32 function erosion_offset_spline(x1, x2, x3, x4, x5, x6, bl::Val{BL}) where {BL}
+    # initial mountain ridge spline
+    spline1 = mountain_ridge_spline(lerp(x4, 0.6, 1.5), bl)
+    spline2 = mountain_ridge_spline(lerp(x4, 0.6, 1.0), bl)
+    spline3 = mountain_ridge_spline(x4, bl)
 
-@only_float32 function land_spline(x1, x2, x3, x4, x5, x6, bl::Val{BL}) where {BL}
-    # create initial splines with different linear interpolation values
-    lerp_4_15 = lerp(x4, 0.6, 1.5)
-    lerp_4_1 = lerp(x4, 0.6, 1.0)
-    spline_1 = spline_38219(lerp_4_15, bl)
-    spline_2 = spline_38219(lerp_4_1, bl)
-    spline_3 = spline_38219(x4, bl)
+    # ridge spline
+    halfx4 = 0.5 * x4
+    spline4 = ridge_spline(x1 - 0.15, halfx4, halfx4, halfx4, x4 * 0.6, 0.5)
+    spline5 = ridge_spline(x1, x5 * x4, x2 * x4, halfx4, x4 * 0.6, 0.5)
+    spline6 = ridge_spline(x1, x5, x5, x2, x3, 0.5)
 
-    # create flat offset splines
-    half_i = 0.5 * x4
-    spline_4 = flat_offset_spline(x1 - 0.15, half_i, half_i, half_i, x4 * 0.6, 0.5)
-    spline_5 = flat_offset_spline(x1, x5 * x4, x2 * x4, half_i, x4 * 0.6, 0.5)
-    spline_6 = flat_offset_spline(x1, x5, x5, x2, x3, 0.5)
+    #! format: off
+    locations =     (-0.85  , -0.7   , -0.4   , -0.35  , -0.1   , 0.2    )
+    child_splines = (spline1, spline2, spline3, spline4, spline5, spline6)
+    #! format: on
 
-    # Initialize locations and associated splines
-    locations = (-0.85f0, -0.7f0, -0.4f0, -0.35f0, -0.1f0, 0.2f0)
-    child_splines = (spline_1, spline_2, spline_3, spline_4, spline_5, spline_6)
 
-    mid_locs, mid_splines = additional_values_land_spline(x1, x2, x3, x5, spline_6, bl)
-    end_loc, end_spline = 0.7, flat_offset_spline(-0.02, x6, x6, x2, x3, 0)
+    # if bl is true or not, there is additional splines that occur before the last one
+    mid_locs, mid_splines = additional_ridge_splines(x1, x2, x3, x5, spline6, bl)
+    last_loc, last_spline = 0.7, ridge_spline(-0.02, x6, x6, x2, x3, 0)
 
-    locations = (locations..., mid_locs..., end_loc)
-    child_splines = (child_splines..., mid_splines..., end_spline)
-    derivatives = zero_like(locations)
+    # concatenate the additional and last splines to the initial ones
+    locations = (locations..., mid_locs..., last_loc)
+    child_splines = (child_splines..., mid_splines..., last_spline)
 
-    # Create and return the final spline
+    # derivatives are always zero (don't ask me why, but i take it it's simpler this way)
+    derivatives = zerolike(locations)
+
     return Spline(SP_EROSION, locations, derivatives, child_splines)
 end
 
-@only_float32 function world_spline()
-    spline1 = land_spline(-0.15, 0, 0, 0.1, 0, -0.03, Val(false))
-    spline2 = land_spline(-0.1, 0.03, 0.1, 0.1, 0.01, -0.03, Val(false))
-    spline3 = land_spline(-0.1, 0.03, 0.1, 0.7, 0.01, -0.03, Val(true))
-    spline4 = land_spline(-0.05, 0.03, 0.1, 1.0, 0.01, 0.01, Val(true))
+@only_float32 function worldspline()
+    spline1 = erosion_offset_spline(-0.15, 0, 0, 0.1, 0, -0.03, Val(false))
+    spline2 = erosion_offset_spline(-0.1, 0.03, 0.1, 0.1, 0.01, -0.03, Val(false))
+    spline3 = erosion_offset_spline(-0.1, 0.03, 0.1, 0.7, 0.01, -0.03, Val(true))
+    spline4 = erosion_offset_spline(-0.05, 0.03, 0.1, 1.0, 0.01, 0.01, Val(true))
 
     locations = (-1.1, -1.02, -0.51, -0.44, -0.18, -0.16, -0.15, -0.1, 0.25, 1.0)
     child_splines = (
-        fixspline(0.044),
-        fixspline(-0.2222),
-        fixspline(-0.2222),
-        fixspline(-0.12),
-        fixspline(-0.12),
+        point_spline(0.044),
+        point_spline(-0.2222),
+        point_spline(-0.2222),
+        point_spline(-0.12),
+        point_spline(-0.12),
         spline1,
         spline1,
         spline2,
         spline3,
         spline4,
     )
-    derivatives = zero_like(locations)
+    derivatives = zerolike(locations)
 
     return Spline(SP_CONTINENTALNESS, locations, derivatives, child_splines)
 end
 
-const SPLINE_STACK = world_spline()
+const SPLINE_STACK = worldspline()
 #endregion
 #region Spline getter
 # ---------------------------------------------------------------------------- #
