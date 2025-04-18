@@ -205,6 +205,7 @@ function Base.show(io::IO, mime::MIME"text/plain", o::Octaves{N}) where {N}
     println(io, "├ Total amplitude: $(round(total_amplitude; digits=4))")
 
     # Show individual octaves
+    oct_str = []
     for (i, octave) in enumerate(o.octaves)
         if i < length(o.octaves)
             prefix = "├"
@@ -214,6 +215,7 @@ function Base.show(io::IO, mime::MIME"text/plain", o::Octaves{N}) where {N}
         amp = round(octave.amplitude; digits=4)
         lac = round(octave.lacunarity; digits=4)
         weight = round(100 * octave.amplitude / total_amplitude; digits=1)
-        println(io, "$prefix Octave $i: amplitude=$(amp) ($(weight)%), lacunarity=$(lac)")
+        push!(oct_str, "$prefix Octave $i: amplitude=$(amp) ($(weight)%), lacunarity=$(lac)")
     end
+    print(io, join(oct_str, "\n"))
 end

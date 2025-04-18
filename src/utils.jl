@@ -8,7 +8,6 @@ public md5_to_uint64, u64_seed, sha256_from_seed, sha256_from_seed!
 public lerp, lerp2, lerp3, lerp4, clamped_lerp
 public length_of_trimmed, length_filter
 public @only_float32
-public iter_chunks_threads
 
 using MD5: md5
 using StaticArrays: MVector
@@ -20,7 +19,7 @@ Converts an iterator of bytes to an iterator of UInt64.
 
 # Example
 ```julia
->>> bytes2uint64([0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10]) |> collect
+julia> bytes2uint64([0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10]) |> collect
 2-element Vector{UInt64}:
 0x0102030405060708
 0x090a0b0c0d0e0f10
@@ -293,23 +292,6 @@ end
 # ---------------------------------------------------------------------------- #
 #                                  Iteration                                   #
 # ---------------------------------------------------------------------------- #
-
-function iter_chunks_threads(collection)
-    len = length(collection)
-    nb_threads = Threads.nthreads()
-    nb_chunks = len <= nb_threads ? 1 : len ÷ nb_threads
-    return Iterators.partition(collection, nb_chunks)
-end
-
-"""
-    @map_inline(func, tuple)
-
-Inline the loop done by map(func, tuple), i.e. transform it to the tuple of the form
-`(:func(x1), :func(x2), ...)` at compile-time. Improves performance for small tuples.
-"""
-macro map_inline(func, tuple)
-    return Expr(:tuple, map(x -> esc(:($func($x))), tuple.args)...)
-end
 
 end # module
 

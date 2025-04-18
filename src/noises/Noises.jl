@@ -1,6 +1,6 @@
 # document Noises module
 """
-!!! note
+!!! warning
     Working over raw noise functions is very low-level and should only be used
     as a last resort or for performance reasons.
 

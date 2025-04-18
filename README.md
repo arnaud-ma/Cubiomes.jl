@@ -4,6 +4,9 @@
 --->
 [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://arnaud-ma.github.io/Cubiomes.jl/stable/)
 [![Build Status](https://github.com/arnaud-ma/cubiomes.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/arnaud-ma/cubiomes.jl/actions/workflows/CI.yml?query=branch%3Amain)
+[![Coverage](https://codecov.io/gh/arnaud-ma/Cubiomes.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/arnaud-ma/Cubiomes.jl)
+[![Aqua](https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg)](https://github.com/JuliaTesting/Aqua.jl)
+[![code style: runic](https://img.shields.io/badge/code_style-%E1%9A%B1%E1%9A%A2%E1%9A%BE%E1%9B%81%E1%9A%B2-black)](https://github.com/fredrikekre/Runic.jl)
 
 A rewrite of [Cubiomes](https://github.com/Cubitect/cubiomes) but in [Julia](https://julialang.org/), intended to be (much) easier to use and to contribute to, and faster.
 
@@ -125,7 +128,7 @@ it would return a array WorldMap. So the current `gen_biomes!` should still exis
 
 ### Conventions
 
-- The code should be formatted with `using JuliaFormatter; format(".")`.
+- The code should be formatted with [Runic.jl](https://github.com/fredrikekre/Runic.jl)
 - For random generator, each function that modifies the state inplace should be prefixed with a `🎲` (:game_die:)
 - For array manipulation, each function that modifies the array inplace should be prefixed with a `!`.
 - Each new feature should be tested with unit tests (with the `Test` module) and if possible with property-based tests (with [Suppositions.jl](https://github.com/Seelengrab/Supposition.jl))
@@ -137,12 +140,6 @@ You can run the tests with:
 
 ```julia
 julia> ] test Cubiomes
-```
-
-To not include [Aqua.jl](https://github.com/JuliaTesting/Aqua.jl) tests:
-
-```julia
-julia> using Pkg; Pkg.test("Cubiomes"; test_args=["not_aqua"])
 ```
 
 To run the tests with the coverage:

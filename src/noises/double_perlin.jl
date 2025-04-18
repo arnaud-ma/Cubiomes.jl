@@ -119,14 +119,10 @@ function Base.show(io::IO, mime::MIME"text/plain", dp::DoublePerlin{N}) where {N
 
     # Display first octave group
     println(io, "├ Octave Group A:")
-    io_octave_a = IOBuffer()
-    show(IOContext(io_octave_a, :compact => true), mime, dp.octave_A)
-    octave_a_lines = split(String(take!(io_octave_a)), '\n')
+    octave_a_lines = split(repr(mime, dp.octave_A), '\n')
     for (i, line) in enumerate(octave_a_lines)
         if i == 1
             continue  # Skip the first line which is the title
-        elseif i == length(octave_a_lines)
-            println(io, "│ └$(line[3:end])")  # Replace the last prefix
         else
             println(io, "│ $(line)")
         end
@@ -134,12 +130,13 @@ function Base.show(io::IO, mime::MIME"text/plain", dp::DoublePerlin{N}) where {N
 
     # Display second octave group
     println(io, "└ Octave Group B:")
-    io_octave_b = IOBuffer()
-    show(IOContext(io_octave_b, :compact => true), mime, dp.octave_B)
-    octave_b_lines = split(String(take!(io_octave_b)), '\n')
+    octave_b_lines = split(repr(mime, dp.octave_B), '\n')
+
     for (i, line) in enumerate(octave_b_lines)
         if i == 1
             continue  # Skip the first line which is the title
+        elseif i == length(octave_b_lines)
+            print(io, "  $(line)") # no new line at the end
         else
             println(io, "  $(line)")
         end

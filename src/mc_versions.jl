@@ -119,7 +119,7 @@ end
 A string macro to get a Minecraft version. For example `mcv"1.8.9"`
 represents the 1.8.9 version or `mcv"beta1.7"` for the beta 1.7.
 
-!!!warning
+!!! warning
     It does not *exactly* represents a Minecraft version, but more a close one, where the
     biome generation is the same. For example, `mcv"1.8.6"` is exactly equal to `mcv"1.8.9`
     since the generation does not change between those two versions.

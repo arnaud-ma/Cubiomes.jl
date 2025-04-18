@@ -419,10 +419,6 @@ function Base.show(io::IO, mime::MIME"text/plain", p::Perlin)
 
     # Show just the first few and last few permutation values
     perms = p.permutations
-    if length(perms) > 8
-        perm_str = "[$(perms[0]), $(perms[1]), $(perms[2]), $(perms[3]), ..., $(perms[254]), $(perms[255]), $(perms[256])]"
-    else
-        perm_str = string(perms)
-    end
+    perm_str = "[$(perms[0]), $(perms[1]), $(perms[2]), $(perms[3]), ..., $(perms[254]), $(perms[255]), $(perms[256])]"
     print(io, "└ Permutation table: $perm_str")
 end
