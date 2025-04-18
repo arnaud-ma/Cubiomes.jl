@@ -68,7 +68,7 @@ Perms(::UndefInitializer) = OffsetVector(MVector{257, UInt8}(undef), 0:256)
     @inbounds for i in 0x00:0xFF
         perms[i] = i
     end
-    return 
+    return nothing
 end
 
 """
