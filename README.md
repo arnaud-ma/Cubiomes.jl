@@ -38,34 +38,31 @@ You can look at the [documentation](https://arnaud-ma.github.io/Cubiomes.jl/stab
 
 ### Biome generation
 
-Let's create a simple program which tests seeds for a mushroom fields biome at a predefined location.
+Search a seed for a mushroom fields biome at a predefined location.
 
 ```julia
 using Cubiomes
-using Base.Iterators: countfrom
 
-function search_biome_at(x, z, y)
-    overworld = Overworld(undef, mcv"1.18")
-
-    for seed in countfrom(zero(UInt64))
-        set_seed!(overworld, seed)
-        biome = get_biome(overworld, x, z, y)
-
-        if biome == Biomes.mushroom_fields
-            println("Seed $(signed(seed)) has a Mmushroom Fields at $((x, z, y))")
+function search_biome_at(gen, x, z, y)
+    seed = 0
+    while true
+        set_seed!(gen, seed)
+        if get_biome(gen, x, z, y) == Biomes.mushroom_fields
+            println("Seed $seed has a Mushroom Fields at $((x, z, y))")
             break
         end
+        seed += 1
     end
 end
 
-search_biome_at(0, 0, 63)
+const gen = Overworld(undef, mcv"1.18")
+search_biome_at(gen, 0, 0, 63)
 ```
 
 ### World map generation
 
-To generate a map of biomes, you need to create a `World` object that is simply a 3D / 2D array of biomes, with the real coordinates of the world as indices. Use `gen_biomes!`
-to fill the world with the biomes. It can be much faster than calling `get_biome` for each block.
-Here is an example that generate the biomes and save the map as an image:
+Generate a map of biomes and save it as an image. Using `gen_biomes!` can be much faster than iterating over the world map
+and calling `get_biome` for each coordinate.
 
 ```julia
 using Cubiomes
