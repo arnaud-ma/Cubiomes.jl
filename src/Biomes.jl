@@ -134,11 +134,9 @@ using ..MCVersions
     BIOME_NONE = typemax(UInt8)
 )
 #! format: on
-Biome = Biome
+const Biome = Biome # for the editor
 isnone(biome::Biome) = biome == BIOME_NONE
 Base.transpose(x::Biome) = x
-
-
 
 """
     biome_exists(biome::Biome, version::MCVersion)
@@ -363,7 +361,6 @@ not have a mutated variant, return `BIOME_NONE`.
     biome == badlands_plateau && return modified_badlands_plateau
     return BIOME_NONE
 end
-
 
 """
     category(biome::Biome, version::MCVersion)
