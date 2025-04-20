@@ -33,30 +33,35 @@ Cubiomes.jl provides a powerful and efficient implementation of Minecraft's worl
 }
 .quick-link-box {
     flex: 1;
-    min-width: 200px;
-    padding: 15px 20px;
-    border-radius: 8px;
-    background-color: #f5f5f5;
-    border: 1px solid #e0e0e0;
+    min-width: 250px;
+    padding: 20px 25px;
+    border-radius: 10px;
+    background-color: rgba(127, 127, 127, 0.05);
+    border: 1px solid rgba(127, 127, 127, 0.2);
     text-decoration: none;
     color: inherit;
-    transition: transform 0.2s, box-shadow 0.2s;
+    transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
 }
 .quick-link-box:hover {
     transform: translateY(-3px);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+    background-color: rgba(127, 127, 127, 0.1);
 }
 .quick-link-box h3 {
     margin-top: 0;
-    color: #3955a3;
+    /* Using currentColor which inherits from the parent text color */
+    color: currentColor;
+    opacity: 0.9;
+    font-size: 1.3em;
 }
 .quick-link-box p {
     margin-bottom: 0;
-    opacity: 0.8;
+    opacity: 0.7;
+    font-size: 1.05em;
 }
 </style>
 ```
-
 ## Audience
 
 You should be familiar with programming. That's all. If you are not familiar with Julia, the syntax is quite easy (similar to Python in some ways). You can learn it by working with this package. Look at the [Examples](#examples) or [Getting Started](gettingstarted.md) pages to see how to use it.
