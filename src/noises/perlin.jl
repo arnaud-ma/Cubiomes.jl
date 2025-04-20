@@ -114,7 +114,7 @@ function is_undef(p::Perlin)
     )
 end
 
-function set_rng!🎲(perlin::Perlin, rng::AbstractJavaRNG)
+function setrng!🎲(perlin::Perlin, rng::AbstractJavaRNG)
     x = next🎲(rng, Float64, 0:256)
     y = next🎲(rng, Float64, 0:256)
     z = next🎲(rng, Float64, 0:256)

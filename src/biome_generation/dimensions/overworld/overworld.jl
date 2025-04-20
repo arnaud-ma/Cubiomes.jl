@@ -11,7 +11,7 @@ The Overworld dimension. See [`Dimension`](@ref) for general usage.
 
 # Minecraft version >= 1.18 specificities
 
-- If the 1:1 scale will never be used, adding `sha=Val(false)` to `set_seed!` will
+- If the 1:1 scale will never be used, adding `sha=Val(false)` to `setseed!` will
   save a very small amount of time (of the order of 100ns up to 1µs). The sha
   is a precomputed value only used for the 1:1 scale. But the default behavior is
   to compute the sha at each seed change for simplicity.

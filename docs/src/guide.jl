@@ -46,7 +46,7 @@ overworld = Overworld(undef, mcv"1.18")
 # As suggested by the `undef` keyword, the object is currently uninitialized and unusable.
 # We need to assign it a seed.
 
-set_seed!(overworld, 999)
+setseed!(overworld, 999)
 
 # Just retype `overworld` to see the initialized object. Not shown here because it is
 # quite long.
@@ -54,7 +54,7 @@ set_seed!(overworld, 999)
 # The seed can be any valid Minecraft seed, i.e., a string or an integer. However, for
 # performance reasons, integers are preferred.
 #
-# The "!" at the end of [`set_seed!`](@ref) follows Julia’s convention, indicating that the
+# The "!" at the end of [`setseed!`](@ref) follows Julia’s convention, indicating that the
 # function modifies the object (`overworld`) in place. This prevents the creation of a new
 # object each time a seed is set, allowing reuse of the same `overworld` instance.
 # The only thing that cannot be changed is the version. Think of it like the game starting
@@ -68,14 +68,14 @@ set_seed!(overworld, 999)
 # - the version
 # - the seed
 
-# Now, we just need to call the [`get_biome`](@ref) function, providing our object and a coordinate.
+# Now, we just need to call the [`getbiome`](@ref) function, providing our object and a coordinate.
 
-get_biome(overworld, -55, 45, 63)
+getbiome(overworld, -55, 45, 63)
 
 # The coordinates can be passed as three numbers or as a tuple (x, z, y):
 
 coord = (-55, 45, 63)
-get_biome(overworld, coord)
+getbiome(overworld, coord)
 
 # !!! warning
 #     In Cubiomes.jl, the coordinate order is **ALWAYS** `(x, z, y)`.
@@ -111,7 +111,7 @@ DisplayAs.PNG(to_color(view2d(worldmap))) # hide
 
 function populate_map!(overworld, worldmap)
     for coord in coordinates(worldmap)
-        worldmap[coord] = get_biome(overworld, coord)
+        worldmap[coord] = getbiome(overworld, coord)
     end
     return
 end
@@ -122,9 +122,9 @@ DisplayAs.PNG(to_color(view2d(worldmap))) # hide
 # And it works! However, it could be inefficient. Because of how Minecraft generation works,
 # we can optimize the process using algorithms that take advantage of a global world view.
 # For certain dimensions/versions, this can be significantly faster. That's what
-# [`gen_biomes!`](@ref) is for.
+# [`genbiomes!`](@ref) is for.
 
-gen_biomes!(overworld, worldmap)
+genbiomes!(overworld, worldmap)
 to_color(view2d(worldmap))
 DisplayAs.PNG(to_color(view2d(worldmap))) # hide
 
@@ -132,7 +132,7 @@ DisplayAs.PNG(to_color(view2d(worldmap))) # hide
 
 @time populate_map!(overworld, worldmap)
 #
-@time gen_biomes!(overworld, worldmap)
+@time genbiomes!(overworld, worldmap)
 
 # A world map acts like a standard array; the only difference is that its indices correspond to Minecraft coordinates.
 worldmap[-55, 45]
@@ -142,11 +142,11 @@ worldmap[-255, 45] # show_error
 
 # ## The scale object
 
-# In `get_biome` and `gen_biomes!`, there is an optional final argument: the `Scale` object.
+# In `getbiome` and `genbiomes!`, there is an optional final argument: the `Scale` object.
 # A scale can be created using 📏"1:N", where N is a power of 4.
 
 worldmap2 = WorldMap(-50:50, -50:50, 16)
-gen_biomes!(overworld, worldmap2, 📏"1:4")
+genbiomes!(overworld, worldmap2, 📏"1:4")
 to_color(view2d(worldmap2))
 DisplayAs.PNG(to_color(view2d(worldmap2))) # hide
 

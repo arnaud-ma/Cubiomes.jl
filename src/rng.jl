@@ -10,7 +10,7 @@ Only the [`next🎲`] function is used to get random numbers. Instead of `nextDo
 in Java, use `next🎲(rng, Float64)` or `next🎲(rng, Int32)` respectively.
 """
 module JavaRNG
-export next🎲, randjump🎲, set_seed🎲
+export next🎲, randjump🎲, setseed🎲
 export AbstractJavaRNG, JavaRandom, JavaXoroshiro128PlusPlus
 
 using ..Utils: u64_seed
@@ -40,11 +40,11 @@ function randjump🎲(rng::T, type, n::Integer) where {T <: AbstractJavaRNG}
 end
 
 """
-    set_seed🎲(rng::AbstractJavaRNG, seed) -> AbstractJavaRNG
+    setseed🎲(rng::AbstractJavaRNG, seed) -> AbstractJavaRNG
 
 Initialize the rng with the given seed. Return the rng itself for convenience.
 """
-set_seed🎲(rng::AbstractJavaRNG, seed, args...) = set_seed🎲(rng, u64_seed(seed), args...)
+setseed🎲(rng::AbstractJavaRNG, seed, args...) = setseed🎲(rng, u64_seed(seed), args...)
 
 next🎲(rng::AbstractJavaRNG, ::Type{T}, stop::Real) where {T} = next🎲(rng, T) * stop
 
@@ -97,7 +97,7 @@ end
 Base.copy(rng::JavaRandom) = copy!(JavaRandom(0), rng)
 Base.:(==)(a::JavaRandom, b::JavaRandom) = a.seed == b.seed
 
-function set_seed🎲(rng::JavaRandom, seed::UInt64)
+function setseed🎲(rng::JavaRandom, seed::UInt64)
     rng.seed = _new_seed(seed)
     return rng
 end
@@ -204,7 +204,7 @@ function _get_lo_hi(seed::UInt64)
     return l, h
 end
 
-function set_seed🎲(rng::JavaXoroshiro128PlusPlus, seed::UInt64)
+function setseed🎲(rng::JavaXoroshiro128PlusPlus, seed::UInt64)
     rng.lo, rng.hi = _get_lo_hi(seed)
     return rng
 end

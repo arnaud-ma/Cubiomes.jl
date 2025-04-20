@@ -37,7 +37,7 @@ function check_octave_min(N::Int, octave_min)
 end
 check_octave_min(octaves, octave_min) = check_octave_min(length(octaves), octave_min)
 
-function set_rng!🎲(noise::Octaves{N}, rng::JavaRandom, octave_min) where {N}
+function setrng!🎲(noise::Octaves{N}, rng::JavaRandom, octave_min) where {N}
     check_octave_min(N, octave_min)
     end_ = octave_min + N - 1
     persistence = 1 / (2.0^N - 1)
@@ -49,21 +49,21 @@ function set_rng!🎲(noise::Octaves{N}, rng::JavaRandom, octave_min) where {N}
     end
 
     @inbounds for i in 1:N
-        set_rng_octave!🎲(octaves[i], rng, persistence, lacunarity)
+        setrng_octave!🎲(octaves[i], rng, persistence, lacunarity)
         persistence *= 2
         lacunarity /= 2
     end
     return nothing
 end
 
-function set_rng_octave!🎲(
+function setrng_octave!🎲(
         octave::Perlin,
         rng,
         persistence::T,
         lacunarity,
         amp = one(T),
     ) where {T}
-    set_rng!🎲(octave, rng)
+    setrng!🎲(octave, rng)
     octave.amplitude = persistence * amp
     octave.lacunarity = lacunarity
     return nothing
@@ -73,7 +73,7 @@ const MD5_OCTAVE_NOISE = Tuple(@. Tuple(Utils.md5_to_uint64("octave_" * string(-
 const LACUNARITY_INI = Tuple(@. 1 / 2^(0:12)) # -omin = 3:12
 const PERSISTENCE_INI = Tuple(2^n / (2^(n + 1) - 1) for n in 0:8) # len = 4:9
 
-function set_rng!🎲(
+function setrng!🎲(
         octaves_type::Octaves{N},
         rng::JavaXoroshiro128PlusPlus,
         amplitudes::NTuple{NA},
@@ -84,14 +84,14 @@ function set_rng!🎲(
         throw(ArgumentError(lazy"the number of octaves must be equal to length_filter(!iszero, amplitudes). \
                                  Got $N != $Utils.length_filter(!iszero, amplitudes)."))
     end
-    return unsafe_set_rng!🎲(octaves_type, rng, amplitudes, octave_min, real_length)
+    return unsafe_setrng!🎲(octaves_type, rng, amplitudes, octave_min, real_length)
 end
 
 # In the ideal world, N is equal to the number of non-zero amplitudes
 # but in the unsafe version, it can be less than the number of non-zero amplitudes
 # it means that we skip some octaves, maybe for performance reasons
 # if N is greater, undefined behavior can occur
-function unsafe_set_rng!🎲(
+function unsafe_setrng!🎲(
         octaves_type::Octaves{N},
         rng::JavaXoroshiro128PlusPlus,
         amplitudes::NTuple{N2},
@@ -120,7 +120,7 @@ function unsafe_set_rng!🎲(
             # Set RNG for the current octave
             # nb of octaves are always >= 1 so we can safely use @inbounds
             @inbounds octave = octaves[octave_counter]
-            set_rng_octave!🎲(octave, rng_temp, persistence, lacunarity, amp)
+            setrng_octave!🎲(octave, rng_temp, persistence, lacunarity, amp)
 
             # Move to the next octave
             octave_counter == N && break

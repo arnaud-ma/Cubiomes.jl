@@ -9,11 +9,11 @@ in the procedural generation of Minecraft worlds. The result are always floating
 the input can be any type of number.
 
 A noise object can be quite big in memory, so we can create an undefined noise object
-and initialize it without copying it with the `set_rng!🎲` function, saving time and memory.
+and initialize it without copying it with the `setrng!🎲` function, saving time and memory.
 
 The main uses are with the functions:
 - [`Noise`](@ref) : create an undefined noise object.
-- [`set_rng!🎲`](@ref) : initialize the noise object.
+- [`setrng!🎲`](@ref) : initialize the noise object.
 - [`Noise🎲`](@ref) : create and initialize the noise object in one step.
 - [`sample_noise`](@ref) : sample the noise at a given point.
 
@@ -24,11 +24,11 @@ The noises implemented are:
 """
 module Noises
 
-export Noise, Noise🎲, set_rng!🎲
+export Noise, Noise🎲, setrng!🎲
 export sample_noise, sample_simplex
 export Perlin, Octaves, DoublePerlin
 
-export is_undef, unsafe_set_rng!🎲
+export is_undef, unsafe_setrng!🎲
 
 include("interface.jl")
 include("perlin.jl")

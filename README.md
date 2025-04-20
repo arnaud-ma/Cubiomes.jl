@@ -46,8 +46,8 @@ using Cubiomes
 function search_biome_at(gen, x, z, y)
     seed = 0
     while true
-        set_seed!(gen, seed)
-        if get_biome(gen, x, z, y) == Biomes.mushroom_fields
+        setseed!(gen, seed)
+        if getbiome(gen, x, z, y) == Biomes.mushroom_fields
             println("Seed $seed has a Mushroom Fields at $((x, z, y))")
             break
         end
@@ -61,8 +61,8 @@ search_biome_at(gen, 0, 0, 63)
 
 ### World map generation
 
-Generate a map of biomes and save it as an image. Using `gen_biomes!` can be much faster than iterating over the world map
-and calling `get_biome` for each coordinate.
+Generate a map of biomes and save it as an image. Using `genbiomes!` can be much faster than iterating over the world map
+and calling `getbiome` for each coordinate.
 
 ```julia
 using Cubiomes
@@ -71,8 +71,8 @@ using FileIO
 const overworld1_18 = Overworld(undef, mcv"1.18")
 const worldmap = WorldMap(x=-1000:1000, z=-1000:1000, y=63)
 
-set_seed!(overworld1_18, 42)
-gen_biomes!(overworld1_18, worldmap, 📏"1:16")
+setseed!(overworld1_18, 42)
+genbiomes!(overworld1_18, worldmap, 📏"1:16")
 save("world.png", to_color(view2d(worldmap)))
 ```
 
@@ -116,9 +116,9 @@ is to do everything by hand by following [this](https://discourse.julialang.org/
 ### Infrastructure changes
 
 - [X] Make the Minecraft version types instead of enums and dispatch the functions instead of if checks.
-- [ ] Make a type `World(dimension, version)` similar to each dimension objects, with `set_seed!`, etc. But would act
-more like an immutable array of biomes, implementing `getindex` instead of the current `get_biome(dim, coord)`. For slices,
-it would return a array WorldMap. So the current `gen_biomes!` should still exist to allow inplace generation, with a buffer
+- [ ] Make a type `World(dimension, version)` similar to each dimension objects, with `setseed!`, etc. But would act
+more like an immutable array of biomes, implementing `getindex` instead of the current `getbiome(dim, coord)`. For slices,
+it would return a array WorldMap. So the current `genbiomes!` should still exist to allow inplace generation, with a buffer
 `WorldMap` to store the biomes.
 
 ## Contributing

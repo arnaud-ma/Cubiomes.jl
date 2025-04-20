@@ -62,14 +62,14 @@ end
 
 is_undef(x::DoublePerlin{N}) where {N} = is_undef(x.octave_A) || is_undef(x.octave_B)
 
-function set_rng!🎲(noise::DoublePerlin, rng, args::Vararg{Any, N}) where {N}
-    set_rng!🎲(noise.octave_A, rng, args...)
-    return set_rng!🎲(noise.octave_B, rng, args...)
+function setrng!🎲(noise::DoublePerlin, rng, args::Vararg{Any, N}) where {N}
+    setrng!🎲(noise.octave_A, rng, args...)
+    return setrng!🎲(noise.octave_B, rng, args...)
 end
 
-function unsafe_set_rng!🎲(noise::DoublePerlin, rng, args::Vararg{Any, N}) where {N}
-    unsafe_set_rng!🎲(noise.octave_A, rng, args...)
-    return unsafe_set_rng!🎲(noise.octave_B, rng, args...)
+function unsafe_setrng!🎲(noise::DoublePerlin, rng, args::Vararg{Any, N}) where {N}
+    unsafe_setrng!🎲(noise.octave_A, rng, args...)
+    return unsafe_setrng!🎲(noise.octave_B, rng, args...)
 end
 
 # we need to overload the default constructor here because we need to pass the amplitudes
@@ -81,7 +81,7 @@ function Noise🎲(
         octave_min,
     ) where {N}
     dp = Noise(DoublePerlin{N}, undef, amplitudes) # here it's why we need to overload
-    set_rng!🎲(dp, rng, amplitudes, octave_min)
+    setrng!🎲(dp, rng, amplitudes, octave_min)
     return dp
 end
 

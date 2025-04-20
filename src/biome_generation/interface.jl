@@ -86,28 +86,28 @@ using .BiomeArrays: BiomeArrays
 The parent type of every Minecraft dimension. There is generally three steps to use a dimension:
 
 1. Create one dimension with a specific [`MCVersion`](@ref) and maybe some specific arguments.
-2. Set the seed of the dimension with [`set_seed!`](@ref).
+2. Set the seed of the dimension with [`setseed!`](@ref).
 3. Do whatever you want with the dimension: get biomes, generate biomes, etc.
 
 # Examples
 ```julia
 julia> overworld = Overworld(undef, mcv"1.18");
 
-julia> set_seed!(overworld, 42)
+julia> setseed!(overworld, 42)
 
-julia> get_biome(overworld, 0, 0, 63)
+julia> getbiome(overworld, 0, 0, 63)
 dark_forest::Biome = 0x1d
 
-julia> set_seed!(overworld, "I love cats")
+julia> setseed!(overworld, "I love cats")
 
 julia> world = WorldMap(x=-100:100, z=-100:100, y=63);
 
-julia> gen_biomes!(overworld, world, scale=📏"1:4")
+julia> genbiomes!(overworld, world, scale=📏"1:4")
 ```
 
 See also:
   - [`Nether`](@ref), [`Overworld`](@ref), [`End`](@ref)
-  - [`set_seed!`](@ref), [`get_biome`](@ref), [`gen_biomes!`](@ref)
+  - [`setseed!`](@ref), [`getbiome`](@ref), [`genbiomes!`](@ref)
   - [`WorldMap`](@ref), [`Scale`](@ref)
 
 # Extended help
@@ -118,11 +118,11 @@ See also:
 
     The concrete type `TheDim` *MUST* implement:
     - An uninitialized constructor `TheDim(::UndefInitializer, ::MCVersion, args...)`
-    - An inplace constructor `set_seed!(dim::TheDim, seed::UInt64, args...)`.
+    - An inplace constructor `setseed!(dim::TheDim, seed::UInt64, args...)`.
         Be aware that the seed must be constrained to `UInt64` dispatch to work.
-    - get_biome(dim::TheDim, coord, scale::Scale, args...) -> Biome where
+    - getbiome(dim::TheDim, coord, scale::Scale, args...) -> Biome where
         `coord` can be either (x::Real, z::Real, y::Real) or NTuple{3}
-    - gen_biomes!(dim::TheDim, out::WorldMap, scale::Scale, args...)
+    - genbiomes!(dim::TheDim, out::WorldMap, scale::Scale, args...)
 
 """
 abstract type Dimension end
@@ -130,7 +130,7 @@ abstract type Dimension end
 Base.broadcastable(d::Dimension) = Ref(d)
 
 """
-    set_seed!(dim::Dimension, seed; kwargs...)
+    setseed!(dim::Dimension, seed; kwargs...)
 
 Set the seed of the dimension generator. It can be any valid seed you can pass like in
 Minecraft, but UInt64 is better if performance is a concern. To transform an UInt64 seed to
@@ -142,12 +142,12 @@ dimension for more information.
 
 See also: [`Nether`](@ref), [`Overworld`](@ref), [`End`](@ref)
 """
-set_seed!(dim::Dimension, seed; kwargs...) =
-    set_seed!(dim, Utils.u64_seed(seed); kwargs...)
+setseed!(dim::Dimension, seed; kwargs...) =
+    setseed!(dim, Utils.u64_seed(seed); kwargs...)
 
 """
-    get_biome(dim::Dimension, x::Real, z::Real, y::Real, [scale::Scale,], args...; kwargs...) -> Biome
-    get_biome(dim::Dimension, coord, [scale::Scale,], args...; kwargs...) -> Biome
+    getbiome(dim::Dimension, x::Real, z::Real, y::Real, [scale::Scale,], args...; kwargs...) -> Biome
+    getbiome(dim::Dimension, coord, [scale::Scale,], args...; kwargs...) -> Biome
 
 Get the biome at the coordinates `(x, z, y)` in the dimension `dim`. The coordinates can be
 passed as numbers or as tuples or as `CartesianIndex` (the coords returned by
@@ -157,42 +157,42 @@ The scale is defaulted to 1:1, i.e. the exact coordinates. The args are specific
 dimension. See the documentation of the dimension for more information.
 
 See also:
-    - [`Scale`](@ref), [`gen_biomes!`](@ref), [`Dimension`](@ref)
+    - [`Scale`](@ref), [`genbiomes!`](@ref), [`Dimension`](@ref)
 """
-function get_biome end
+function getbiome end
 
-# assuming any subtype of Dimension has a specific get_biome method with either
+# assuming any subtype of Dimension has a specific getbiome method with either
 # (x, z, y) or NTuple{3} as coordinates.
 # Otherwise infinite recursion
-function get_biome(dim::Dimension, x::Real, z::Real, y::Real, s::Scale; kwargs...)
-    return get_biome(dim, (x, z, y), s; kwargs...)
+function getbiome(dim::Dimension, x::Real, z::Real, y::Real, s::Scale; kwargs...)
+    return getbiome(dim, (x, z, y), s; kwargs...)
 end
-function get_biome(dim::Dimension, coord::NTuple{3, Real}, s::Scale; kwargs...)
-    return get_biome(dim, coord..., s; kwargs...)
-end
-
-function get_biome(dim::Dimension, x::Real, z::Real, y::Real; kwargs...)
-    return get_biome(dim, (x, z, y), Scale(1); kwargs...)
-end
-function get_biome(dim::Dimension, coord::NTuple{3, Real}; kwargs...)
-    return get_biome(dim, coord..., Scale(1); kwargs...)
+function getbiome(dim::Dimension, coord::NTuple{3, Real}, s::Scale; kwargs...)
+    return getbiome(dim, coord..., s; kwargs...)
 end
 
-function get_biome(dim::Dimension, coord::CartesianIndex{3}, s::Scale = Scale(1); kwargs...)
-    return get_biome(dim, coord.I, s; kwargs...)
+function getbiome(dim::Dimension, x::Real, z::Real, y::Real; kwargs...)
+    return getbiome(dim, (x, z, y), Scale(1); kwargs...)
+end
+function getbiome(dim::Dimension, coord::NTuple{3, Real}; kwargs...)
+    return getbiome(dim, coord..., Scale(1); kwargs...)
+end
+
+function getbiome(dim::Dimension, coord::CartesianIndex{3}, s::Scale = Scale(1); kwargs...)
+    return getbiome(dim, coord.I, s; kwargs...)
 end
 
 """
-    gen_biomes!(dim::Dimension, world::WorldMap, [scale::Scale,], args...; kwargs...) -> Nothing
+    genbiomes!(dim::Dimension, world::WorldMap, [scale::Scale,], args...; kwargs...) -> Nothing
 
 Fill the world map with the biomes of the dimension `dim`. The scale is defaulted to 1:1.
 The args are specific to the dimension. See the documentation of the dimension for more
 information.
 
-See also: [`WorldMap`](@ref), [`Scale`](@ref), [`Dimension`](@ref), [`get_biome`](@ref)
+See also: [`WorldMap`](@ref), [`Scale`](@ref), [`Dimension`](@ref), [`getbiome`](@ref)
 """
-function gen_biomes!(dim::Dimension, world::BiomeArrays.WorldMap; kwargs...)
-    return gen_biomes!(dim, world, Scale(1); kwargs...)
+function genbiomes!(dim::Dimension, world::BiomeArrays.WorldMap; kwargs...)
+    return genbiomes!(dim, world, Scale(1); kwargs...)
 end
 
 """
@@ -200,7 +200,7 @@ end
 
 A struct that holds a `UInt64` or `nothing`. It is used to store the SHA of the seed
 if it is needed. Acts like a reference (a zero dimension array) to a `UInt64` or `nothing`.
-Use `sha[]` to get or store the value, or directly `set_seed!(sha, seed)` to compute the SHA
+Use `sha[]` to get or store the value, or directly `setseed!(sha, seed)` to compute the SHA
 of the seed and store it and `reset!(sha)` to set it to `nothing`.
 """
 mutable struct SomeSha
@@ -209,7 +209,7 @@ end
 SomeSha() = SomeSha(nothing)
 Base.getindex(s::SomeSha) = s.x
 Base.setindex!(s::SomeSha, value) = s.x = value
-set_seed!(s::SomeSha, seed::UInt64) = s[] = Utils.sha256_from_seed(seed)
+setseed!(s::SomeSha, seed::UInt64) = s[] = Utils.sha256_from_seed(seed)
 reset!(s::SomeSha) = s[] = nothing
 
 #endregion

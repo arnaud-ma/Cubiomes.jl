@@ -126,22 +126,22 @@ end
 
 # @eval needed for $(length(NOISE_PARAMETERS)) to be understand
 # as an integer by @nexprs instead of an expression
-@eval function set_seed!(noise::BiomeNoise, seed::UInt64; sha = true, large = false)
+@eval function setseed!(noise::BiomeNoise, seed::UInt64; sha = true, large = false)
     rng, param_rng = noise.rng_temp1, noise.rng_temp2
-    set_seed🎲(rng, seed)
+    setseed🎲(rng, seed)
     xlo = next🎲(rng, UInt64)
     xhi = next🎲(rng, UInt64)
 
     # Next line is the Julia syntax to unroll a "for i in 1:length(NOISE_PARAMETERS)"
     # This is needed because otherwise the specific type of each clim and noise_param
     # is not known at compile time and this is crucial to dispatch at compile time
-    # set_rng!🎲 and magic_xlo
+    # setrng!🎲 and magic_xlo
     @nexprs $(length(NOISE_PARAMETERS)) i -> begin
         clim, noise_param = noise.climate[i], NOISE_PARAMETERS[i]
         param_rng.lo = xlo ⊻ magic_xlo(noise_param, Val(large))
         param_rng.hi = xhi ⊻ magic_xhi(noise_param, Val(large))
 
-        set_rng!🎲(
+        setrng!🎲(
             clim,
             param_rng,
             trimmed_end_amplitudes(noise_param),
@@ -151,7 +151,7 @@ end
     end
 
     if sha
-        set_seed!(noise.sha, seed)
+        setseed!(noise.sha, seed)
     else
         reset!(noise.sha)
     end
@@ -416,40 +416,40 @@ end
 # ---------------------------------------------------------------------------- #
 
 # Scale 1 -> rescaling scale 4 with voronoi noise
-function get_biome(
+function getbiome(
         bn::BiomeNoise, coord::NTuple{3, Real}, ::Scale{1};
         skip_shift = false, skip_depth = false, spline = SPLINE_STACK,
     )
-    return get_biome(
+    return getbiome(
         bn, voronoi_access(bn.sha[], coord), Scale(4);
         skip_shift, skip_depth, spline,
     )
 end
 
 # Scale anything except 1 and 4 -> shift the coordinates to scale 4
-function get_biome(
+function getbiome(
         bn::BiomeNoise, coord::NTuple{3, Real}, ::Scale{S};
         skip_shift = false, skip_depth = false, spline = SPLINE_STACK,
     ) where {S}
     scale = S >> 2
     mid = scale >> 1
     coord_scale4 = coord .* scale .+ mid
-    return get_biome(
+    return getbiome(
         bn, coord_scale4, Scale(4);
         skip_shift, skip_depth, spline,
     )
 end
 
 # Scale 4 (the main one)
-function get_biome(
+function getbiome(
         bn::BiomeNoise, coord::NTuple{3, Real}, ::Scale{4};
         skip_shift = false, skip_depth = false, spline = SPLINE_STACK,
     )
-    result = get_biome_int(bn, coord; spline, skip_shift, skip_depth)
+    result = getbiome_int(bn, coord; spline, skip_shift, skip_depth)
     return Biome(result)
 end
 
-function get_biome_int(
+function getbiome_int(
         bn::BiomeNoise{V}, coord;
         spline = SPLINE_STACK, skip_shift = false, skip_depth = false,
     ) where {V}
@@ -494,7 +494,7 @@ end
 end
 
 function climate_to_biome(noise_parameters::NTuple{6}, version::mcvt">=1.18")
-    return climate_to_biome(noise_parameters, get_biome_tree(version))
+    return climate_to_biome(noise_parameters, getbiome_tree(version))
 end
 
 function climate_to_biome(noise_parameters::NTuple{6}, biome_tree::BiomeTree)
@@ -575,7 +575,7 @@ end
 #                               Biome Generation                               #
 # ---------------------------------------------------------------------------- #
 
-function gen_biomes!(
+function genbiomes!(
         bn::BiomeNoise,
         map3D::WorldMap{3},
         ::Scale{1};
@@ -583,12 +583,12 @@ function gen_biomes!(
         kwargs...,
     )
     tforeach(coordinates(map3D); scheduler) do coord
-        @inbounds map3D[coord] = get_biome(bn, coord, Scale(1); kwargs...)
+        @inbounds map3D[coord] = getbiome(bn, coord, Scale(1); kwargs...)
     end
     return nothing
 end
 
-function gen_biomes!(
+function genbiomes!(
         bn::BiomeNoise,
         map3D::WorldMap{3},
         s::Scale{4};
@@ -596,12 +596,12 @@ function gen_biomes!(
         kwargs...,
     )
     tforeach(coordinates(map3D); scheduler) do coord
-        map3D[coord] = get_biome(bn, coord, s; kwargs...)
+        map3D[coord] = getbiome(bn, coord, s; kwargs...)
     end
     return nothing
 end
 
-function gen_biomes!(
+function genbiomes!(
         bn::BiomeNoise, map3D::WorldMap{3}, ::Scale{S};
         scheduler = StaticScheduler(; minchunksize = Threads.nthreads()),
         skip_depth = false, skip_shift = true,
@@ -620,7 +620,7 @@ function gen_biomes!(
     coord_mid = CartesianIndex(mid, mid, 0)
     return tforeach(coordinates(map3D); scheduler) do coord
         coord_scale4 = coord .* scale .+ coord_mid
-        map3D[coord] = get_biome(
+        map3D[coord] = getbiome(
             bn, coord_scale4.I, Scale(4);
             skip_depth, skip_shift,
         )

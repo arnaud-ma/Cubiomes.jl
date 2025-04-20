@@ -12,13 +12,13 @@ Module for generating biomes in Minecraft worlds.
 The typical workflow is:
 
 1. Create a dimension object (e.g. `Overworld`, `Nether`, `End`) -> [`Dimension`](@ref)
-2. Set the seed of the dimension -> [`set_seed!`](@ref)
-3. Get the biome at a specific coordinate -> [`get_biome`](@ref)
+2. Set the seed of the dimension -> [`setseed!`](@ref)
+3. Get the biome at a specific coordinate -> [`getbiome`](@ref)
 
 Or:
 
 3. Create a world object -> [`WorldMap`](@ref)
-4. Generate the biomes in the world -> [`gen_biomes!`](@ref)
+4. Generate the biomes in the world -> [`genbiomes!`](@ref)
 
 The biomes are stored in a `WorldMap` object, which is a 3D array of biomes. To get the
 coordinates of the biomes, use the `coordinates` function. It gives an iterator of
@@ -30,7 +30,7 @@ module BiomeGeneration
 using Reexport
 
 export Dimension, Nether, Overworld, End
-export set_seed!, gen_biomes!, get_biome
+export setseed!, genbiomes!, getbiome
 export Scale, @📏_str
 
 include("interface.jl")

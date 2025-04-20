@@ -21,16 +21,16 @@ julia> using Cubiomes
 
 ## Getting help
 
-To get help on specific functionality you can either look up the information here, or you can use the built-in help system in Julia. For example, to get help on the `get_biome` function:
+To get help on specific functionality you can either look up the information here, or you can use the built-in help system in Julia. For example, to get help on the `getbiome` function:
 
 ```julia-repl
 julia>?
 
-help?> get_biome
-search: get_biome gen_biomes!
+help?> getbiome
+search: getbiome genbiomes!
 
-  get_biome(dim::Dimension, x::Real, z::Real, y::Real, [scale::Scale,], args...; kwargs...) -> Biome
-  get_biome(dim::Dimension, coord, [scale::Scale,], args...; kwargs...) -> Biome
+  getbiome(dim::Dimension, x::Real, z::Real, y::Real, [scale::Scale,], args...; kwargs...) -> Biome
+  getbiome(dim::Dimension, coord, [scale::Scale,], args...; kwargs...) -> Biome
 
   Get the biome at the coordinates (x, z, y) in the dimension dim. The coordinates can be passed as numbers or as ...
 ```

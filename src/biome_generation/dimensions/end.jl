@@ -21,9 +21,9 @@ end
 
 struct End1_9Minus <: End end
 End(::UndefInitializer, ::mcvt"1.0 <= x < 1.9") = End1_9Minus()
-set_seed!(::End1_9Minus, seed::UInt64) = nothing
-get_biome(::End1_9Minus, x::Real, z::Real, y::Real, ::Scale) = the_end
-gen_biomes!(::End1_9Minus, out::WorldMap) = fill!(out, the_end)
+setseed!(::End1_9Minus, seed::UInt64) = nothing
+getbiome(::End1_9Minus, x::Real, z::Real, y::Real, ::Scale) = the_end
+genbiomes!(::End1_9Minus, out::WorldMap) = fill!(out, the_end)
 
 struct End1_9Plus{V} <: End
     perlin::Perlin
@@ -35,13 +35,13 @@ function End(::UndefInitializer, version::mcvt">=1.9")
     return End1_9Plus{version}(Perlin(undef), SomeSha(nothing), JavaRandom(undef))
 end
 
-function set_seed!(nn::End1_9Plus, seed::UInt64; sha = true)
-    set_seed🎲(nn.rng_temp, seed)
+function setseed!(nn::End1_9Plus, seed::UInt64; sha = true)
+    setseed🎲(nn.rng_temp, seed)
     randjump🎲(nn.rng_temp, Int32, 17_292)
-    set_rng!🎲(perlin, rng)
+    setrng!🎲(perlin, rng)
 
     if sha
-        set_seed!(nn.sha, seed)
+        setseed!(nn.sha, seed)
     else
         reset!(nn.sha)
     end
@@ -53,7 +53,7 @@ end
 #==========================================================================================#
 
 """
-    original_get_biome(end_noise::EndNoise, x, z)
+    original_getbiome(end_noise::EndNoise, x, z)
 
 Original algorithm to get the biome at a given point in the End dimension.
 It is only here for documentation purposes, because everything else is just
@@ -62,7 +62,7 @@ optimizations and scaling on this basis (for scale >= 4).
 But not so sure that the optimizations are really important, most of ones are
 just avoid √ operations, but hypot is already really fast in Julia.
 """
-function original_get_biome(end_::End1_9Plus, x, z, ::Scale{4})
+function original_getbiome(end_::End1_9Plus, x, z, ::Scale{4})
     x >>= 2
     z >>= 2
 
@@ -246,10 +246,10 @@ function biome_from_height_sample(height)
 end
 
 # we need to do like this instead of ::Union{End1_9Plus, Elevations} because it leads to
-# ambiguity with the  get_biome(end_::Cubiomes.BiomeGeneration.End1_9Plus, x::Real, z::Real, ::Scale{S}, range) where S
+# ambiguity with the  getbiome(end_::Cubiomes.BiomeGeneration.End1_9Plus, x::Real, z::Real, ::Scale{S}, range) where S
 # below
 for type in (:End1_9Plus, :Elevations)
-    @eval function get_biome(
+    @eval function getbiome(
             eg::$type{V}, x::Real, z::Real, ::Scale{16}, range::Integer = 12,
         ) where {V}
         x^2 + z^2 <= 4096 && return the_end
@@ -259,28 +259,28 @@ for type in (:End1_9Plus, :Elevations)
         )
     end
 
-    @eval function get_biome(eg::$type, x::Real, z::Real, ::Scale{4}, range = 12)
-        return get_biome(eg, x >> 2, z >> 2, Scale(16), range)
+    @eval function getbiome(eg::$type, x::Real, z::Real, ::Scale{4}, range = 12)
+        return getbiome(eg, x >> 2, z >> 2, Scale(16), range)
     end
 end
 
 # For scale > 16
-function get_biome(end_::End1_9Plus, x::Real, z::Real, ::Scale{S}, range = 4) where {S}
+function getbiome(end_::End1_9Plus, x::Real, z::Real, ::Scale{S}, range = 4) where {S}
     scale = S >> 3
-    return get_biome(end_, x * scale, z * scale, Scale(16), range)
+    return getbiome(end_, x * scale, z * scale, Scale(16), range)
 end
 
-function gen_biomes!(end_noise::End1_9Plus, map2D::WorldMap{2}, s::Scale{16})
+function genbiomes!(end_noise::End1_9Plus, map2D::WorldMap{2}, s::Scale{16})
     #! memory allocation
     # TODO: remove this allocation
     elevations = Elevations(end_noise, map2D, 12)
     for coord in coordinates(map2D)
-        map2D[coord] = get_biome(elevations, coord.I, s)
+        map2D[coord] = getbiome(elevations, coord.I, s)
     end
     return nothing
 end
 
-function gen_biomes!(::End1_9Plus, ::WorldMap{2}, ::Scale{4})
+function genbiomes!(::End1_9Plus, ::WorldMap{2}, ::Scale{4})
     throw(
         ArgumentError(
             "1:4 end generation is the same as 1:16 but simply rescaled by 4. \
@@ -290,9 +290,9 @@ function gen_biomes!(::End1_9Plus, ::WorldMap{2}, ::Scale{4})
 end
 
 # scale > 16
-function gen_biomes!(end_noise::End1_9Plus, map2D::WorldMap{2}, s::Scale{S}) where {S}
+function genbiomes!(end_noise::End1_9Plus, map2D::WorldMap{2}, s::Scale{S}) where {S}
     for coord in coordinates(map2D)
-        map2D[coord] = get_biome(end_noise, coord, s)
+        map2D[coord] = getbiome(end_noise, coord, s)
     end
     return nothing
 end
@@ -301,10 +301,10 @@ end
 # # Biome Generation / Scale 1 ⚠ STILL DRAFT # TODO
 # #==========================================================================================#
 
-function get_biome(end_::End1_9Plus, x::Real, z::Real, ::Scale{1})
+function getbiome(end_::End1_9Plus, x::Real, z::Real, ::Scale{1})
     error("scale 1:1 end generation is not implemented yet.")
 end
 
-function gen_biomes!(end_noise::End1_9Plus, map2D::WorldMap{2}, ::Scale{1})
+function genbiomes!(end_noise::End1_9Plus, map2D::WorldMap{2}, ::Scale{1})
     error("scale 1:1 end generation is not implemented yet.")
 end

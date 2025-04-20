@@ -42,10 +42,10 @@ end
 @testset "Random" begin
     rng_gen = @rng_gen("Random", JavaRNG.JavaRandom, Data.Integers{Int64}())
 
-    @check function set_seed(seed = Data.Integers{Int64}())
+    @check function setseed(seed = Data.Integers{Int64}())
         rng = JavaRNG.JavaRandom(1)
         rng2 = JavaRNG.JavaRandom(seed)
-        JavaRNG.set_seed🎲(rng, seed)
+        JavaRNG.setseed🎲(rng, seed)
         rng == rng2
     end
 
@@ -86,10 +86,10 @@ end
         Data.Integers{Int64}()
     )
 
-    @check function set_seed(seed = Data.Integers{Int64}())
+    @check function setseed(seed = Data.Integers{Int64}())
         rng = JavaRNG.JavaXoroshiro128PlusPlus(0x00, 0x00)
         rng2 = JavaRNG.JavaXoroshiro128PlusPlus(seed)
-        JavaRNG.set_seed🎲(rng, seed)
+        JavaRNG.setseed🎲(rng, seed)
         rng == rng2
     end
 

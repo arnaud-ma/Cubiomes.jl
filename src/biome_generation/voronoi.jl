@@ -61,9 +61,9 @@ by Minecraft to translate the 1:4 scale coordinates to the 1:1 scale.
 
 For example we can find in some part of the biome generation source code:
 ```julia
->>> function get_biome(dimension, x, z, y, ::Scale{1})
+>>> function getbiome(dimension, x, z, y, ::Scale{1})
         sx, sz, zy = voronoi_access(dimension, x, z, y)
-        get_biome(dimension, sx, sz, sy, Scale(4))
+        getbiome(dimension, sx, sz, sy, Scale(4))
     end
 ```
 """

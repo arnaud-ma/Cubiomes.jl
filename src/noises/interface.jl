@@ -7,7 +7,7 @@ The abstract type for a Noise sampler.
 
 # Methods
 - [`sample_noise`](@ref)
-- [`set_rng!🎲`](@ref)
+- [`setrng!🎲`](@ref)
 - `Noise(::Type{Noise}, ::UndefInitializer, ...)`
 - [`Noise🎲`](@ref)
 - [`is_undef`](@ref)
@@ -40,11 +40,11 @@ function sample_noise(noise::Noise, coord::CartesianIndex, args::Vararg{Any, N})
 end
 
 """
-    set_rng!🎲(noise::Perlin, rng)
-    set_rng!🎲(noise::Octaves{N}, rng::JavaRandom, octave_min) where N
-    set_rng!🎲(noise::Octaves{N}, rng::JavaXoroshiro128PlusPlus, amplitudes, octave_min) where N
-    set_rng!🎲(noise::DoublePerlin{N}, rng, octave_min) where N
-    set_rng!🎲(noise::DoublePerlin{N}, rng, amplitudes, octave_min) where N
+    setrng!🎲(noise::Perlin, rng)
+    setrng!🎲(noise::Octaves{N}, rng::JavaRandom, octave_min) where N
+    setrng!🎲(noise::Octaves{N}, rng::JavaXoroshiro128PlusPlus, amplitudes, octave_min) where N
+    setrng!🎲(noise::DoublePerlin{N}, rng, octave_min) where N
+    setrng!🎲(noise::DoublePerlin{N}, rng, amplitudes, octave_min) where N
 `
 Initialize the noise in place with the given random number generator (of type AbstractJavaRNG).
 
@@ -53,7 +53,7 @@ Initialize the noise in place with the given random number generator (of type Ab
     Therefore, `N` **MUST** be equal to the number of non-zero values in amplitudes.
     This number can be obtained with `Cubiomes.length_filter(!iszero, amplitudes)`.
     For performance reasons, it is possible to lower `N` and completely ignore the last
-    amplitudes using [`unsafe_set_rng!🎲`](@ref).
+    amplitudes using [`unsafe_setrng!🎲`](@ref).
 
 !!! tip
     Since the last amplitudes are ignored if they are set to zero, replace the tuple of
@@ -61,29 +61,29 @@ Initialize the noise in place with the given random number generator (of type Ab
     of memory / time. However, only do this if the trimmed amplitudes are already known.
     Computing them only for this function call will not save any time.
 
-See also: [`unsafe_set_rng!🎲`](@ref), [`Noise`](@ref), [`Noise🎲`](@ref)
+See also: [`unsafe_setrng!🎲`](@ref), [`Noise`](@ref), [`Noise🎲`](@ref)
 """
-function set_rng!🎲 end
+function setrng!🎲 end
 
 """
-    unsafe_set_rng!🎲(noise, rng::JavaXoroshiro128PlusPlus, amplitudes, octave_min)
+    unsafe_setrng!🎲(noise, rng::JavaXoroshiro128PlusPlus, amplitudes, octave_min)
 
-Same as [`set_rng!🎲`](@ref) but allows to skip some octaves for performance reasons, i.e.
+Same as [`setrng!🎲`](@ref) but allows to skip some octaves for performance reasons, i.e.
 `N` can be less than the number of non-zero values in `amplitudes`, and the last octaves are
 completely ignored. If instead `N` is greater, the behavior is undefined.
 
-See also: [`set_rng!🎲`](@ref), [`Noise`](@ref), [`Noise🎲`](@ref)
+See also: [`setrng!🎲`](@ref), [`Noise`](@ref), [`Noise🎲`](@ref)
 """
-function unsafe_set_rng!🎲 end
+function unsafe_setrng!🎲 end
 
 """
     Noise(::Type{T}, ::UndefInitializer) where {T<:Noise}
     Noise(::Type{DoublePerlin}; ::UndefInitializer, amplitudes)
 
 Create a noise of type `T` with an undefined state, i.e., it is not initialized yet. Use
-[`set_rng!🎲`](@ref) or [`unsafe_set_rng!🎲`](@ref) to initialize it.
+[`setrng!🎲`](@ref) or [`unsafe_setrng!🎲`](@ref) to initialize it.
 
-See also: [`Noise🎲`](@ref), [`set_rng!🎲`](@ref), [`unsafe_set_rng!🎲`](@ref)
+See also: [`Noise🎲`](@ref), [`setrng!🎲`](@ref), [`unsafe_setrng!🎲`](@ref)
 """
 Noise(::Type{T}, ::UndefInitializer, args::Vararg{Any, N}) where {T <: Noise, N} =
     T(undef, args...)
@@ -93,20 +93,20 @@ Noise(::Type{T}, ::UndefInitializer, args::Vararg{Any, N}) where {T <: Noise, N}
 
 Create a noise of type `T` and initialize it with the given random number generator `rng`.
 Other arguments are used to initialize the noise. They depend on the noise type and they are
-the same as the arguments of the [`set_rng!🎲`](@ref) function.
+the same as the arguments of the [`setrng!🎲`](@ref) function.
 
 Strictly equivalent to
 ```julia
 julia> noise = Noise(T, undef) # or Noise(T, undef, args[1]) for DoublePerlin
 T(...)
 
-julia> set_rng!🎲(noise, rng, args...)`.
+julia> setrng!🎲(noise, rng, args...)`.
 ```
-See also: [`Noise`](@ref), [`set_rng!🎲`](@ref)
+See also: [`Noise`](@ref), [`setrng!🎲`](@ref)
 """
 function Noise🎲(::Type{T}, rng::AbstractJavaRNG, args::Vararg{Any, N}) where {T <: Noise, N}
     noise = Noise(T, undef)
-    set_rng!🎲(noise, rng, args...)
+    setrng!🎲(noise, rng, args...)
     return noise
 end
 

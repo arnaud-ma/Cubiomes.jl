@@ -1,6 +1,6 @@
 module BiomeTrees
 
-export BiomeTree, get_biome_tree
+export BiomeTree, getbiome_tree
 
 using ...MCVersions
 
@@ -27,15 +27,15 @@ include("1_19.jl")
 include("1_20.jl")
 include("1_19_2.jl")
 
-function get_biome_tree(::MCVersion)
+function getbiome_tree(::MCVersion)
     msg = "Biome tree not implemented for this version. Trying to get a biome for a version < 1.18 but
     you used something that is only available for 1.18+"
     throw(ArgumentError(msg))
 end
 
-get_biome_tree(::mcvt"1.18") = MC_1_18
-get_biome_tree(::mcvt"1.19.2") = MC_1_19_2
-get_biome_tree(::mcvt"1.19.4") = MC_1_19
-get_biome_tree(::mcvt"1.20") = MC_1_20
-get_biome_tree(::mcvt"1.21") = MC_1_20
+getbiome_tree(::mcvt"1.18") = MC_1_18
+getbiome_tree(::mcvt"1.19.2") = MC_1_19_2
+getbiome_tree(::mcvt"1.19.4") = MC_1_19
+getbiome_tree(::mcvt"1.20") = MC_1_20
+getbiome_tree(::mcvt"1.21") = MC_1_20
 end

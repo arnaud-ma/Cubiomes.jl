@@ -12,7 +12,7 @@ const atol_f64 = 1.0e-15
         rng2 = copy(rng)
         perlin = Noise🎲(Perlin, rng)
         perlin2 = Noise(Perlin, undef)
-        set_rng!🎲(perlin2, rng2)
+        setrng!🎲(perlin2, rng2)
 
         @test perlin == perlin_test
         @test perlin2 == perlin_test
@@ -142,7 +142,7 @@ end
         rng2 = copy(rng)
         noise = Noise🎲(Octaves{nb}, rng, args...)
         noise2 = Noise(Octaves{nb}, undef)
-        set_rng!🎲(noise2, rng2, args...)
+        setrng!🎲(noise2, rng2, args...)
         @test noise == octaves_test
         @test noise == noise2
     end
@@ -257,7 +257,7 @@ end
         rng2 = copy(rng)
         noise = Noise🎲(DoublePerlin{nb}, rng, omin)
         noise2 = Noise(DoublePerlin{nb}, undef)
-        set_rng!🎲(noise2, rng2, omin)
+        setrng!🎲(noise2, rng2, omin)
         @test noise == double_test
         @test noise == noise2
     end
@@ -266,7 +266,7 @@ end
         rng2 = copy(rng)
         noise = Noise🎲(DoublePerlin{nb}, rng, amp, omin)
         noise2 = Noise(DoublePerlin{nb}, undef, amp)
-        set_rng!🎲(noise2, rng2, amp, omin)
+        setrng!🎲(noise2, rng2, amp, omin)
         @test noise == double_test
         @test noise == noise2
     end

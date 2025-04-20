@@ -33,8 +33,8 @@ using Cubiomes
 function search_biome_at(gen, x, z, y)
     seed = 0
     while true
-        set_seed!(gen, seed)
-        if get_biome(gen, x, z, y) == Biomes.mushroom_fields
+        setseed!(gen, seed)
+        if getbiome(gen, x, z, y) == Biomes.mushroom_fields
             println("Seed $seed has a Mushroom Fields at $((x, z, y))")
             break
         end
@@ -55,8 +55,8 @@ using FileIO
 const overworld1_18 = Overworld(undef, mcv"1.18")
 const worldmap = WorldMap(x=-1000:1000, z=-1000:1000, y=63)
 
-set_seed!(overworld1_18, 42)
-gen_biomes!(overworld1_18, worldmap, 📏"1:16")
+setseed!(overworld1_18, 42)
+genbiomes!(overworld1_18, worldmap, 📏"1:16")
 save("world.png", to_color(view2d(worldmap)))
 ```
 
