@@ -10,9 +10,6 @@
 
 A rewrite of [Cubiomes](https://github.com/Cubitect/cubiomes) but in [Julia](https://julialang.org/), intended to be (much) easier to use and to contribute to, and faster.
 
-> [!WARNING]
-> The code is still in early development, and everything can change at any time. This repo should be seen as a proof of concept and nothing else.
-
 ## Why Cubiomes.jl?
 
 - **Readability and ease of use**: Julia is a high-level language, which makes the code easier to read and understand. Of course to be fast, it is sometimes necessary to write more complex code, but if it is simply to use an API (like the one of Cubiomes), it a very easy Python-like language (see the [examples](#examples))
