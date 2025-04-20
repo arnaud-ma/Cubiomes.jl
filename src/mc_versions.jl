@@ -1,8 +1,8 @@
 """
     MCVersions
 
-Representation of Minecraft versions in Julia. Works like the built in `VersionNumber` type
-but for Minecraft versions, with the `mcv""` string macro and the `MCVersion` abstract type.
+Representation of Minecraft versions in Julia. Works like the built in [`VersionNumber`](https://docs.julialang.org/en/v1/base/base/#Base.VersionNumber)
+but for Minecraft versions, with the `mcv""` string macro and the `MCVersion`(@ref) abstract type.
 """
 module MCVersions
 
@@ -165,11 +165,12 @@ A string macro to get the type representation of one or more (with an Union{}) M
 Useful for functions who need to dispatch over specifics versions.
 
 The syntax is:
-    - `mcvt"1.8.9"` -> expands to Type{mcv"1.8.9"}
-    - `mcvt">=1.8.9"` -> expands to Union{...} on every version >=1.8.9.
-      The supported operations are `<, <=, >, >=`.
-    - `mcvt"1.0.0<=x<=1.8.9` -> expands to Union{...} on every version such that 1.0.0<=version<=1.8.9.
-      The place holder `x` can be anything, can even be empty. The supported operations are **only** `<, <=`.
+
+  - `mcvt"1.8.9"` -> expands to `Type{mcv"1.8.9"}`
+  - `mcvt">=1.8.9"` -> expands to `Union{...}`` on every version >=1.8.9.
+    The supported operations are `<, <=, >, >=`.
+  - `mcvt"1.0.0<=x<=1.8.9"` -> expands to `Union{...}` on every version such that 1.0.0<=version<=1.8.9.
+    The place holder `x` can be anything, can even be empty. The supported operations are **only** `<, <=`.
 
 # Examples
 ```julia-repl

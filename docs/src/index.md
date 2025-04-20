@@ -1,10 +1,61 @@
-# Cubiomes.jl Docs
+# Cubiomes.jl Documentation
 
 **Imitation of Minecraft's world generation in Julia.**
 
 *Julia port of Cubiomes C library*
 
 Cubiomes.jl provides a powerful and efficient implementation of Minecraft's world generation algorithms in the Julia programming language. Built as a port of the popular Cubiomes C library, this package offers superior performance while maintaining an elegant and approachable API.
+
+## Quick Links
+
+```@raw html
+<div class="quick-links">
+    <a href="gettingstarted/" class="quick-link-box">
+        <h3>🚀 Getting Started</h3>
+        <p>Install and run your first program</p>
+    </a>
+    <a href="guide/" class="quick-link-box">
+        <h3>📖 User Guide</h3>
+        <p>Learn core concepts and usage</p>
+    </a>
+    <a href="api/" class="quick-link-box">
+        <h3>📚 API Reference</h3>
+        <p>Detailed function documentation</p>
+    </a>
+</div>
+
+<style>
+.quick-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin: 30px 0;
+}
+.quick-link-box {
+    flex: 1;
+    min-width: 200px;
+    padding: 15px 20px;
+    border-radius: 8px;
+    background-color: #f5f5f5;
+    border: 1px solid #e0e0e0;
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.quick-link-box:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+.quick-link-box h3 {
+    margin-top: 0;
+    color: #3955a3;
+}
+.quick-link-box p {
+    margin-bottom: 0;
+    opacity: 0.8;
+}
+</style>
+```
 
 ## Audience
 
@@ -13,11 +64,7 @@ You should be familiar with programming. That's all. If you are not familiar wit
 There are already a lot of tools for Minecraft seed generation. Maybe Cubiomes.jl is not the best choice.
 The goal of this package is to provide more than just a tool to generate Minecraft worlds, with a focus on performance. So it involves writing code, but an easy code thanks to Julia's high-level syntax. An example would be doing some statistics, or very specific seed searches.
 
-## Quick Links
 
-- [**Getting Started**](gettingstarted.md)
-- [**Guide 📖**](guide.md)
-- [**API Reference 📚**](api/main.md)
 
 ## New to Julia?
 

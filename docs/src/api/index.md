@@ -6,9 +6,7 @@ This section contains the complete API reference documentation for Cubiomes.jl.
 
 - [Biomes](Biomes.md)
 - [Biomes Generation](BiomeGeneration.md)
-- [Noise Generation](Noises.md)
 - [Minecraft Versions](MCVersions.md)
-- [Utilities](Utils.md)
 
 ## Working with Seeds
 
@@ -19,6 +17,8 @@ This section contains the complete API reference documentation for Cubiomes.jl.
 
 - [Display Functions](Display.md)
 
-## Known Issues
+## Low-Level Components
 
+- [Noise Generation](Noises.md)
 - [Minecraft Bugs](MCBugs.md)
+- [Utilities](Utils.md)

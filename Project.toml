@@ -1,7 +1,7 @@
 name = "Cubiomes"
 uuid = "e720158a-9490-4262-afb0-b6410688564f"
 authors = ["arnaud-ma <arnaudma.code@gmail.com>"]
-version = "0.1.8"
+version = "0.2.0"
 
 [deps]
 CEnum = "fa961155-64e5-5f13-b03f-caf6b980ea82"

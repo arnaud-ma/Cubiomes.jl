@@ -142,7 +142,7 @@ worldmap[-255, 45] # show_error
 
 # ## The scale object
 
-# In `getbiome` and `genbiomes!`, there is an optional final argument: the `Scale` object.
+# In [`getbiome`](@ref) and [`genbiomes!`](@ref), there is an optional final argument: the [`Scale`](@ref) object.
 # A scale can be created using 📏"1:N", where N is a power of 4.
 
 worldmap2 = WorldMap(-50:50, -50:50, 16)

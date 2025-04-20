@@ -8,7 +8,20 @@
 [![Aqua](https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg)](https://github.com/JuliaTesting/Aqua.jl)
 [![code style: runic](https://img.shields.io/badge/code_style-%E1%9A%B1%E1%9A%A2%E1%9A%BE%E1%9B%81%E1%9A%B2-black)](https://github.com/fredrikekre/Runic.jl)
 
-A rewrite of [Cubiomes](https://github.com/Cubitect/cubiomes) but in [Julia](https://julialang.org/), intended to be (much) easier to use and to contribute to, and faster.
+A rewrite of [Cubiomes](https://github.com/Cubitect/cubiomes) but in [Julia](https://julialang.org/), intended to be (much) easier to use and to contribute to, and faster. Even though it is possible to call Java/C code from Julia, here everything is rewritten by hand, exploiting the possibilities of Julia to be fast and easy to use at the same time.
+
+Please look at the [documentation](https://arnaud-ma.github.io/Cubiomes.jl/stable/). In particular:
+
+- The [getting started](https://arnaud-ma.github.io/Cubiomes.jl/stable/gettingstarted) page if you are new to Julia
+- The [guide](https://arnaud-ma.github.io/Cubiomes.jl/stable/guide) that should cover 90% of the use cases
+
+This readme is a small summary of the documentation.
+
+## Audience
+
+The goal is to provide a library that generate the biomes and structures of Minecraft worlds, in a fast and easy way, while still having the flexibility given by writing code.
+
+You should be familiar to programming. That's all. Julia syntax is quite simple so you could be able to learn it by using the library / reading the [documentation](https://arnaud-ma.github.io/Cubiomes.jl/stable/). Same for the Minecraft world generation concepts.
 
 ## Why Cubiomes.jl?
 

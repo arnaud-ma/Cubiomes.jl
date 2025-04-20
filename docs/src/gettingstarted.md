@@ -21,7 +21,7 @@ julia> using Cubiomes
 
 ## Getting help
 
-To get help on specific functionality you can either look up the information here, or you can use the built-in help system in Julia. For example, to get help on the `getbiome` function:
+To get help on specific functionality you can either look up the information here, or you can use the built-in help system in Julia. For example, to get help on the [`getbiome`](@ref) function:
 
 ```julia-repl
 julia>?

@@ -43,12 +43,6 @@ makedocs(;
     format = Documenter.HTML(
         size_threshold = 2_000_000,
     ),
-    # format=MarkdownVitepress(
-    #     repo="https://github.com/arnaud-ma/Cubiomes.jl",
-    #     # md_output_path=".",
-    #     # build_vitepress=false,
-    # ),
-    # # clean=false,
     pages = [
         "Cubiomes.jl" => "index.md",
         "Manual" => [
@@ -56,13 +50,24 @@ makedocs(;
             "Guide" => "guide.md",
         ],
         "API Reference" => [
-            "Biomes" => "api/Biomes.md",
-            "BiomeGeneration" => "api/BiomeGeneration.md",
-            "MCBugs" => "api/MCBugs.md",
-            "MCVersions" => "api/MCVersions.md",
-            "Noises" => "api/Noises.md",
-            "SeedUtils" => "api/SeedUtils.md",
-            "Utils" => "api/Utils.md",
+            "Index" => "api/index.md",
+            "Core Components" => [
+                "Biomes" => "api/Biomes.md",
+                "Biome Generation" => "api/BiomeGeneration.md",
+                "MC Versions" => "api/MCVersions.md",
+            ],
+            "Seeds" => [
+                "Seed Utilities" => "api/SeedUtils.md",
+                "Random Number Generators" => "api/JavaRNG.md",
+            ],
+            "Visualization" => [
+                "Display" => "api/Display.md",
+            ],
+            "Low-Level Components" => [
+                "Noises" => "api/Noises.md",
+                "MC Bugs" => "api/MCBugs.md",
+                "Utils" => "api/Utils.md",
+            ],
         ],
     ],
 )
