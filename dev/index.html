@@ -23,26 +23,32 @@
 }
 .quick-link-box {
     flex: 1;
-    min-width: 200px;
-    padding: 15px 20px;
-    border-radius: 8px;
-    background-color: #f5f5f5;
-    border: 1px solid #e0e0e0;
+    min-width: 250px;
+    padding: 20px 25px;
+    border-radius: 10px;
+    background-color: rgba(127, 127, 127, 0.05);
+    border: 1px solid rgba(127, 127, 127, 0.2);
     text-decoration: none;
     color: inherit;
-    transition: transform 0.2s, box-shadow 0.2s;
+    transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
 }
 .quick-link-box:hover {
     transform: translateY(-3px);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+    background-color: rgba(127, 127, 127, 0.1);
 }
 .quick-link-box h3 {
     margin-top: 0;
-    color: #3955a3;
+    /* Using currentColor which inherits from the parent text color */
+    color: currentColor;
+    opacity: 0.9;
+    font-size: 1.3em;
 }
 .quick-link-box p {
     margin-bottom: 0;
-    opacity: 0.8;
+    opacity: 0.7;
+    font-size: 1.05em;
 }
 </style><h2 id="Audience"><a class="docs-heading-anchor" href="#Audience">Audience</a><a id="Audience-1"></a><a class="docs-heading-anchor-permalink" href="#Audience" title="Permalink"></a></h2><p>You should be familiar with programming. That&#39;s all. If you are not familiar with Julia, the syntax is quite easy (similar to Python in some ways). You can learn it by working with this package. Look at the <a href="#examples">Examples</a> or <a href="gettingstarted/">Getting Started</a> pages to see how to use it.</p><p>There are already a lot of tools for Minecraft seed generation. Maybe Cubiomes.jl is not the best choice. The goal of this package is to provide more than just a tool to generate Minecraft worlds, with a focus on performance. So it involves writing code, but an easy code thanks to Julia&#39;s high-level syntax. An example would be doing some statistics, or very specific seed searches.</p><h2 id="New-to-Julia?"><a class="docs-heading-anchor" href="#New-to-Julia?">New to Julia?</a><a id="New-to-Julia?-1"></a><a class="docs-heading-anchor-permalink" href="#New-to-Julia?" title="Permalink"></a></h2><p>Read the <a href="gettingstarted/">Getting Started</a> page to learn how to install Julia and Cubiomes.jl and run your first program.</p><h2 id="Examples"><a class="docs-heading-anchor" href="#Examples">Examples</a><a id="Examples-1"></a><a class="docs-heading-anchor-permalink" href="#Examples" title="Permalink"></a></h2><p>Find a mushroom fields biome at a predefined location:</p><pre><code class="language-julia hljs">using Cubiomes
 
@@ -67,4 +73,4 @@ const worldmap = WorldMap(x=-1000:1000, z=-1000:1000, y=63)
 
 setseed!(overworld1_18, 42)
 genbiomes!(overworld1_18, worldmap, 📏&quot;1:16&quot;)
-save(&quot;world.png&quot;, to_color(view2d(worldmap)))</code></pre><p><img src="assets/world.png" alt="world.png"/></p></article><nav class="docs-footer"><a class="docs-footer-nextpage" href="gettingstarted/">Getting started »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.10.1 on <span class="colophon-date" title="Sunday 20 April 2025 06:53">Sunday 20 April 2025</span>. Using Julia version 1.11.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+save(&quot;world.png&quot;, to_color(view2d(worldmap)))</code></pre><p><img src="assets/world.png" alt="world.png"/></p></article><nav class="docs-footer"><a class="docs-footer-nextpage" href="gettingstarted/">Getting started »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.10.1 on <span class="colophon-date" title="Sunday 20 April 2025 07:07">Sunday 20 April 2025</span>. Using Julia version 1.11.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
