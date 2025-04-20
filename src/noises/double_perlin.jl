@@ -1,4 +1,4 @@
-import ..Utils
+using ..Utils: Utils
 
 const MAX_AMPLITUDE = 9
 

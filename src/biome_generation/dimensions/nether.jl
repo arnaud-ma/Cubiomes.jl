@@ -1,6 +1,5 @@
 using ..Noises
 using ..JavaRNG: JavaRandom, setseed🎲
-using ..Utils: Utils
 using ..MCVersions
 using ..Biomes: Biomes, BIOME_NONE, Biome, isnone
 using .BiomeArrays: WorldMap, coordinates

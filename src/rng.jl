@@ -13,7 +13,7 @@ module JavaRNG
 export next🎲, randjump🎲, setseed🎲
 export AbstractJavaRNG, JavaRandom, JavaXoroshiro128PlusPlus
 
-using ..Utils: u64_seed
+using ..SeedUtils: u64_seed
 # ---------------------------------------------------------------------------- #
 #                              Interface                                       #
 # ---------------------------------------------------------------------------- #
@@ -75,11 +75,11 @@ A pseudorandom number generator that mimics the behavior of Java's
 # Examples
 
 ```julia
-julia> rng = JavaRandom(1234);
+julia> rng = JavaRandom(1234)
 JavaRandom(0x00000005deece2bf)
 
-julia> next_int32_range!(rng, 10)
-3
+julia> next🎲(rng, Int32, 10)
+7
 ```
 """
 mutable struct JavaRandom <: AbstractJavaRNG

@@ -4,7 +4,8 @@ using Base.Cartesian: @nexprs
 using StaticArrays: SVector
 using OhMyThreads: tforeach, StaticScheduler
 
-using ..Utils: Utils, @only_float32, md5_to_uint64, lerp
+using ..Utils: Utils, @only_float32, lerp
+using ..SeedUtils: SeedUtils
 using ..JavaRNG: JavaXoroshiro128PlusPlus, next🎲
 using ..Noises: Noise, DoublePerlin
 using .BiomeArrays: WorldMap, coordinates
@@ -47,8 +48,8 @@ function create_noise_param(noise_param, amp, oct, id_str, oct_large)
         id_str_large = "$(id_str)_large"
     end
 
-    xlo, xhi = md5_to_uint64(id_str)
-    xlo_large, xh_large = md5_to_uint64(id_str_large)
+    xlo, xhi = SeedUtils.md5_to_uint64(id_str)
+    xlo_large, xh_large = SeedUtils.md5_to_uint64(id_str_large)
 
     T = Type{noise_param}
     return @eval begin

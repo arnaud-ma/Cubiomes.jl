@@ -1,6 +1,7 @@
 using StaticArrays: SizedArray
 using ..JavaRNG: JavaRandom, JavaXoroshiro128PlusPlus, next🎲, randjump🎲
-import ..Utils
+using ..SeedUtils: SeedUtils
+using ..Utils: Utils
 
 TypeInnerOctaves{N} = SizedArray{Tuple{N}, Perlin, 1, 1, Vector{Perlin}}
 
@@ -69,17 +70,17 @@ function setrng_octave!🎲(
     return nothing
 end
 
-const MD5_OCTAVE_NOISE = Tuple(@. Tuple(Utils.md5_to_uint64("octave_" * string(-12:0))))
+const MD5_OCTAVE_NOISE = Tuple(@. Tuple(SeedUtils.md5_to_uint64("octave_" * string(-12:0))))
 const LACUNARITY_INI = Tuple(@. 1 / 2^(0:12)) # -omin = 3:12
 const PERSISTENCE_INI = Tuple(2^n / (2^(n + 1) - 1) for n in 0:8) # len = 4:9
 
 function setrng!🎲(
-        octaves_type::Octaves{N},
+        octaves_type::Octaves,
         rng::JavaXoroshiro128PlusPlus,
         amplitudes::NTuple{NA},
         octave_min,
         real_length = NA,
-    ) where {N, NA}
+    ) where {NA}
     if N != Utils.length_filter(!iszero, amplitudes)
         throw(ArgumentError(lazy"the number of octaves must be equal to length_filter(!iszero, amplitudes). \
                                  Got $N != $Utils.length_filter(!iszero, amplitudes)."))

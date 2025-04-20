@@ -2,8 +2,7 @@ using OffsetArrays
 
 using ..Noises
 using ..JavaRNG: AbstractJavaRNG
-using ..Utils: Utils
-using ..SeedUtils: mc_step_seed
+using ..SeedUtils: SeedUtils, mc_step_seed
 using ..MCVersions
 using ..Biomes: BIOME_NONE
 
