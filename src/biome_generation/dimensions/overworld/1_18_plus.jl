@@ -381,7 +381,6 @@ function get_spline_offset(spline::Spline, index, vals, f)
     return muladd(der, f - loc, v)
 end
 
-# TODO: transform the recursive to an iterate one, since Julia is very bad with recursion :(
 function get_spline(spline::Spline, vals)
     N = length(spline)
     iszero(N) && return spline.fix_value
@@ -576,55 +575,32 @@ end
 #                               Biome Generation                               #
 # ---------------------------------------------------------------------------- #
 
+# minchunksize = 100 is quite big after doing some benchmarking.
+# But the worse case would be to have poorer performance than thrading(:off)
+# when using the default. So let's be conservative to adapt to lot of machines
+# and configurations.
+# TODO: provides an helper macro that do benchmarking and rewrite each default_threading at runtime
+default_threading(::BiomeNoise, ::WorldMap, ::Scale, ::typeof(genbiomes!)) =
+    threading(:static, minchunksize = 100)
+
+# fallback to the generic function for scale 1 and 4
 function genbiomes!(
-        bn::BiomeNoise,
-        map3D::WorldMap{3},
-        ::Scale{1};
-        scheduler = StaticScheduler(; minchunksize = Threads.nthreads()),
-        kwargs...,
+        bn::BiomeNoise, map3D::WorldMap, s::Union{Scale{1}, Scale{4}}, threading::Scheduler;
+        kwargs...
     )
-    tforeach(coordinates(map3D); scheduler) do coord
-        @inbounds map3D[coord] = getbiome(bn, coord, Scale(1); kwargs...)
-    end
-    return nothing
+    return @invoke genbiomes!(bn::Dimension, map3D, s, threading; kwargs...)
 end
 
 function genbiomes!(
-        bn::BiomeNoise,
-        map3D::WorldMap{3},
-        s::Scale{4};
-        scheduler = StaticScheduler(; minchunksize = Threads.nthreads()),
-        kwargs...,
-    )
-    tforeach(coordinates(map3D); scheduler) do coord
-        map3D[coord] = getbiome(bn, coord, s; kwargs...)
-    end
-    return nothing
-end
-
-function genbiomes!(
-        bn::BiomeNoise, map3D::WorldMap{3}, ::Scale{S};
-        scheduler = StaticScheduler(; minchunksize = Threads.nthreads()),
-        skip_depth = false, skip_shift = true,
+        bn::BiomeNoise, map3D::WorldMap, ::Scale{S}, threading::Scheduler;
+        skip_depth = false, skip_shift = true
     ) where {S}
-    # Since with scale higher than 4 accruacy is not needed, there is a possible
-    # optimization that involves caching an old_idx variable, that can be passed to the function
-    # and return the new one (in addition to the biome) to be used in the next call
-    # but it depends on the order of the coordinates iteration. The good order is not the one
-    # of coordinates(map3D) so loss of performance is expected
-    # (https://docs.julialang.org/en/v1/manual/performance-tips/#man-performance-column-major)
-    # furthermore it is obviously not thread safe, and it seems like with >=3 threads
-    # it is better to use multithreading than this cache optimization
-
     scale = S >> 2
     mid = scale >> 1
     coord_mid = CartesianIndex(mid, mid, 0)
-    return tforeach(coordinates(map3D); scheduler) do coord
+    return tforeach(coordinates(map3D); scheduler = threading) do coord
         coord_scale4 = coord .* scale .+ coord_mid
-        map3D[coord] = getbiome(
-            bn, coord_scale4.I, Scale(4);
-            skip_depth, skip_shift,
-        )
+        map3D[coord] = getbiome(bn, coord_scale4.I, Scale(4); skip_depth, skip_shift)
     end
 end
 #endregion

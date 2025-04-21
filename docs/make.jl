@@ -78,3 +78,7 @@ makedocs(;
 deploydocs(
     repo = "github.com/arnaud-ma/Cubiomes.jl.git",
 )
+
+# To display locally:
+# using LiveServer
+# servedocs(literate_dir="docs/src")

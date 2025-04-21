@@ -11,8 +11,6 @@ export Biome, isnone, biome_exists, is_overworld, mutated, category, are_similar
 using CEnum
 using ..MCVersions
 
-# TODO: a module for the biomes instead of a raw file
-
 #! format: off
 @cenum(
     Biome::UInt8,

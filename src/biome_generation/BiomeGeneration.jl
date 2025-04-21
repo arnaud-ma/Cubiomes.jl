@@ -20,8 +20,8 @@ Or:
 3. Create a world object -> [`WorldMap`](@ref)
 4. Generate the biomes in the world -> [`genbiomes!`](@ref)
 
-The biomes are stored in a `WorldMap` object, which is a 3D array of biomes. To get the
-coordinates of the biomes, use the `coordinates` function. It gives an iterator of
+The biomes are stored in a [`WorldMap`](@ref) object, which is a 3D array of biomes. To get the
+coordinates of the biomes, use the [`coordinates`](@ref) function. It gives an iterator of
 `CartesianIndex` objects, a built-in Julia type. So any intuitive indexing should work out of
 the box.
 """

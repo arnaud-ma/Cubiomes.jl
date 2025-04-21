@@ -1,13 +1,15 @@
 """
-Some utility functions and types that are used in various places in the codebase. It should
-not be used directly by the user and could be nice if this module does not exist at all.
+Some utility functions and types that are used in various places in the codebase. Ideally
+it should be divided into multiple very small modules.
 """
 module Utils
 
+export threading
 public lerp, lerp2, lerp3, lerp4, clamped_lerp
 public length_of_trimmed, length_filter
 public @only_float32
 
+import OhMyThreads
 
 #region Arithmetic
 # ---------------------------------------------------------------------------- #
@@ -15,15 +17,32 @@ public @only_float32
 # ---------------------------------------------------------------------------- #
 
 # Linear interpolation
-# lerp(part, from, to) = from + part * (to - from)
+"""
+    lerp(part, from, to)
+
+Performs linear interpolation between `from` and `to` using `part` as the fraction.
+Equivalent to `from + part * (to - from)`.
+"""
 lerp(part, from, to) = muladd(part, to - from, from)
 
+"""
+    lerp2(dx, dy, v00, v10, v01, v11)
+
+Performs bilinear interpolation between four values `v00`, `v10`, `v01`, `v11`
+using fractions `dx` and `dy`.
+"""
 function lerp2(dx, dy, v00, v10, v01, v11)
     from = lerp(dx, v00, v10)
     to = lerp(dx, v01, v11)
     return lerp(dy, from, to)
 end
 
+"""
+    lerp3(dx, dy, dz, v000, v100, v010, v110, v001, v101, v011, v111)
+
+Performs trilinear interpolation between eight values `v...` using fractions
+`dx`, `dy`, and `dz`.
+"""
 function lerp3(dx, dy, dz, v000, v100, v010, v110, v001, v101, v011, v111)
     v00 = lerp2(dx, dy, v000, v100, v010, v110)
     v01 = lerp2(dx, dy, v001, v101, v011, v111)
@@ -31,6 +50,16 @@ function lerp3(dx, dy, dz, v000, v100, v010, v110, v001, v101, v011, v111)
 end
 
 const Couple = NTuple{2}
+"""
+    lerp4(a::Couple, b::Couple, c::Couple, d::Couple, dy, dx, dz)
+
+Performs trilinear interpolation where the initial eight corner values are derived
+from four `Couple`s (pairs of values) by first interpolating along the y-axis
+using `dy`. Subsequent interpolations use `dz` and `dx`.
+
+Specifically, it computes:
+`lerp(dx, lerp(dz, lerp(dy, a[1], a[2]), lerp(dy, c[1], c[2])), lerp(dz, lerp(dy, b[1], b[2]), lerp(dy, d[1], d[2])))`
+"""
 @inbounds function lerp4(a::Couple, b::Couple, c::Couple, d::Couple, dy, dx, dz)
     b00 = lerp(dy, a[1], a[2])
     b01 = lerp(dy, b[1], b[2])
@@ -164,9 +193,22 @@ macro only_float32(expr)
     return transform(esc(expr))
 end
 #endregion
-#region Iteration
+
 # ---------------------------------------------------------------------------- #
-#                                  Iteration                                   #
+#                               region Threading                               #
 # ---------------------------------------------------------------------------- #
+
+"""
+    threading(kind = :off; kwargs...)
+
+Return a `Scheduler` from the `OhMyThreads` package type that contains all the static
+parameters needed for threading. See the [documentation](https://juliafolds2.github.io/OhMyThreads.jl/stable/refs/api/#Schedulers)
+of OhMyThreads related to the schedulers to know what to pass to the kwargs.
+"""
+function threading(kind = :off; kwargs...)
+    kind == :off && (kind = :serial)
+    return OhMyThreads.Schedulers.scheduler_from_symbol(kind; kwargs...)
+end
+
 
 end # module
