@@ -60,7 +60,7 @@ using `dy`. Subsequent interpolations use `dz` and `dx`.
 Specifically, it computes:
 `lerp(dx, lerp(dz, lerp(dy, a[1], a[2]), lerp(dy, c[1], c[2])), lerp(dz, lerp(dy, b[1], b[2]), lerp(dy, d[1], d[2])))`
 """
-@inbounds function lerp4(a::Couple, b::Couple, c::Couple, d::Couple, dy, dx, dz)
+function lerp4(a::Couple, b::Couple, c::Couple, d::Couple, dy, dx, dz)
     b00 = lerp(dy, a[1], a[2])
     b01 = lerp(dy, b[1], b[2])
     b10 = lerp(dy, c[1], c[2])

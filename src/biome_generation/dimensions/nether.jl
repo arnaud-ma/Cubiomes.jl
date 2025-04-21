@@ -267,7 +267,7 @@ function genbiomes!(nn::Nether1_16Plus, world3d::WorldMap{3}, ::Scale{1}; confid
     return nothing
 end
 
-function genbiomes!(::Nether1_16Plus, ::WorldMap{2}, ::Scale{1}, confidence = 1)
+function genbiomes!(::Nether1_16Plus, ::WorldMap{2}, ::Scale{1}; confidence = 1)
     msg = "generate the nether biomes at scale 1 requires a 3D map because \
             the biomes depend on the y coordinate. You can create a 3D map with \
             a single y coordinate with `MCMap(x_coords, z_coords, y)`"
