@@ -4,7 +4,7 @@ it should be divided into multiple very small modules.
 """
 module Utils
 
-export threading
+export threading, isundef
 public lerp, lerp2, lerp3, lerp4, clamped_lerp
 public length_of_trimmed, length_filter
 public @only_float32
@@ -209,6 +209,17 @@ function threading(kind = :off; kwargs...)
     kind == :off && (kind = :serial)
     return OhMyThreads.Schedulers.scheduler_from_symbol(kind; kwargs...)
 end
+
+# ---------------------------------------------------------------------------- #
+#                             Function to overload                             #
+# ---------------------------------------------------------------------------- #
+
+"""
+    isundef(x)
+
+Returns true if the value `x` is undefined, i.e. it has not been initialized.
+"""
+isundef(x) = false
 
 
 end # module

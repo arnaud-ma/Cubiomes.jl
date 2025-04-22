@@ -22,7 +22,8 @@ The Overworld dimension. See [`Dimension`](@ref) for general usage.
   - `skip_shift=Val(false)`: only for the 1:1 and 1:4 scales. If `Val(true)`,
     the shift sampling is skipped. Time saved: 1/10 of the biome generation time.
 """
-abstract type Overworld <: Dimension end
+abstract type Overworld{V} <: Dimension{V} end
+label(::Overworld) = "Overworld"
 
 include("biome_trees/BiomeTrees.jl")
 include("1_18_plus.jl")

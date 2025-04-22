@@ -80,5 +80,4 @@ deploydocs(
 )
 
 # To display locally:
-# using LiveServer
-# servedocs(literate_dir="docs/src")
+# using LiveServer; servedocs(literate_dir="docs/src")

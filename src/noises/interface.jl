@@ -1,5 +1,3 @@
-using ..JavaRNG: AbstractJavaRNG
-
 """
     Noise
 
@@ -10,7 +8,6 @@ The abstract type for a Noise sampler.
 - [`setrng!🎲`](@ref)
 - `Noise(::Type{Noise}, ::UndefInitializer, ...)`
 - [`Noise🎲`](@ref)
-- [`is_undef`](@ref)
 
 See also:  [`Perlin`](@ref), [`Octaves`](@ref), [`DoublePerlin`](@ref)
 """
@@ -109,10 +106,3 @@ function Noise🎲(::Type{T}, rng::AbstractJavaRNG, args::Vararg{Any, N}) where 
     setrng!🎲(noise, rng, args...)
     return noise
 end
-
-"""
-    is_undef(noise::Noise)
-
-Check if the noise is undefined, i.e., it has not been initialized yet.
-"""
-function is_undef end

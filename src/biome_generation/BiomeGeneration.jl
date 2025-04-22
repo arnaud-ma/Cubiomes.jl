@@ -33,12 +33,19 @@ export Dimension, Nether, Overworld, End
 export setseed!, genbiomes!, getbiome
 export Scale, @📏_str
 
-include("interface.jl")
+include("scale.jl")
+include("biome_arrays.jl")
 include("voronoi.jl")
 
+@reexport using .BiomeArrays
+
+using ..Utils, ..SeedUtils, ..MCVersions, ..JavaRNG, ..Noises, .Voronoi
+using ..Biomes: Biomes
+using OhMyThreads: Scheduler, tforeach
+
+include("interface.jl")
 include("dimensions/nether.jl")
 include("dimensions/overworld/overworld.jl")
 include("dimensions/end.jl")
 
-@reexport using .BiomeArrays
 end # module

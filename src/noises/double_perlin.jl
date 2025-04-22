@@ -1,5 +1,3 @@
-using ..Utils: Utils
-
 const MAX_AMPLITUDE = 9
 
 # almost equal to (5/3 * x / (x + 1)) for x in 1:MAX_AMPLITUDE
@@ -60,7 +58,7 @@ function DoublePerlin(x::UndefInitializer, amplitudes)
     return DoublePerlin{N}(x, amplitudes)
 end
 
-is_undef(x::DoublePerlin{N}) where {N} = is_undef(x.octave_A) || is_undef(x.octave_B)
+Utils.isundef(x::DoublePerlin{N}) where {N} = isundef(x.octave_A) || isundef(x.octave_B)
 
 function setrng!🎲(noise::DoublePerlin, rng, args::Vararg{Any, N}) where {N}
     setrng!🎲(noise.octave_A, rng, args...)
@@ -100,16 +98,20 @@ end
 # ---------------------------------------------------------------------------- #
 
 function Base.show(io::IO, dp::DoublePerlin{N}) where {N}
-    is_undef(dp) && return print(io, "DoublePerlin{$N}(uninitialized)")
+    if isundef(dp)
+        print(io, "DoublePerlin{$N}(uninitialized)")
+        return nothing
+    end
 
     print(io, "DoublePerlin{$N}(")
     print(io, "amplitude=", round(dp.amplitude; digits = 2))
-    return print(io, ")")
+    print(io, ")")
+    return nothing
 end
 
 function Base.show(io::IO, mime::MIME"text/plain", dp::DoublePerlin{N}) where {N}
-    if is_undef(dp)
-        println(io, "Double Perlin Noise{$N} (uninitialized)")
+    if isundef(dp)
+        print(io, "Double Perlin Noise{$N} (uninitialized)")
         return
     end
 

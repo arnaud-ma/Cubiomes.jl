@@ -1,15 +1,8 @@
-using ..Noises
-using ..JavaRNG: JavaRandom, setseed🎲
-using ..MCVersions
-using ..Biomes: Biomes, BIOME_NONE, Biome, isnone
-using .BiomeArrays: WorldMap, coordinates
-using .Voronoi: voronoi_access, voronoi_source2d
-
 using Base.Iterators
 
-#region nether definition
+#region definition
 # ---------------------------------------------------------------------------- #
-#                               Nether definition                              #
+#                                  Definition                                  #
 # ---------------------------------------------------------------------------- #
 
 """
@@ -32,30 +25,33 @@ Before version 1.16, the Nether is only composed of nether wastes. Nothing else.
   is a performance-related parameter between 0 and 1. A bit the same as the
   `scale` parameter, but it is a continuous value, and the scale is not modified.
 """
-abstract type Nether <: Dimension end
+abstract type Nether{V} <: Dimension{V} end
+label(::Nether) = "Nether"
 
 # Nothing to do if version is <1.16. The nether is only composed of nether_wastes
-struct Nether1_16Minus end
-Nether(::UndefInitializer, ::mcvt"<1.16") = Nether1_16Minus()
+struct Nether1_16Minus{V} <: Nether{V} end
+Nether(::UndefInitializer, V::mcvt"<1.16") = Nether1_16Minus{V}()
 setseed!(::Nether1_16Minus, seed::UInt64) = nothing
 getbiome(::Nether1_16Minus, x::Real, z::Real, y::Real, ::Scale) = Biomes.nether_wastes
 genbiomes!(::Nether1_16Minus, out::WorldMap, ::Scale) = fill!(out, Biomes.nether_wastes)
 
-struct Nether1_16Plus <: Nether
+struct Nether1_16Plus{V} <: Nether{V}
     temperature::DoublePerlin{2}
     humidity::DoublePerlin{2}
     sha::SomeSha
     rng_temp::JavaRandom
 end
 
-function Nether(::UndefInitializer, ::mcvt">=1.16")
-    return Nether1_16Plus(
+function Nether(::UndefInitializer, V::mcvt">=1.16")
+    return Nether1_16Plus{V}(
         DoublePerlin{2}(undef),
         DoublePerlin{2}(undef),
         SomeSha(nothing),
         JavaRandom(undef),
     )
 end
+
+Utils.isundef(nether::Nether1_16Plus) = any(is_undef, (nether.temperature, nether.humidity))
 
 function setseed!(nn::Nether1_16Plus, seed::UInt64; sha = true)
     setseed🎲(nn.rng_temp, seed)
@@ -72,6 +68,60 @@ function setseed!(nn::Nether1_16Plus, seed::UInt64; sha = true)
     return nothing
 end
 #endregion
+
+#region base dispatch
+# ---------------------------------------------------------------------------- #
+#                                 Base dispatch                                #
+# ---------------------------------------------------------------------------- #
+
+Base.show(io::IO, ::Nether1_16Minus{V}) where {V} = print(io, "Nether($V<1.16)")
+
+function Base.show(io::IO, ::MIME"text/plain", ::Nether1_16Minus{V}) where {V}
+    println(io, "Nether Dimension ($V<1.16):")
+    println(io, "├ MC version: ", V)
+    println(io, "└ Only contains nether_wastes biome")
+    return nothing
+end
+
+function Base.show(io::IO, nether::Nether1_16Plus)
+    if isundef(nether)
+        print(io, "Nether($V ≥ 1.16, uninitialized)")
+        return
+    end
+
+    sha_status = isnothing(nether.sha[]) ? "unset" : "set"
+    print(io, "Nether($V ≥ 1.16, SHA ", sha_status, ")")
+    return nothing
+end
+
+function Base.show(io::IO, mime::MIME"text/plain", nether::Nether1_16Plus{V}) where {V}
+    if isundef(nether)
+        print(io, "Nether Dimension ($V ≥ 1.16, uninitialized)")
+        return nothing
+    end
+
+    println(io, "Nether Dimension ($V ≥ 1.16):")
+
+    # Display SHA status
+    sha_status = isnothing(nether.sha[]) ? "not set" : "set"
+    println(io, "├ SHA: ", sha_status)
+
+    # Display temperature noise
+    println(io, "├ Temperature noise:")
+    _show_noise_to_textplain(io, mime, nether.temperature, '│', '\n')
+
+    # Display humidity noise
+    println(io, "└ Humidity noise:")
+    _show_noise_to_textplain(io, mime, nether.humidity, ' ', "")
+    return nothing
+end
+
+
+Base.:(==)(::Nether1_16Minus{V}, ::Nether1_16Minus{V}) where {V} = true
+function Base.:(==)(n1::Nether1_16Plus{V}, n2::Nether1_16Plus{V}) where {V}
+    return (n1.humidity == n2.humidity) && (n1.humidity == n2.humidity) && (n1.sha[] == n2.sha[])
+end
+
 
 #region getbiome
 # ---------------------------------------------------------------------------- #
@@ -106,9 +156,8 @@ function getbiome_and_delta(nn::Nether1_16Plus, coord::CartesianIndex)
     return biome, √dist1 - √dist2
 end
 
-function calculate_distance_squared(nether_point, temperature, humidity)
-    return (nether_point.x - temperature)^2 + (nether_point.y - humidity)^2 +
-        nether_point.z_square
+function calculate_distance_squared(point, temperature, humidity)
+    return (point.x - temperature)^2 + (point.y - humidity)^2 + point.z_square
 end
 
 function find_closest_biome_with_dists(temperature, humidity)
@@ -158,7 +207,7 @@ const NETHER_POINTS = (
 #                                  genbiomes!                                 #
 # ---------------------------------------------------------------------------- #
 
-@inline function distance_square(coord1::CartesianIndex, coord2::CartesianIndex)
+function distance_square(coord1::CartesianIndex, coord2::CartesianIndex)
     return sum(abs2, (coord1 - coord2).I)
 end
 
@@ -172,7 +221,7 @@ within a given `radius`. Assuming `radius`>=0. If `center` is outside the `out`
 coordinates, nothing is done.
 """
 function fill_radius!(
-        out::WorldMap{N}, center::CartesianIndex{2}, id::Biome, radius,
+        out::WorldMap{N}, center::CartesianIndex{2}, id::Biomes.Biome, radius,
     ) where {N}
     r = floor(Int, radius)
     r_square = r^2
@@ -199,7 +248,8 @@ end
 
 # Assume out is filled with BIOME_NONE
 function genbiomes_unsafe!(
-        nn::Nether1_16Plus, map2d::WorldMap{2}, ::Scale{S}; confidence = 1,
+        nn::Nether1_16Plus, map2d::WorldMap{2}, ::Scale{S};
+        confidence = 1,
     ) where {S}
     scale = S >> 2
 
@@ -211,7 +261,7 @@ function genbiomes_unsafe!(
     inv_grad = inv(0.05 * 2 * confidence * scale)
 
     for coord in coordinates(map2d)
-        if !isnone(map2d[coord])
+        if !Biomes.isnone(map2d[coord])
             continue  # Already filled with a specific biome
         end
         biome, Δnoise = getbiome_and_delta(nn, coord * scale)
@@ -225,8 +275,9 @@ function genbiomes_unsafe!(
 end
 
 function genbiomes_unsafe!(
-        nn::Nether1_16Plus, map3d::WorldMap{3}, scale::Scale{S}; confidence = 1,
-    ) where {S}
+        nn::Nether1_16Plus, map3d::WorldMap{3}, scale::Scale;
+        confidence = 1
+    )
     # At scale != 1, the biome does not change with the y coordinate
     # So we simply take the first y coordinate and fill the other ones with the same biome
     ys = axes(map3d, 3)
@@ -240,7 +291,7 @@ function genbiomes_unsafe!(
 end
 
 function genbiomes!(nn::Nether1_16Plus, world::WorldMap, scale::Scale; confidence = 1)
-    fill!(world, BIOME_NONE)
+    fill!(world, Biomes.BIOME_NONE)
     return genbiomes_unsafe!(nn, world, scale; confidence)
 end
 
@@ -254,7 +305,7 @@ function genbiomes!(nn::Nether1_16Plus, world3d::WorldMap{3}, ::Scale{1}; confid
     end
 
     # The minimal map where we are sure we can find the source coordinates at scale 4
-    biome_parent_axes = voronoi_source2d(world3d)
+    biome_parent_axes = voronoi_source(world3d, #=dim=# Val(2))
     biome_parents = view_reshape_cache_like(biome_parent_axes)
     genbiomes!(nn, biome_parents, Scale(4); confidence)
 
@@ -266,77 +317,4 @@ function genbiomes!(nn::Nether1_16Plus, world3d::WorldMap{3}, ::Scale{1}; confid
     end
     return nothing
 end
-
-function genbiomes!(::Nether1_16Plus, ::WorldMap{2}, ::Scale{1}; confidence = 1)
-    msg = "generate the nether biomes at scale 1 requires a 3D map because \
-            the biomes depend on the y coordinate. You can create a 3D map with \
-            a single y coordinate with `MCMap(x_coords, z_coords, y)`"
-    throw(ArgumentError(msg))
-end
-#endregion
-#region show
-# ---------------------------------------------------------------------------- #
-#                                     Show                                     #
-# ---------------------------------------------------------------------------- #
-
-Base.show(io::IO, n::Nether1_16Minus) = print(io, "Nether(<1.16)")
-
-function Base.show(io::IO, mime::MIME"text/plain", n::Nether1_16Minus)
-    println(io, "Nether Dimension (<1.16):")
-    return println(io, "└ Only contains nether_wastes biome")
-end
-
-function Base.show(io::IO, n::Nether1_16Plus)
-    is_initialized = !is_undef(n.temperature) && !is_undef(n.humidity)
-    if !is_initialized
-        print(io, "Nether(≥1.16, uninitialized)")
-        return
-    end
-
-    sha_status = isnothing(n.sha[]) ? "unset" : "set"
-    return print(io, "Nether(≥1.16, SHA ", sha_status, ")")
-end
-
-function Base.show(io::IO, mime::MIME"text/plain", n::Nether1_16Plus)
-    if is_undef(n.temperature) || is_undef(n.humidity)
-        println(io, "Nether Dimension (≥1.16, uninitialized)")
-        return
-    end
-
-    println(io, "Nether Dimension (≥1.16):")
-
-    # Display SHA status
-    sha_status = isnothing(n.sha[]) ? "not set" : "set"
-    println(io, "├ SHA: ", sha_status)
-
-    # Display temperature noise
-    println(io, "├ Temperature noise:")
-    io_temp = IOBuffer()
-    show(IOContext(io_temp, :compact => true), mime, n.temperature)
-    temp_lines = split(String(take!(io_temp)), '\n')
-    for (i, line) in enumerate(temp_lines)
-        if i == 1
-            continue  # Skip the title line
-        elseif i < length(temp_lines)
-            println(io, "│ ", line)
-        else
-            println(io, "│ ", line)
-        end
-    end
-
-    # Display humidity noise
-    println(io, "└ Humidity noise:")
-    io_humid = IOBuffer()
-    show(IOContext(io_humid, :compact => true), mime, n.humidity)
-    humid_lines = split(String(take!(io_humid)), '\n')
-    for (i, line) in enumerate(humid_lines)
-        if i == 1
-            continue  # Skip the title line
-        else
-            println(io, "  ", line)
-        end
-    end
-    return
-end
-
 #endregion

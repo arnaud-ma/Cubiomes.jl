@@ -1,9 +1,6 @@
 using OffsetArrays: OffsetVector
 using StaticArrays: MVector
 
-using Base: unsafe_trunc
-
-using ..JavaRNG: next🎲, AbstractJavaRNG, JavaRandom, JavaXoroshiro128PlusPlus
 using ..Utils: lerp
 #region RNG
 # ---------------------------------------------------------------------------- #
@@ -108,7 +105,7 @@ function Perlin(::UndefInitializer)
     )
 end
 
-function is_undef(p::Perlin)
+function Utils.isundef(p::Perlin)
     return any(
         isnan, (p.x, p.y, p.z, p.const_y, p.const_smooth_y, p.amplitude, p.lacunarity),
     )
@@ -170,7 +167,7 @@ function init_coord_values(coord)
     # but it's the same idea
     index = floor(coord)
     frac_coord = coord - index
-    return frac_coord, unsafe_trunc(UInt8, index), smoothstep_perlin_unsafe(frac_coord)
+    return frac_coord, Base.unsafe_trunc(UInt8, index), smoothstep_perlin_unsafe(frac_coord)
 end
 
 """
@@ -391,7 +388,7 @@ end
 # ---------------------------------------------------------------------------- #
 
 function Base.show(io::IO, p::Perlin)
-    is_undef(p) && return print(io, "Perlin(uninitialized)")
+    isundef(p) && return print(io, "Perlin(uninitialized)")
 
     print(io, "Perlin(")
     print(io, "x=", round(p.x; digits = 2), ", ")
@@ -407,7 +404,7 @@ function Base.show(io::IO, p::Perlin)
 end
 
 function Base.show(io::IO, mime::MIME"text/plain", p::Perlin)
-    if is_undef(p)
+    if isundef(p)
         println(io, "Perlin Noise (uninitialized)")
         return
     end

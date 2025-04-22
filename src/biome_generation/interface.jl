@@ -1,80 +1,6 @@
 using OffsetArrays
 
-using ..Noises
-using ..JavaRNG: AbstractJavaRNG
-using ..SeedUtils: SeedUtils, mc_step_seed
-using ..MCVersions
-using ..Biomes: BIOME_NONE
 using ..Utils: threading
-using OhMyThreads: OhMyThreads, Scheduler, tforeach
-
-#region Scale
-# ---------------------------------------------------------------------------- #
-#                               Scale definition                               #
-# ---------------------------------------------------------------------------- #
-
-"""
-    Scale{N}
-    Scale(N::Integer)
-    📏"1:N"
-
-The scale of a map. It represents the ratio between the size of the map an the real world.
-For example, a 1:4 scale map means that each block in the map represents a 4x4 area
-in the real world. So the coordinates (5, 5) are equal to the real world coordinates
-(20, 20).
-
-`N` **MUST** ne to the form ``4^n, n \\geq 0``. So the more common scales are 1:1, 1:4, 1:16,
-1:64, 1:256. The support for big scales is not guaranteed and depends on the function that
-uses it. Read the documentation of the function that uses it to know the supported values.
-
-It is possible to use the alternative syntax `📏"1:N"`. The emoji name is `:straight_ruler:`.
-
-# Examples
-```julia
-julia> Scale(4)
-Scale{4}()
-
-julia> Scale(5)
-ERROR: ArgumentError: The scale must be to the form 4^n. Got 1:5. The closest valid scales are 1:4 and 1:16.
-
-julia> 📏"1:4" === Scale(4) === Scale{4}()
-true
-
-```
-"""
-struct Scale{N}
-    function Scale{N}() where {N}
-        if N < 1
-            throw(ArgumentError("The scale must be to the form 2^(2n) with n >= 0. Got $N."))
-        end
-        i = log(4, N)
-        if !(isinteger(i))
-            ii = floor(Int, i)
-            closest_before = 4^ii
-            closest_after = 4^(ii + 1)
-            throw(ArgumentError("The scale must be to the form 4^n. Got 1:$N. The closest valid scales are 1:$closest_before and 1:$closest_after."))
-        end
-        return new()
-    end
-end
-Scale(N::Integer) = Scale{N}()
-
-macro 📏_str(str)
-    splitted = split(str, ':')
-    if length(splitted) != 2
-        throw(ArgumentError("Bad scale format."))
-    end
-    num, denom = parse.(Int, splitted)
-    scale = num // denom
-    if numerator(scale) != 1
-        throw(ArgumentError("The scale must be simplified to the form 1:N. Got $str -> $num:$denom."))
-    end
-    return Scale(denominator(scale))
-end
-const var"@T📏_str" = typeof ∘ var"@📏_str"
-
-include("BiomeArrays.jl")
-using .BiomeArrays: WorldMap
 
 #region Dimension
 # ---------------------------------------------------------------------------- #
@@ -82,7 +8,7 @@ using .BiomeArrays: WorldMap
 # ---------------------------------------------------------------------------- #
 
 """
-    Dimension
+    Dimension{Version}
 
 The parent type of every Minecraft dimension. There is generally three steps to use a dimension:
 
@@ -110,6 +36,7 @@ See also:
   - [`Nether`](@ref), [`Overworld`](@ref), [`End`](@ref)
   - [`setseed!`](@ref), [`getbiome`](@ref), [`genbiomes!`](@ref)
   - [`WorldMap`](@ref), [`Scale`](@ref)
+  - [`MCVersion`]
   - [`threading`](@ref)
 
 # Extended help
@@ -121,37 +48,48 @@ See also:
 
     It **MUST** implement the following interface:
 
-    - `MyDim(::UndefInitializer, ::MCVersion, args...) -> MyDim`
-       This is the constructor that creates an uninitialized dimension. It is used to
-        create a dimension with a specific version and some arguments.
+    - `MyDim(::UndefInitializer, V::MCVersion, args...) -> MyDim{V}`
+
+      Creates an uninitialized dimension.
 
     - `setseed!(dim::MyDim, seed::UInt64, args...) -> Nothing`
-        It should modify the internal state of the dimension to use the seed. Be aware
-        of the ::UInt64 for the auto-conversion to work (i.e. the user can automatically
-        pass any seed type). See [`setseed!`](@ref).
+
+      See [`setseed!`](@ref). Be aware of the ::UInt64 for the seed, the converion
+      is automatically done before calling this function thanks to the interface.
 
     - `getbiome(dim::MyDim, coord, scale::Scale, args...) -> Biome`
-        This function should return the biome at the coordinates `coord` in the dimension
-        `dim`. The coordinates can be either (x::Real, z::Real, y::Real) or NTuple{3}.
-        If the 3rd coordinate (y, the height) is not needed, a method
-        `getbiome(dim::MyDim, x::Real, z::Real, scale::Scale, args...)` can be added. But
-        the first one is **always** mandatory.
+
+      Seed [`getbiome`](@ref). Only the coordinates to the form of numbers or as a tuple
+      can be implemented. If the 3rd coordinate (`y`) is not needed, it can be
+      ignored, but only for the form of numbers.
 
     It **CAN** implement:
 
     - `genbiomes!(dim::MyDim, world::WorldMap, scale::Scale, threading::Scheduler) -> Nothing`
-        Fill inplace the world map with the biomes of the dimension `dim`. The default
-        implementation is to simply loop over the world map and call `getbiome` for each
-        coordinate. See [`genbiomes!`](@ref).
+
+      See [`genbiomes!`](@ref) The default implementation is to simply loop over the world map
+      and to call `getbiome` for each coordinate.
 
     - `default_threading(::MyDim, ::WorldMap, ::Scale, ::typeof(gen_biomes!)) -> Scheduler`
-        Should return the default threading mode from the given types. The default one
-        is `threading(:off)`, i.e. no threading. See [`threading`](@ref).
 
+      See [`threading`](@ref). Should return the default threading mode from the given types.
+      The default one is `threading(:off)`, i.e. no threading.
 """
-abstract type Dimension end
+abstract type Dimension{V} end
 
 Base.broadcastable(d::Dimension) = Ref(d)
+
+"""
+    mcversion(dim::Dimension) -> MCVersion
+
+Get the Minecraft version of the dimension `dim`. It is a subtype of [`MCVersion`](@ref).
+
+# Examples
+```julia
+julia> overworld = Overworld(undef, mcv"1.18");
+julia> mcversion(overworld)
+"""
+mcversion(::Dimension{V}) where {V} = V
 
 """
     setseed!(dim::Dimension, seed; kwargs...)
@@ -192,12 +130,20 @@ function getbiome end
 function getbiome(dim::Dimension, x::Real, z::Real, y::Real, s::Scale = Scale(1); kwargs...)
     return getbiome(dim, (x, z, y), s; kwargs...)
 end
-function getbiome(dim::Dimension, coord::NTuple{3, Real}, s::Scale = Scale(1); kwargs...)
+function getbiome(dim::Dimension, coord::NTuple{N, Real}, s::Scale = Scale(1); kwargs...) where {N}
     return getbiome(dim, coord..., s; kwargs...)
 end
 
 function getbiome(dim::Dimension, coord::CartesianIndex, s::Scale = Scale(1); kwargs...)
     return getbiome(dim, coord.I, s; kwargs...)
+end
+
+function getbiome(::Dimension, ::Real, ::Real, ::Scale; kwargs...)
+    throw(
+        ArgumentError(
+            "The y coordinate is required for this dimension..",
+        ),
+    )
 end
 
 """
@@ -274,7 +220,7 @@ reset!(s::SomeSha) = s[] = nothing
 # ---------------------------------------------------------------------------- #
 
 const FIRST_CACHE_SIZE_VECTOR_BIOMES = 1024
-const CACHE_VECTOR_BIOMES = fill(BIOME_NONE, FIRST_CACHE_SIZE_VECTOR_BIOMES)
+const CACHE_VECTOR_BIOMES = fill(Biomes.BIOME_NONE, FIRST_CACHE_SIZE_VECTOR_BIOMES)
 
 """
     view_reshape_cache_like(axes)
@@ -291,10 +237,27 @@ function view_reshape_cache_like(axes, cache = CACHE_VECTOR_BIOMES)
     if length(cache) < required_size
         append!(
             cache,
-            fill(BIOME_NONE, required_size - length(cache)),
+            fill(Biomes.BIOME_NONE, required_size - length(cache)),
         )
     end
     buffer_view = @view cache[1:required_size]
     reshaped_view = reshape(buffer_view, size_axes...)
     return OffsetArray(reshaped_view, axes...)
+end
+
+# ---------------------------------------------------------------------------- #
+#                                  Some utils                                  #
+# ---------------------------------------------------------------------------- #
+
+function _show_noise_to_textplain(io, mime, noise, char, last)
+    lines = split(repr(mime, noise), '\n')
+    for (i, line) in enumerate(lines)
+        i == 1 && continue # skip title line
+        if i < length(lines)
+            println(io, char, " ", line)
+        else
+            print(io, char, " ", line, last)
+        end
+    end
+    return nothing
 end

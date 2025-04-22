@@ -1,4 +1,5 @@
 using Test: @testset
+using Cubiomes
 
 @testset "Aqua" begin
     include("aqua.jl")

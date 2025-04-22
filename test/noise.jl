@@ -23,9 +23,9 @@ const atol_f64 = 1.0e-15
         @test sample_noise(noise, args...) ≈ result atol = atol_f64
     end
 
-    @testset "is_undef" begin
-        @test is_undef(Noise(Perlin, undef))
-        @test !is_undef(Noise🎲(Perlin, JavaRandom(42)))
+    @testset "isundef" begin
+        @test isundef(Noise(Perlin, undef))
+        @test !isundef(Noise🎲(Perlin, JavaRandom(42)))
     end
 
     @testset "creation with JavaRandom rng" begin
@@ -133,9 +133,9 @@ end
         Octaves{1}, JavaXoroshiro128PlusPlus(42), (1,), 1
     )
 
-    @testset "is_undef" begin
-        @test is_undef(Noise(Octaves{6}, undef))
-        @test !is_undef(Noise🎲(Octaves{6}, JavaRandom(42), -6))
+    @testset "isundef" begin
+        @test isundef(Noise(Octaves{6}, undef))
+        @test !isundef(Noise🎲(Octaves{6}, JavaRandom(42), -6))
     end
 
     function test_octaves_creations(octaves_test, nb, rng, args...)

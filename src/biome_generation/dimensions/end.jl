@@ -1,39 +1,40 @@
 using StaticArrays: SMatrix
 using OffsetArrays: Origin
+import ..MCBugs
 
-using ..Noises
-using ..JavaRNG: JavaRandom, randjump🎲
-using ..MCBugs: has_bug_mc159283
-using .BiomeArrays: WorldMap, coordinates
-using ..MCVersions
-using ..Biomes: the_end, end_highlands, end_midlands, end_barrens, small_end_islands
+#region definition
+# ---------------------------------------------------------------------------- #
+#                                  Definition                                  #
+# ---------------------------------------------------------------------------- #
 
 """
     End(::UndefInitializer, version::MCVersion)
 
 The Minecraft End dimension.
 """
-abstract type End <: Dimension end
+abstract type End{V} <: Dimension{V} end
 
-function End(::UndefInitializer, ::mcvt"<1.0")
-    throw(ArgumentError("Version less than 1.0 does not have the end dimension"))
-end
+End(::UndefInitializer, ::mcvt"<1.0") = throw(ArgumentError("Version less than 1.0 does not have the end dimension"))
 
-struct End1_9Minus <: End end
-End(::UndefInitializer, ::mcvt"1.0 <= x < 1.9") = End1_9Minus()
+
+struct End1_9Minus{V} <: End{V} end
+End(::UndefInitializer, V::mcvt"1.0 <= x < 1.9") = End1_9Minus{V}()
 setseed!(::End1_9Minus, seed::UInt64) = nothing
-getbiome(::End1_9Minus, x::Real, z::Real, y::Real, ::Scale) = the_end
-genbiomes!(::End1_9Minus, out::WorldMap) = fill!(out, the_end)
+getbiome(::End1_9Minus, x::Real, z::Real, y::Real, ::Scale) = Biomes.the_end
+genbiomes!(::End1_9Minus, out::WorldMap) = fill!(out, Biomes.the_end)
 
-struct End1_9Plus{V} <: End
+
+struct End1_9Plus{V} <: End{V}
     perlin::Perlin
     sha::SomeSha
     rng_temp::JavaRandom
 end
 
-function End(::UndefInitializer, version::mcvt">=1.9")
-    return End1_9Plus{version}(Perlin(undef), SomeSha(nothing), JavaRandom(undef))
+function End(::UndefInitializer, V::mcvt">=1.9")
+    return End1_9Plus{V}(Perlin(undef), SomeSha(nothing), JavaRandom(undef))
 end
+
+Utils.isundef(end_::End1_9Plus) = isundef(end_.perlin)
 
 function setseed!(nn::End1_9Plus, seed::UInt64; sha = true)
     setseed🎲(nn.rng_temp, seed)
@@ -48,9 +49,58 @@ function setseed!(nn::End1_9Plus, seed::UInt64; sha = true)
     return nothing
 end
 
-#==========================================================================================#
-# Original Algorithm
-#==========================================================================================#
+#endregion
+#region base dispatch
+# ---------------------------------------------------------------------------- #
+#                                 Base dispatch                                #
+# ---------------------------------------------------------------------------- #
+
+Base.show(io::IO, ::End1_9Minus{V}) where {V} = print(io, "End($V < 1.9)")
+
+function Base.show(io::IO, ::MIME"text/plain", ::End1_9Minus{V}) where {V}
+    println(io, "End Dimension ($V < 1.9):")
+    println(io, "├ MC version: ", V)
+    println(io, "└ Only contains the_end biome")
+    return nothing
+end
+
+function Base.show(io::IO, end_::End1_9Plus{V}) where {V}
+    if isundef(end_)
+        print(io, "End($V ≥ 1.9, uninitialized)")
+        return
+    end
+
+    sha_status = isnothing(end_.sha[]) ? "unset" : "set"
+    print(io, "End($V ≥ 1.9, SHA ", sha_status, ")")
+    return nothing
+end
+
+function Base.show(io::IO, mime::MIME"text/plain", end_::End1_9Plus{V}) where {V}
+    if isundef(end_)
+        print(io, "End Dimension ($V ≥ 1.9, uninitialized)")
+        return nothing
+    end
+
+    println(io, "End Dimension ($V ≥ 1.9):")
+    sha_status = isnothing(end_.sha[]) ? "not set" : "set"
+    println(io, "├ SHA: ", sha_status)
+
+    println(io, "└ Perlin noise:")
+    _show_noise_to_textplain(io, mime, end_.perlin, ' ', "")
+    return nothing
+end
+
+Base.:(==)(::End1_9Minus{V}, ::End1_9Minus{V}) where {V} = true
+function Base.:(==)(e1::End1_9Plus{V}, e2::End1_9Plus{V}) where {V}
+    return (e1.perlin == e2.perlin) && (e1.sha[] == e2.sha[])
+end
+#endregion
+
+#region original algo
+
+# ---------------------------------------------------------------------------- #
+#                              Original algorithm                              #
+# ---------------------------------------------------------------------------- #
 
 """
     original_getbiome(end_noise::EndNoise, x, z)
@@ -68,7 +118,7 @@ function original_getbiome(end_::End1_9Plus, x, z, ::Scale{4})
 
     # inside the main island
     if x^2 + z^2 <= 4096
-        return the_end
+        return Biomes.the_end
     end
 
     x = 2x + 1
@@ -94,15 +144,17 @@ function original_getbiome(end_::End1_9Plus, x, z, ::Scale{4})
         end
     end
 
-    height > 40 && return end_highlands
-    height >= 0 && return end_midlands
-    height >= -20 && return end_barrens
-    return small_end_islands
+    height > 40 && return Biomes.end_highlands
+    height >= 0 && return Biomes.end_midlands
+    height >= -20 && return Biomes.end_barrens
+    return Biomes.small_end_islands
 end
+#endregion
+#region Elevation / Height
 
-#==========================================================================================#
-# Elevation / Height
-#==========================================================================================#
+# ---------------------------------------------------------------------------- #
+#                              Elevation / Height                              #
+# ---------------------------------------------------------------------------- #
 
 struct Elevations{V, A}
     inner::A
@@ -225,24 +277,25 @@ function get_height(end_noise::End1_9Plus, x, z, range::Integer = 12)
     return get_height_end(get_height_sample(end_noise, x, z, start, range))
 end
 
-#==========================================================================================#
-# Biome Generation
-#==========================================================================================#
-
+#endregion
+#region getbiome
+# ---------------------------------------------------------------------------- #
+#                                   getbiome                                   #
+# ---------------------------------------------------------------------------- #
 ElevationGetter{V} = Union{End1_9Plus{V}, Elevations{V}} where {V}
 
 function biome_from_height(height)
-    height > 40 && return end_highlands
-    height >= 0 && return end_midlands
-    height >= -20 && return end_barrens
-    return small_end_islands
+    height > 40 && return Biomes.end_highlands
+    height >= 0 && return Biomes.end_midlands
+    height >= -20 && return Biomes.end_barrens
+    return Biomes.small_end_islands
 end
 
 function biome_from_height_sample(height)
-    height < 3600 && return end_highlands  # height < (40 - 100)^2
-    height < 10_000 && return end_midlands # height < (0 - 100)^2
-    height < 14_400 && return end_barrens  # height < (-20 - 100)^2
-    return small_end_islands
+    height < 3600 && return Biomes.end_highlands  # height < (40 - 100)^2
+    height < 10_000 && return Biomes.end_midlands # height < (0 - 100)^2
+    height < 14_400 && return Biomes.end_barrens  # height < (-20 - 100)^2
+    return Biomes.small_end_islands
 end
 
 # we need to do like this instead of ::Union{End1_9Plus, Elevations} because it leads to
@@ -252,8 +305,8 @@ for type in (:End1_9Plus, :Elevations)
     @eval function getbiome(
             eg::$type{V}, x::Real, z::Real, ::Scale{16}, range::Integer = 12,
         ) where {V}
-        x^2 + z^2 <= 4096 && return the_end
-        has_bug_mc159283(V, x, z) && return small_end_islands
+        x^2 + z^2 <= 4096 && return Biomes.the_end
+        MCBugs.has_bug_mc159283(V, x, z) && return Biomes.small_end_islands
         return biome_from_height_sample(
             get_height_sample(eg, x, z, 14_401, range)
         )
@@ -269,6 +322,13 @@ function getbiome(end_::End1_9Plus, x::Real, z::Real, ::Scale{S}, range = 4) whe
     scale = S >> 3
     return getbiome(end_, x * scale, z * scale, Scale(16), range)
 end
+
+#endregion
+#region genbiomes!
+
+# ---------------------------------------------------------------------------- #
+#                                   genbiomes                                  #
+# ---------------------------------------------------------------------------- #
 
 function genbiomes!(end_noise::End1_9Plus, map2D::WorldMap{2}, s::Scale{16})
     #! memory allocation
@@ -308,3 +368,5 @@ end
 function genbiomes!(end_noise::End1_9Plus, map2D::WorldMap{2}, ::Scale{1})
     error("scale 1:1 end generation is not implemented yet.")
 end
+
+#endregion

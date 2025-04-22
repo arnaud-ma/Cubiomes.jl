@@ -1,7 +1,4 @@
 using StaticArrays: SizedArray
-using ..JavaRNG: JavaRandom, JavaXoroshiro128PlusPlus, next🎲, randjump🎲
-using ..SeedUtils: SeedUtils
-using ..Utils: Utils
 
 TypeInnerOctaves{N} = SizedArray{Tuple{N}, Perlin, 1, 1, Vector{Perlin}}
 
@@ -29,7 +26,7 @@ function Base.:(==)(o1::Octaves, o2::Octaves)
 end
 
 Octaves{N}(::UndefInitializer) where {N} = Octaves{N}([Perlin(undef) for _ in 1:N])
-is_undef(x::Octaves{N}) where {N} = any(is_undef, x.octaves)
+Utils.isundef(x::Octaves{N}) where {N} = any(isundef, x.octaves)
 
 function check_octave_min(N::Int, octave_min)
     return if octave_min > 1 - N
@@ -181,7 +178,7 @@ end
 # ---------------------------------------------------------------------------- #
 
 function Base.show(io::IO, o::Octaves{N}) where {N}
-    is_undef(o) && return print(io, "Octaves{$N}(uninitialized)")
+    isundef(o) && return print(io, "Octaves{$N}(uninitialized)")
 
     print(io, "Octaves{$N}(")
     for (i, octave) in enumerate(o.octaves)
@@ -194,7 +191,7 @@ function Base.show(io::IO, o::Octaves{N}) where {N}
 end
 
 function Base.show(io::IO, mime::MIME"text/plain", o::Octaves{N}) where {N}
-    if is_undef(o)
+    if isundef(o)
         println(io, "Perlin Noise Octaves{$N} (uninitialized)")
         return
     end

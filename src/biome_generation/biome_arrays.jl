@@ -64,6 +64,11 @@ to iterate over the coordinates of the map.
 coordinates(M::WorldMap) = CartesianIndices(M)
 true_coordinates(M::WorldMap) = coordinates(M)
 
+
+# ---------------------------------------------------------------------------- #
+#                                  In progress                                 #
+# ---------------------------------------------------------------------------- #
+
 struct ScaledWorldMap{S, N, A <: WorldMap{N}} <: WorldMap{N}
     parent::A
 end

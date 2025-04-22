@@ -1,18 +1,9 @@
-using InteractiveUtils: subtypes
 using Base.Cartesian: @nexprs
 
-using StaticArrays: SVector
-using OhMyThreads: tforeach, StaticScheduler
+using OhMyThreads: tforeach
 
-using ..Utils: Utils, @only_float32, lerp
-using ..SeedUtils: SeedUtils
-using ..JavaRNG: JavaXoroshiro128PlusPlus, next🎲
-using ..Noises: Noise, DoublePerlin
-using .BiomeArrays: WorldMap, coordinates
-using .Voronoi: voronoi_access, voronoi_source
-using ..MCVersions
-
-using .BiomeTrees
+using ..Utils: @only_float32, lerp
+using .BiomeTrees: BiomeTree, getbiome_tree
 
 #region Noise Parameters
 # ---------------------------------------------------------------------------- #
@@ -100,19 +91,26 @@ const TypeTupleClimate = Tuple{(DoublePerlin{nb_octaves(np)} for np in NOISE_PAR
 
 Base.getindex(tc::TypeTupleClimate, np::Type{<:NoiseParameter}) = @inbounds tc[Int(np)]
 
-struct BiomeNoise{V} <: Overworld
+#endregion
+#region definition
+# ---------------------------------------------------------------------------- #
+#                                  Definition                                  #
+# ---------------------------------------------------------------------------- #
+
+struct BiomeNoise{V} <: Overworld{V}
     climate::TypeTupleClimate
     sha::SomeSha
     rng_temp1::JavaXoroshiro128PlusPlus
     rng_temp2::JavaXoroshiro128PlusPlus
 end
 
-@inline function create_noise(noise_param::Type{<:NoiseParameter})
-    return Noise(
-        DoublePerlin{nb_octaves(noise_param)},
+Utils.isundef(bn::BiomeNoise) = any(isundef, bn.climate)
+
+function create_noise(noise_param::Type{<:NoiseParameter})
+    return DoublePerlin{nb_octaves(noise_param)}(
         undef,
         trimmed_amplitudes(noise_param),
-        Val(true), # tell the constructor it is already trimmed
+        #=already_trimmed=# Val(true),
     )
 end
 
@@ -159,10 +157,72 @@ end
 
     return nothing
 end
+#endregion
+#region base dispatch
+# ---------------------------------------------------------------------------- #
+#                                 Base dispatch                                #
+# ---------------------------------------------------------------------------- #
+
+function Base.show(io::IO, bn::BiomeNoise{V}) where {V}
+    if isundef(bn)
+        print(io, "Overworld($V ≥ 1.18, uninitialized)")
+        return
+    end
+
+    sha_status = isnothing(bn.sha[]) ? "unset" : "set"
+    return print(io, "Overworld(≥ 1.18, SHA ", sha_status, ")")
+end
+
+function Base.show(io::IO, mime::MIME"text/plain", bn::BiomeNoise{V}) where {V}
+    if isundef(bn)
+        print(io, "Overworld Dimension ($V ≥ 1.18, uninitialized)")
+        return nothing
+    end
+
+    println(io, "Overworld Dimension ($V ≥ 1.18):")
+
+    # Display SHA status
+    sha_status = isnothing(bn.sha[]) ? "not set" : "set"
+    println(io, "├ SHA: ", sha_status)
+    println(io, "├ MC version: ", V)
+
+    # Display each noise parameter
+    for (i, (np_type, noise)) in enumerate(zip(NOISE_PARAMETERS, bn.climate))
+        if i < length(bn.climate)
+            prefix = "├"
+            indent = "│"
+            last_char = "\n"
+        else
+            prefix = "└"
+            indent = " "
+            last_char = ""
+        end
+
+        np_name = nameof(np_type)
+        println(io, "$prefix $np_name noise:")
+
+        # Display the noise details with proper indentation
+        noise_lines = split(repr(mime, noise), '\n')
+        for (j, line) in enumerate(noise_lines)
+            if j == 1
+                continue  # Skip the title line
+            elseif j < length(noise_lines)
+                println(io, indent, " ", line)
+            else
+                print(io, indent, " ", line, last_char)
+            end
+        end
+    end
+    return nothing
+end
+
+function Base.:(==)(bn1::BiomeNoise{V}, bn2::BiomeNoise{V}) where {V}
+    return all(n1 == n2 for (n1, n2) in zip(bn1.climate, bn2.climate)) &&
+        bn1.sha[] == bn2.sha[]
+end
 
 #endregion
-#region Spline creation
-
+#region Splines
 # ---------------------------------------------------------------------------- #
 #                              Splines Creation                                #
 # ---------------------------------------------------------------------------- #
@@ -181,7 +241,7 @@ Base.trunc(::Type{SplineType}, x) = SplineType(trunc(Int, x))
 
 # ? NTuple vs Vector ?
 # if we use ntuple, julia will always try to do some dynamic dispatch on N.
-# since the elements are getting accessed in get_spline very randomly, julia will
+# since the elements are getting accessed in getspline very randomly, julia will
 # never be able to infer N.
 struct Spline
     spline_type::SplineType
@@ -367,27 +427,32 @@ end
     return Spline(SP_CONTINENTALNESS, locations, derivatives, child_splines)
 end
 
+"""
+    SPLINE_STACK
+
+The stack of splines used to generate the biome noise in the overworld, version >= 1.18.
+"""
 const SPLINE_STACK = worldspline()
 #endregion
-#region Spline getter
+#region getspline
 # ---------------------------------------------------------------------------- #
-#                                 Spline Getter                                #
+#                                   getspline                                  #
 # ---------------------------------------------------------------------------- #
 
-function get_spline_offset(spline::Spline, index, vals, f)
+function getspline_offset(spline::Spline, index, vals, f)
     loc, der, sp =
         spline.locations[index], spline.derivatives[index], spline.child_splines[index]
-    v = get_spline(sp, vals)
+    v = getspline(sp, vals)
     return muladd(der, f - loc, v)
 end
 
-function get_spline(spline::Spline, vals)
+function getspline(spline::Spline, vals)
     N = length(spline)
     iszero(N) && return spline.fix_value
     f = vals[Int(spline.spline_type) + 1]
     i = Utils.findfirst_default(>=(f), spline.locations, N)
-    isone(i) && return get_spline_offset(spline, 1, vals, f)
-    i == (N + 1) && return get_spline_offset(spline, N, vals, f)
+    isone(i) && return getspline_offset(spline, 1, vals, f)
+    i == (N + 1) && return getspline_offset(spline, N, vals, f)
 
     spline_1 = spline.child_splines[i - 1]
     spline_2 = spline.child_splines[i]
@@ -400,8 +465,8 @@ function get_spline(spline::Spline, vals)
     l = spline.derivatives[i - 1]
     m = spline.derivatives[i]
 
-    n = get_spline(spline_1, vals)
-    o = get_spline(spline_2, vals)
+    n = getspline(spline_1, vals)
+    o = getspline(spline_2, vals)
 
     p = l * (h - g) - (o - n)
     q = -m * (h - g) + (o - n)
@@ -410,9 +475,9 @@ function get_spline(spline::Spline, vals)
     return r
 end
 #endregion
-#region Biome Getter
+#region getbiome
 # ---------------------------------------------------------------------------- #
-#                                 Biome Getter                                 #
+#                                   getbiome                                   #
 # ---------------------------------------------------------------------------- #
 
 # Scale 1 -> rescaling scale 4 with voronoi noise
@@ -446,7 +511,7 @@ function getbiome(
         skip_shift = false, skip_depth = false, spline = SPLINE_STACK,
     )
     result = getbiome_int(bn, coord; spline, skip_shift, skip_depth)
-    return Biome(result)
+    return Biomes.Biome(result)
 end
 
 function getbiome_int(
@@ -489,7 +554,7 @@ end
 @only_float32 function sample_depth(spline, c, e, w, y, skip_depth::Bool)
     skip_depth && return 0
     vals = (c, e, eval_weirdness(w), w)
-    off = get_spline(spline, vals) + 0.015
+    off = getspline(spline, vals) + 0.015
     return 1 - (y * 4) / 128 - 83 / 160 + off
 end
 
@@ -570,9 +635,9 @@ function calculate_distance(noise_param, param1, param2)
     return zero(a)
 end
 #endregion
-#region Biome Generation
+#region genbiomes!
 # ---------------------------------------------------------------------------- #
-#                               Biome Generation                               #
+#                                  genbiomes!                                  #
 # ---------------------------------------------------------------------------- #
 
 # minchunksize = 100 is quite big after doing some benchmarking.
@@ -602,78 +667,5 @@ function genbiomes!(
         coord_scale4 = coord .* scale .+ coord_mid
         map3D[coord] = getbiome(bn, coord_scale4.I, Scale(4); skip_depth, skip_shift)
     end
-end
-#endregion
-#region Show
-# ---------------------------------------------------------------------------- #
-#                                     Show                                     #
-# ---------------------------------------------------------------------------- #
-
-function Base.show(io::IO, bn::BiomeNoise{V}) where {V}
-    is_initialized = !any(is_undef, bn.climate)
-    if !is_initialized
-        print(io, "Overworld(≥1.18, uninitialized)")
-        return
-    end
-
-    sha_status = isnothing(bn.sha[]) ? "unset" : "set"
-    return print(io, "Overworld(≥1.18, SHA ", sha_status, ")")
-end
-
-function Base.show(io::IO, mime::MIME"text/plain", bn::BiomeNoise{V}) where {V}
-    if any(is_undef, bn.climate)
-        println(io, "Overworld Dimension (≥1.18, uninitialized)")
-        return
-    end
-
-    println(io, "Overworld Dimension (≥1.18):")
-
-    # Display SHA status
-    sha_status = isnothing(bn.sha[]) ? "not set" : "set"
-    println(io, "├ SHA: ", sha_status)
-    println(io, "├ MC version: ", V)
-
-    # Display each noise parameter
-    for (i, (np_type, noise)) in enumerate(zip(NOISE_PARAMETERS, bn.climate))
-        if i < length(bn.climate)
-            prefix = "├"
-            indent = "│"
-        else
-            prefix = "└"
-            indent = " "
-        end
-
-        np_name = nameof(np_type)
-        println(io, "$prefix $np_name noise:")
-
-        # Display the noise details with proper indentation
-        io_noise = IOBuffer()
-        show(IOContext(io_noise, :compact => true), mime, noise)
-        noise_lines = split(String(take!(io_noise)), '\n')
-        for (j, line) in enumerate(noise_lines)
-            if j == 1
-                continue  # Skip the title line
-            else
-                println(io, "$indent ", line)
-            end
-        end
-    end
-    return
-end
-
-function Base.summary(io::IO, bn::BiomeNoise{V}) where {V}
-    if any(is_undef, bn.climate)
-        print(io, "Overworld(≥1.18, uninitialized)")
-        return
-    end
-
-    print(io, "Overworld(≥1.18): ")
-    print(io, "SHA: ", isnothing(bn.sha[]) ? "unset" : "set")
-    return print(io, ", MC version: ", V)
-end
-
-function Base.:(==)(bn1::BiomeNoise{V}, bn2::BiomeNoise{V}) where {V}
-    return all(n1 == n2 for (n1, n2) in zip(bn1.climate, bn2.climate)) &&
-        bn1.sha[] == bn2.sha[]
 end
 #endregion

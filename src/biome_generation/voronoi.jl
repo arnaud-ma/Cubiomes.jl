@@ -3,13 +3,25 @@ module Voronoi
 using ..BiomeArrays: WorldMap
 using ...SeedUtils: mc_step_seed
 
+export voronoi_source, voronoi_access
+
 firsts(coord, ::Val{2}) = coord[1], coord[2]
 firsts(coord, ::Val{3}) = coord[1], coord[2], coord[3]
+
+
+"""
+    voronoi_source(ax::AbstractUnitRange)
+    voronoi_source(W::WorldMap{N}, dim::Val{D} = Val(N)) where {N, D}
+
+Get the minimal map coordinates where we are sure to have all the Voronoi cells, i.e.
+we can find the source coordinates (can be computed with [`voronoi_access`](@ref)).
+"""
+function voronoi_source end
+
 voronoi_source(ax::AbstractUnitRange) = range((first(ax) - 2) >> 2, (last(ax) - 1) >> 2 + 1)
 function voronoi_source(W::WorldMap{N}, dim::Val{D} = Val(N)) where {N, D}
     return map(voronoi_source, firsts(axes(W), dim))
 end
-voronoi_source2d(W) = voronoi_source(W, Val(2))
 
 new_coord_voronoi(t) = (((t >> 24) & 1023) - 512) * 36
 
@@ -61,11 +73,13 @@ by Minecraft to translate the 1:4 scale coordinates to the 1:1 scale.
 
 For example we can find in some part of the biome generation source code:
 ```julia
->>> function getbiome(dimension, x, z, y, ::Scale{1})
-        sx, sz, zy = voronoi_access(dimension, x, z, y)
-        getbiome(dimension, sx, sz, sy, Scale(4))
-    end
+julia> function getbiome(dimension, x, z, y, ::Scale{1})
+           sx, sz, sy = voronoi_access(dimension, x, z, y)
+           getbiome(dimension, sx, sz, sy, Scale(4))
+       end
 ```
+
+See also: [`voronoi_source`](@ref)
 """
 function voronoi_access(sha::UInt64, coord::NTuple{3, T}) where {T}
     coord = coord .- 2
