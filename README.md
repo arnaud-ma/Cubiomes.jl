@@ -34,7 +34,7 @@ You should be familiar to programming. That's all. Julia syntax is quite simple 
 The package is still early in development, so it is not yet registered. You can install it via the github repository, in the Julia REPL:
 
 ```julia
-julia> ] add github.com/arnaud-ma/cubiomes.jl
+julia> ] add http://github.com/arnaud-ma/cubiomes.jl
 ```
 
 ## Usage
