@@ -102,9 +102,11 @@ DisplayAs.PNG(to_color(view2d(worldmap))) # hide
 # !!! note
 #     If you see a bunch of numbers instead of an image, nothing is wrong.
 #     The colors are just not displayed in your environment. You can either:
-#     - Use a Jupyter notebook
-#     - Save the image using `FileIO` and `ImageIO`:
+#     - If you are in a terminal, load `ImageInTerminal` and retry: 
+#       `Pkg.add("ImageInTerminal"; using ImageInTerminal`
+#     - Save the image using `FileIO`:
 #       `using FileIO; save("worldmap.png", to_color(worldmap))`
+#     - Use a Jupyter notebook ([IJulia.jl](https://github.com/JuliaLang/IJulia.jl))
 
 # The map is currently empty. To populate it with biomes from our `overworld` object, we
 # would think about simply iterating over all coordinates and assigning the biome to each.
