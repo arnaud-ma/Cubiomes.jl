@@ -93,6 +93,19 @@ const SHA256_INITIAL_VALUES::NTuple{8, UInt32} = (
     0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19,
 )
 
+
+"""
+    split_u64(x::UInt64) -> (UInt32, UInt32)
+
+Splits a `UInt64` into two `UInt32`s, where the first element of the tuple is
+the lower 32 bits of the input and the second element is the upper 32 bits of the input.
+
+# Example
+```julia
+julia> split_u64(0x0123456789abcdef)
+(0x89abcdef, 0x01234567)
+```
+"""
 split_u64(x::UInt64) = UInt32(x & typemax(UInt32)), UInt32(x >> 32)
 
 """
