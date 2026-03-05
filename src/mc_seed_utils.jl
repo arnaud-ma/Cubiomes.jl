@@ -32,7 +32,6 @@ end
 md5_to_uint64 = bytes2uint64 ∘ md5
 
 
-
 """
     java_hashcode(str::String) -> Int32
     java_hashcode(x::Char) -> Int32
@@ -68,18 +67,8 @@ end
 Converts `x` to `UInt64` for use as a seed, exactly as the Minecraft Java Edition does. It
 can be any integer or a string.
 
-If performance is a concern, the priority of types is as follows:
-1. `UInt64`
-2. `Unsigned`
-3. `Integer`
-4. `Real`)
-5. `String` or `Char`
-
-But it is a very small optimization, it goes from 1ns for `UInt64` to 10ns for `String` on my machine.
-
 !!! warning
-    The conversion of strings to seeds is not a hash function only supports
-    ASCII characters. For example, "é" will return a bad result.
+    Currently, only supports ASCII characters. For example, "é" will return a bad result.
 
 # Example
 ```julia
@@ -89,6 +78,18 @@ julia> u64_seed(1234)
 julia> u64_seed("hello world")
 0x000000006aefe2c4
 ```
+
+# Extended help
+
+If performance is a concern, the priority of types is as follows:
+1. `UInt64`
+2. `Unsigned`
+3. `Integer`
+4. `Real`)
+5. `String` or `Char`
+
+But it is a very small optimization, it goes from 1ns for `UInt64` to 10ns
+for `String` on my machine.
 """
 function u64_seed end
 
