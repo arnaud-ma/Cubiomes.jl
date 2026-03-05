@@ -31,21 +31,55 @@ function bytes2uint64(itr)
 end
 md5_to_uint64 = bytes2uint64 ∘ md5
 
-function java_hashcode(str::String)
-    hash_code = zero(Int32)
-    for char in str
-        hash_code = hash_code * Int32(31) + Int32(char)
-    end
-    return hash_code
-end
 
-java_hashcode(x::Char) = Int32(x)
+
+"""
+    java_hashcode(str::String) -> Int32
+    java_hashcode(x::Char) -> Int32
+
+Computes the Java hash code of a string or a character.
+
+!!! warning
+    Currently, only supports ASCII characters. For example, "é" will return a bad
+    result.
+
+# Example
+```julia-repl
+julia > java_hashcode("hello world")
+1794106052
+
+julia > java_hashcode('a')
+97
+
+```
+"""
+@inline function java_hashcode(str::String)
+    h = zero(Int32)
+    for b in codeunits(str)
+        h = h * Int32(31) + Int32(b)
+    end
+    return h
+end
+@inline java_hashcode(x::Char) = Int32(x)
 
 """
     u64_seed(x)
 
 Converts `x` to `UInt64` for use as a seed, exactly as the Minecraft Java Edition does. It
 can be any integer or a string.
+
+If performance is a concern, the priority of types is as follows:
+1. `UInt64`
+2. `Unsigned`
+3. `Integer`
+4. `Real`)
+5. `String` or `Char`
+
+But it is a very small optimization, it goes from 1ns for `UInt64` to 10ns for `String` on my machine.
+
+!!! warning
+    The conversion of strings to seeds is not a hash function only supports
+    ASCII characters. For example, "é" will return a bad result.
 
 # Example
 ```julia
