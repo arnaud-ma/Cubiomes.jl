@@ -94,6 +94,28 @@ const SHA256_INITIAL_VALUES::NTuple{8, UInt32} = (
 )
 
 split_u64(x::UInt64) = UInt32(x & typemax(UInt32)), UInt32(x >> 32)
+
+"""
+    concat_u32(x::UInt32, UInt32) -> UInt64
+
+Concatenate the bit representation of two unsigned 32 bit integers to produce an
+unsigned 64 bits integer
+
+# Examples
+```julia-repl
+julia > x = 0b01111101100000100100101010111000
+0x7d824ab8
+
+julia > y = 0b00000000001111110000000000000000
+0x003f0000
+
+julia > concat_u32(x, y)
+0x7d824ab8003f0000
+
+julia > concat_u32(x, y) |> bitstring
+"0111110110000010010010101011100000000000001111110000000000000000"
+```
+"""
 concat_u32(x::UInt32, y::UInt32) = UInt64(x) << 32 | y
 
 sha256_from_seed(seed::UInt64) = sha256_from_seed!(MVector{64, UInt32}(undef), seed)
