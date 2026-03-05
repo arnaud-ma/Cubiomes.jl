@@ -88,6 +88,7 @@ Get the Minecraft version of the dimension `dim`. It is a subtype of [`MCVersion
 ```julia
 julia> overworld = Overworld(undef, mcv"1.18");
 julia> mcversion(overworld)
+```
 """
 mcversion(::Dimension{V}) where {V} = V
 

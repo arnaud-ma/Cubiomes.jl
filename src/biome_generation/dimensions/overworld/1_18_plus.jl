@@ -1,6 +1,7 @@
 using Base.Cartesian: @nexprs
 
 using OhMyThreads: tforeach
+using StaticArrays: MVector
 
 using ..Utils: @only_float32, lerp
 using .BiomeTrees: BiomeTree, getbiome_tree
@@ -536,9 +537,13 @@ function sample_biomenoises(
     temperature::Float32 = sample_noise(bn.climate[Temperature], px, pz)
     humidity::Float32 = sample_noise(bn.climate[Humidity], px, pz)
 
-    return map(
-        x -> Base.unsafe_trunc(Int64, 10_000.0f0 * x),
-        (temperature, humidity, continentalness, erosion, depth, weirdness),
+    return (
+        Base.unsafe_trunc(Int64, 10_000f0 * temperature),
+        Base.unsafe_trunc(Int64, 10_000f0 * humidity),
+        Base.unsafe_trunc(Int64, 10_000f0 * continentalness),
+        Base.unsafe_trunc(Int64, 10_000f0 * erosion),
+        Base.unsafe_trunc(Int64, 10_000f0 * depth),
+        Base.unsafe_trunc(Int64, 10_000f0 * weirdness),
     )
 end
 
@@ -667,5 +672,6 @@ function genbiomes!(
         coord_scale4 = coord .* scale .+ coord_mid
         map3D[coord] = getbiome(bn, coord_scale4.I, Scale(4); skip_depth, skip_shift)
     end
+    return nothing
 end
 #endregion
