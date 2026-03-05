@@ -102,7 +102,7 @@ DisplayAs.PNG(to_color(view2d(worldmap))) # hide
 # !!! note
 #     If you see a bunch of numbers instead of an image, nothing is wrong.
 #     The colors are just not displayed in your environment. You can either:
-#     - If you are in a terminal, load `ImageInTerminal` and retry: 
+#     - If you are in a terminal, load `ImageInTerminal` and retry:
 #       `Pkg.add("ImageInTerminal"; using ImageInTerminal`
 #     - Save the image using `FileIO`:
 #       `using FileIO; save("worldmap.png", to_color(worldmap))`
