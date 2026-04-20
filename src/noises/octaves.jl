@@ -210,8 +210,8 @@ function Base.show(io::IO, mime::MIME"text/plain", o::Octaves{N}) where {N}
         else
             prefix = "└"
         end
-        amp = round(octave.amplitude; digits = 4)
-        lac = round(octave.lacunarity; digits = 4)
+        amp = round(octave.amplitude; digits = 6)
+        lac = round(octave.lacunarity; digits = 6)
         weight = round(100 * octave.amplitude / total_amplitude; digits = 1)
         push!(oct_str, "$prefix Octave $i: amplitude=$(amp) ($(weight)%), lacunarity=$(lac)")
     end

@@ -6,7 +6,7 @@ The rngs implemented are:
 - [`JavaRandom`](@ref) for the [`java.util.Random`](https://docs.oracle.com/javase/7/docs/api/java/util/Random.html) class.
 - [`JavaXoroshiro128PlusPlus`](@ref) for the [`Xoroshiro128PlusPlus`](http://prng.di.unimi.it/xoshiro128plusplus.c) PRNG.
 
-Only the [`next🎲`] function is used to get random numbers. Instead of `nextDouble` or `nextInt`
+Only the [`next🎲`](@ref) function is used to get random numbers. Instead of `nextDouble` or `nextInt`
 in Java, use `next🎲(rng, Float64)` or `next🎲(rng, Int32)` respectively.
 """
 module JavaRNG
@@ -67,6 +67,7 @@ _new_seed(seed::UInt64) = (seed ⊻ MAGIC_JAVA_INT32) & ((1 << 48) - 1)
 _new_seed(seed) = _new_seed(u64_seed(seed))
 
 """
+    JavaRandom <: AbstractJavaRNG
     JavaRandom(seed::Integer)
 
 A pseudorandom number generator that mimics the behavior of Java's
@@ -173,6 +174,7 @@ end
 # ---------------------------------------------------------------------------- #
 
 """
+    JavaXoroshiro128PlusPlus <: AbstractJavaRNG
     JavaXoroshiro128PlusPlus(lo::UInt64, hi::UInt64)
     JavaXoroshiro128PlusPlus(seed::Integer)
 
