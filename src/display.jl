@@ -6,7 +6,6 @@ Module for visualization of results
 module Display
 
 using Colors
-using RecipesBase
 import ..Biomes as b
 using ..BiomeGeneration: WorldMap, view2d
 
@@ -128,16 +127,5 @@ function to_color(x::WorldMap)
     end
     return to_color.(x)
 end
-
-# function Plots.plot(map::MCMap{2})#, widen_factor=0.05)
-#     colors = to_color.(map)
-#     xlims = first(axes(map, 1)), last(axes(map, 1))
-#     ylims = first(axes(map, 2)), last(axes(map, 2))
-
-#     # xlims = @. xlims + widen_factor * abs(xlims) * [sign(xlims)...]
-#     # ylims = @. ylims + widen_factor * abs(ylims) * [sign(ylims)...]
-
-#     return plot(colors; xlims=xlims, ylims=ylims, grid=:true)
-# end
 
 end
