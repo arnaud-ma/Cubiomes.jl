@@ -11,3 +11,4 @@ OpenCV = "f878e3a2-a245-4720-8660-60795d644f2a"
 [compat]
 ImageMagick = "1.4.2"
 DisplayAs = "0.1.6"
+ImageShow = "0.3.8"
