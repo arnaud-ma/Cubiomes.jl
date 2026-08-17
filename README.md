@@ -119,6 +119,7 @@ save("world.png", to_color(view2d(worldmap)))
 
 - [ ] Multihreading for the biome generation. Probably using [`OhMyThreads.jl`](https://juliafolds2.github.io/OhMyThreads.jl/stable/literate/tls/tls/) since it provides a way to disable multihreading at runtime with (almost) no cost. See this [doc page](https://juliafolds2.github.io/OhMyThreads.jl/stable/literate/tls/tls/) to be able to use thread-safe cache, which can be useful for e.g. the nether generation.
 - [ ] GPU acceleration for the biome generation
+- [ ] Benchmark with original Cubiomes library
 
 ### Infrastructure changes
 
