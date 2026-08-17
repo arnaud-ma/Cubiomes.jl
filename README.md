@@ -27,7 +27,7 @@ You should be familiar to programming. That's all. Julia syntax is quite simple 
 
 - **Readability and ease of use**: Julia is a high-level language, which makes the code easier to read and understand. Of course to be fast, it is sometimes necessary to write more complex code, but if it is simply to use an API (like the one of Cubiomes), it a very easy Python-like language (see the [examples](#examples))
 
-- **Performance**: Julia is almost as fast as C. For this case, it is in fact faster because uh so actually I don't know why lol but i always measure 2-3x speedup. In addition to this speedup, we can very easily add multireading. We'll see in the future to set it by default in certain cases.
+- **Performance**: Julia is almost as fast as C. For this case. For some cases it is in fact faster because of algorithm simplication. In addition to this, we can very easily add multireading. We'll see in the future to set it by default in certain cases.
 
 ## Installation
 
@@ -114,13 +114,10 @@ save("world.png", to_color(view2d(worldmap)))
 - [ ] Overworld generation
 - [ ] End generation
 - [ ] Structure generation
-- [ ] Use of [recipes](https://docs.juliaplots.org/stable/recipes/) for the plots of maps without the need of depending on Plots.jl
 
 ### Performance
 
-- [ ] Threading for the biome generation. `Polyester.jl` with `@batch` macro would be a nice option. But
-there is [#24(Polyester)](https://github.com/JuliaSIMD/Polyester.jl/issues/24) that only enable threading for the outer loop, in our case it's the y coord that is very often.. only 1. I think the only option
-is to do everything by hand by following [this](https://discourse.julialang.org/t/how-can-i-arrange-to-only-use-threads-if-the-number-of-iteration-is-higher-than-minimum/68177/16)
+- [ ] Multihreading for the biome generation. Probably using [`OhMyThreads.jl`](https://juliafolds2.github.io/OhMyThreads.jl/stable/literate/tls/tls/) since it provides a way to disable multihreading at runtime with (almost) no cost. See this [doc page](https://juliafolds2.github.io/OhMyThreads.jl/stable/literate/tls/tls/) to be able to use thread-safe cache, which can be useful for e.g. the nether generation.
 - [ ] GPU acceleration for the biome generation
 
 ### Infrastructure changes
