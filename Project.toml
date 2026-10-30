@@ -17,7 +17,7 @@ Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
-CEnum = "0.5"
+CEnum = "0.5, 1.0"
 Colors = "0.13"
 InteractiveUtils = "1.11"
 MD5 = "0.2"
