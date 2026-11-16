@@ -27,7 +27,7 @@ abstract type AbstractJavaRNG end
 Generate a random number of type `T` from the given random number generator. If `start` and `stop`
 are provided, the random number will be in the range `[start, stop]`. `start` is default to `0`.
 """
-next🎲(rng::T, type) where {T <: AbstractJavaRNG} = throw(MethodError(next🎲, (T, type)))
+next🎲(::T, type) where {T <: AbstractJavaRNG} = throw(MethodError(next🎲, (T, type)))
 
 """
     randjump🎲(rng::AbstractJavaRNG, ::Type{T}, n::Integer) where T
@@ -35,7 +35,7 @@ next🎲(rng::T, type) where {T <: AbstractJavaRNG} = throw(MethodError(next🎲
 Jump the state of the random number generator `n` steps forward, without generating
 any random numbers.
 """
-function randjump🎲(rng::T, type, n::Integer) where {T <: AbstractJavaRNG}
+function randjump🎲(::T, type, n::Integer) where {T <: AbstractJavaRNG}
     throw(MethodError(randjump🎲, (T, type, n)))
 end
 
@@ -120,7 +120,7 @@ function next🎲(rng::JavaRandom, ::Type{Int32}, stop::Integer)::Int32
         return (stop * Int64(next🎲(rng, 31))) >> 31
     end
 
-    val = zero(Int32)
+    local val::Int32
     while true
         bits = next🎲(rng, 31)
         val = bits % stop
@@ -253,7 +253,7 @@ function next🎲(rng::JavaXoroshiro128PlusPlus, ::Type{Int32}, stop::Integer)::
     m = stop - one(Int32)
     iszero(m & stop) && return next🎲(rng, Int64) >> 32 & m
 
-    val = zero(Int32)
+    local val::Int32
     while true
         bits::Int32 = next🎲(rng, UInt64) >> 33
         val = bits % stop

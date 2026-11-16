@@ -1,4 +1,5 @@
 using Base.Iterators
+using ArgCheck: @argcheck
 
 #region definition
 # ---------------------------------------------------------------------------- #
@@ -31,8 +32,8 @@ label(::Nether) = "Nether"
 # Nothing to do if version is <1.16. The nether is only composed of nether_wastes
 struct Nether1_16Minus{V} <: Nether{V} end
 Nether(::UndefInitializer, V::mcvt"<1.16") = Nether1_16Minus{V}()
-setseed!(::Nether1_16Minus, seed::UInt64) = nothing
-getbiome(::Nether1_16Minus, x::Real, z::Real, y::Real, ::Scale) = Biomes.nether_wastes
+setseed!(::Nether1_16Minus, _seed::UInt64) = nothing
+getbiome(::Nether1_16Minus, _x::Real, _z::Real, _y::Real, ::Scale) = Biomes.nether_wastes
 genbiomes!(::Nether1_16Minus, out::WorldMap, ::Scale) = fill!(out, Biomes.nether_wastes)
 
 struct Nether1_16Plus{V} <: Nether{V}
@@ -51,7 +52,7 @@ function Nether(::UndefInitializer, V::mcvt">=1.16")
     )
 end
 
-Utils.isundef(nether::Nether1_16Plus) = any(is_undef, (nether.temperature, nether.humidity))
+Utils.isundef(nether::Nether1_16Plus) = any(isundef, (nether.temperature, nether.humidity))
 
 function setseed!(nn::Nether1_16Plus, seed::UInt64; sha = true)
     setseed🎲(nn.rng_temp, seed)
@@ -85,12 +86,12 @@ end
 
 function Base.show(io::IO, nether::Nether1_16Plus)
     if isundef(nether)
-        print(io, "Nether($V ≥ 1.16, uninitialized)")
+        print(io, "Nether(≥ 1.16, uninitialized)")
         return
     end
 
     sha_status = isnothing(nether.sha[]) ? "unset" : "set"
-    print(io, "Nether($V ≥ 1.16, SHA ", sha_status, ")")
+    print(io, "Nether(≥ 1.16, SHA ", sha_status, ")")
     return nothing
 end
 
@@ -129,12 +130,14 @@ end
 # ---------------------------------------------------------------------------- #
 
 # y coordinate not used in scale != 1
-function getbiome(nn::Nether1_16Plus, x::Real, z::Real, y::Real, scale::Scale)
+function getbiome(nn::Nether1_16Plus, x::Real, z::Real, _y::Real, scale::Scale)
     return getbiome(nn, x, z, scale)
 end
 
 function getbiome(nn::Nether1_16Plus, x::Real, z::Real, y::Real, ::Scale{1})
-    source_x, source_z, _ = voronoi_access(nn.sha[], x, z, y)
+    sha = nn.sha[]
+    @argcheck !isnothing(sha)
+    source_x, source_z, _ = voronoi_access(sha, x, z, y)
     return getbiome(nn, source_x, source_z, Scale(4))
 end
 
@@ -310,6 +313,7 @@ function genbiomes!(nn::Nether1_16Plus, world3d::WorldMap{3}, ::Scale{1}; confid
     genbiomes!(nn, biome_parents, Scale(4); confidence)
 
     sha = nn.sha[]
+    @argcheck !isnothing(sha)
     for coord in coords
         x, z, _ = voronoi_access(sha, coord)
         result = biome_parents[x, z]

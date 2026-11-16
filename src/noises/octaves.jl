@@ -141,8 +141,8 @@ end
 # sample_noise(octaves, x, z, yamp, ymin) without specifying y but with yamp and ymin
 # it's here and only here that y=nothing is used
 
-get_ay(y, perlin, lf) = y * lf
-get_ay(y::Nothing, perlin, lf) = -perlin.y
+get_ay(y, _perlin, lf) = y * lf
+get_ay(::Nothing, perlin, _lf) = -perlin.y
 
 function sample_octave_noise(octave::Perlin, x, z, y, yamp, ymin)
     lf = octave.lacunarity
@@ -190,7 +190,7 @@ function Base.show(io::IO, o::Octaves{N}) where {N}
     return print(io, ")")
 end
 
-function Base.show(io::IO, mime::MIME"text/plain", o::Octaves{N}) where {N}
+function Base.show(io::IO, ::MIME"text/plain", o::Octaves{N}) where {N}
     if isundef(o)
         println(io, "Perlin Noise Octaves{$N} (uninitialized)")
         return

@@ -33,7 +33,7 @@ end
 function DoublePerlin{N}(
         ::UndefInitializer,
         amplitudes,
-        already_trimmed::Val{true},
+        _already_trimmed::Val{true},
     ) where {N}
     # Xoroshiro128PlusPlus implementation
     return undef_double_perlin(length(amplitudes), Val(N))
@@ -42,7 +42,7 @@ end
 function DoublePerlin{N}(
         ::UndefInitializer,
         amplitudes,
-        already_trimmed::Val{false},
+        _already_trimmed::Val{false},
     ) where {N}
     # Xoroshiro128PlusPlus implementation
     return undef_double_perlin(Utils.length_of_trimmed(iszero, amplitudes), Val(N))
@@ -121,7 +121,7 @@ function Base.show(io::IO, mime::MIME"text/plain", dp::DoublePerlin{N}) where {N
 
     # Display first octave group
     println(io, "├ Octave Group A:")
-    octave_a_lines = split(repr(mime, dp.octave_A), '\n')
+    octave_a_lines = split(string(repr(mime, dp.octave_A)), '\n')
     for (i, line) in enumerate(octave_a_lines)
         if i == 1
             continue  # Skip the first line which is the title
@@ -132,7 +132,7 @@ function Base.show(io::IO, mime::MIME"text/plain", dp::DoublePerlin{N}) where {N
 
     # Display second octave group
     println(io, "└ Octave Group B:")
-    octave_b_lines = split(repr(mime, dp.octave_B), '\n')
+    octave_b_lines = split(string(repr(mime, dp.octave_B)), '\n')
 
     for (i, line) in enumerate(octave_b_lines)
         if i == 1

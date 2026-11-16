@@ -26,10 +26,10 @@ module Noises
 
 export Noise, Noise🎲, setrng!🎲
 export sample_noise, sample_simplex
-export Perlin, Octaves, DoublePerlin
+export DoublePerlin, Octaves, Perlin
 export unsafe_setrng!🎲
 
-using ..Utils, ..SeedUtils, ..JavaRNG
+using ..JavaRNG, ..SeedUtils, ..Utils
 
 include("interface.jl")
 include("perlin.jl")

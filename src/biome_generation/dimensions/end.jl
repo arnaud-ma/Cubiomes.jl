@@ -19,15 +19,15 @@ End(::UndefInitializer, ::mcvt"<1.0") = throw(ArgumentError("Version less than 1
 
 struct End1_9Minus{V} <: End{V} end
 End(::UndefInitializer, V::mcvt"1.0 <= x < 1.9") = End1_9Minus{V}()
-setseed!(::End1_9Minus, seed::UInt64) = nothing
-getbiome(::End1_9Minus, x::Real, z::Real, y::Real, ::Scale) = Biomes.the_end
+setseed!(::End1_9Minus, _seed::UInt64) = nothing
+getbiome(::End1_9Minus, _x::Real, _z::Real, _y::Real, ::Scale) = Biomes.the_end
 genbiomes!(::End1_9Minus, out::WorldMap) = fill!(out, Biomes.the_end)
 
 
 struct End1_9Plus{V} <: End{V}
     perlin::Perlin
     sha::SomeSha
-    rng_temp::JavaRandom
+    rng::JavaRandom
 end
 
 function End(::UndefInitializer, V::mcvt">=1.9")
@@ -37,9 +37,9 @@ end
 Utils.isundef(end_::End1_9Plus) = isundef(end_.perlin)
 
 function setseed!(nn::End1_9Plus, seed::UInt64; sha = true)
-    setseed🎲(nn.rng_temp, seed)
-    randjump🎲(nn.rng_temp, Int32, 17_292)
-    setrng!🎲(perlin, rng)
+    setseed🎲(nn.rng, seed)
+    randjump🎲(nn.rng, Int32, 17_292)
+    setrng!🎲(nn.perlin, nn.rng)
 
     if sha
         setseed!(nn.sha, seed)
@@ -163,7 +163,7 @@ Elevations{V}(a::AbstractMatrix) where {V} = Elevations{V, typeof(a)}(a)
 
 elevation_val(x, z) = ((abs(x) * 3439 + abs(z) * 147) % 13) + 9
 
-function get_elevation_outside_center(perlin, x, z)
+function get_elevation_outside_center(perlin::Perlin, x::Real, z::Real)
     return (sample_simplex(perlin, x, z) < -0.9) ? elevation_val(x, z) : zero(UInt16)
 end
 
@@ -265,7 +265,7 @@ function get_height_sample_outside_center(
         end_noise::End1_9Plus, x, z, start_height, range::Integer = 12,
     )
     return _get_height_sample(
-        (x, z) -> get_elevation_outside_center(end_noise, x, z), x, z, start_height, range,
+        (x, z) -> get_elevation_outside_center(end_noise.perlin, x, z), x, z, start_height, range,
     )
 end
 
@@ -335,7 +335,7 @@ function genbiomes!(end_noise::End1_9Plus, map2D::WorldMap{2}, s::Scale{16})
     # TODO: remove this allocation
     elevations = Elevations(end_noise, map2D, 12)
     for coord in coordinates(map2D)
-        map2D[coord] = getbiome(elevations, coord.I, s)
+        map2D[coord] = getbiome(elevations, coord.I..., s)
     end
     return nothing
 end
@@ -361,11 +361,11 @@ end
 # # Biome Generation / Scale 1 ⚠ STILL DRAFT # TODO
 # #==========================================================================================#
 
-function getbiome(end_::End1_9Plus, x::Real, z::Real, ::Scale{1})
+function getbiome(_end::End1_9Plus, _x::Real, _z::Real, ::Scale{1})
     error("scale 1:1 end generation is not implemented yet.")
 end
 
-function genbiomes!(end_noise::End1_9Plus, map2D::WorldMap{2}, ::Scale{1})
+function genbiomes!(_end_noise::End1_9Plus, _map2D::WorldMap{2}, ::Scale{1})
     error("scale 1:1 end generation is not implemented yet.")
 end
 

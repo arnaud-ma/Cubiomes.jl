@@ -1,6 +1,6 @@
 module BiomeArrays
 
-export WorldMap, view2d, coordinates, true_coordinates
+export WorldMap, coordinates, true_coordinates, view2d
 
 using Base: @propagate_inbounds
 using OffsetArrays

@@ -1,6 +1,6 @@
 module Cubiomes
 
-using Reexport
+using Reexport: @reexport
 
 include("mc_versions.jl")
 @reexport using .MCVersions

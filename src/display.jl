@@ -7,7 +7,7 @@ module Display
 
 using Colors
 import ..Biomes as b
-using ..BiomeGeneration: WorldMap, view2d
+using ..BiomeGeneration: WorldMap
 
 export to_color
 

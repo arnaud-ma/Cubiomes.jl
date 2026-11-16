@@ -4,9 +4,9 @@ it should be divided into multiple very small modules.
 """
 module Utils
 
-export threading, isundef
-public lerp, lerp2, lerp3, lerp4, clamped_lerp
-public length_of_trimmed, length_filter
+export isundef, threading
+public clamped_lerp, lerp, lerp2, lerp3, lerp4
+public length_filter, length_of_trimmed
 public @only_float32
 
 import OhMyThreads
@@ -72,7 +72,7 @@ end
 
 clamped_lerp(part, from, to) = lerp(clamp(part, 0, 1), from, to)
 
-mulinv(x, m) = throw(ErrorException(lazy"Use `Base.invmod` instead."))
+@deprecate mulinv(x, m) Base.invmod(x, m)
 #endregion
 
 #region collections
@@ -167,6 +167,16 @@ end
 #                                     Types                                    #
 # ---------------------------------------------------------------------------- #
 
+_to_float32(x) = x
+_to_float32(x::Float32) = x
+_to_float32(x::Bool) = x
+_to_float32(x::Real) = Meta.parse(string(x, "f0"))
+function _to_float32(x::Expr)
+    x.head === :curly && return x
+    return Expr(x.head, map(_to_float32, x.args)...)
+end
+
+# TODO: replace to ChangePrecision.@change_precision ?
 """
     @only_float32 expr
 
@@ -182,15 +192,7 @@ end
 ```
 """
 macro only_float32(expr)
-    transform(x) = x
-    transform(x::T) where {T <: Real} = Meta.parse(string(x, "f0"))
-    transform(x::Float32) = x
-    transform(x::Bool) = x
-    function transform(x::Expr)
-        x.head == :curly && return x
-        return Expr(x.head, map(transform, x.args)...)
-    end
-    return transform(esc(expr))
+    return esc(_to_float32(expr))
 end
 #endregion
 
@@ -219,7 +221,7 @@ end
 
 Returns true if the value `x` is undefined, i.e. it has not been initialized.
 """
-isundef(x) = false
+isundef(::Any) = false
 
 
 end # module

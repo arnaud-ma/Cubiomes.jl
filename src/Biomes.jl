@@ -5,8 +5,8 @@ Minecraft biome constants and functions to work with them / compare them.
 """
 module Biomes
 
-export Biome, isnone, biome_exists, is_overworld, mutated, category, are_similar, is_mesa,
-    is_shallow_ocean, is_deep_ocean, is_oceanic, is_water, is_snowy
+export Biome, are_similar, biome_exists, category, is_deep_ocean, is_mesa, is_oceanic,
+    is_overworld, is_shallow_ocean, is_snowy, is_water, isnone, mutated
 
 using CEnum
 using ..MCVersions

@@ -455,7 +455,7 @@ function Base.show(io::IO, p::Perlin)
     return nothing
 end
 
-function Base.show(io::IO, mime::MIME"text/plain", p::Perlin)
+function Base.show(io::IO, ::MIME"text/plain", p::Perlin)
     if isundef(p)
         println(io, "Perlin Noise (uninitialized)")
         return

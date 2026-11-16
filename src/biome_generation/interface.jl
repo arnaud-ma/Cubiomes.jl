@@ -139,7 +139,7 @@ function getbiome(dim::Dimension, coord::CartesianIndex, s::Scale = Scale(1); kw
     return getbiome(dim, coord.I, s; kwargs...)
 end
 
-function getbiome(::Dimension, ::Real, ::Real, ::Scale; kwargs...)
+function getbiome(::Dimension, ::Real, ::Real, ::Scale; _kwargs...)
     throw(
         ArgumentError(
             "The y coordinate is required for this dimension..",
@@ -251,7 +251,7 @@ end
 # ---------------------------------------------------------------------------- #
 
 function _show_noise_to_textplain(io, mime, noise, char, last)
-    lines = split(repr(mime, noise), '\n')
+    lines = split(string(repr(mime, noise)), '\n')
     for (i, line) in enumerate(lines)
         i == 1 && continue # skip title line
         if i < length(lines)

@@ -5,7 +5,7 @@ module SeedUtils
 using MD5: md5
 using StaticArrays: MVector
 
-public md5_to_uint64, u64_seed, sha256_from_seed, sha256_from_seed!
+public md5_to_uint64, sha256_from_seed, sha256_from_seed!, u64_seed
 
 
 # ---------------------------------------------------------------------------- #

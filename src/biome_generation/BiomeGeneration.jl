@@ -29,9 +29,9 @@ module BiomeGeneration
 
 using Reexport
 
-export Dimension, Nether, Overworld, End
-export setseed!, genbiomes!, getbiome
-export Scale, @📏_str
+export Dimension, End, Nether, Overworld
+export genbiomes!, getbiome, setseed!
+export @📏_str, Scale
 
 include("scale.jl")
 include("biome_arrays.jl")
@@ -39,7 +39,7 @@ include("voronoi.jl")
 
 @reexport using .BiomeArrays
 
-using ..Utils, ..SeedUtils, ..MCVersions, ..JavaRNG, ..Noises, .Voronoi
+using ..JavaRNG, ..MCVersions, ..Noises, ..SeedUtils, ..Utils, .Voronoi
 using ..Biomes: Biomes
 using OhMyThreads: Scheduler, tforeach
 

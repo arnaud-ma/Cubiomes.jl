@@ -3,7 +3,7 @@ module Voronoi
 using ..BiomeArrays: WorldMap
 using ...SeedUtils: mc_step_seed
 
-export voronoi_source, voronoi_access
+export voronoi_access, voronoi_source
 
 firsts(coord, ::Val{2}) = coord[1], coord[2]
 firsts(coord, ::Val{3}) = coord[1], coord[2], coord[3]

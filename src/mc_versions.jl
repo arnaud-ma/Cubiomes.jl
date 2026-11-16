@@ -9,11 +9,10 @@ module MCVersions
 export @mcv_str, @mcvt_str, MCVersion, MC_VERSIONS
 
 #!format: off
-public vNEWEST, vUNDEF
+public vUNDEF
 #!format: on
 
-using InteractiveUtils: subtypes
-using Base: nextminor, Fix1, Fix2
+using Base: Fix1, Fix2, nextminor
 
 """
     MCVersion
@@ -22,38 +21,42 @@ The parent type of every Minecraft version.
 """
 abstract type MCVersion end
 
-struct v1beta1_7 <: MCVersion end
-struct v1beta1_8 <: MCVersion end
-
-struct v1_0_0 <: MCVersion end
-struct v1_1_0 <: MCVersion end
-struct v1_2_5 <: MCVersion end
-struct v1_3_2 <: MCVersion end
-struct v1_4_2 <: MCVersion end
-struct v1_5_2 <: MCVersion end
-struct v1_6_4 <: MCVersion end
-struct v1_7_10 <: MCVersion end
-struct v1_8_9 <: MCVersion end
-struct v1_9_4 <: MCVersion end
-struct v1_10_2 <: MCVersion end
-struct v1_11_2 <: MCVersion end
-struct v1_12_2 <: MCVersion end
-struct v1_13_2 <: MCVersion end
-struct v1_14_4 <: MCVersion end
-struct v1_15_2 <: MCVersion end
-struct v1_16_1 <: MCVersion end
-struct v1_16_5 <: MCVersion end
-struct v1_17_1 <: MCVersion end
-struct v1_18_2 <: MCVersion end
-struct v1_19_2 <: MCVersion end
-# struct v1_19_3 <: MCVersion end
-struct v1_19_4 <: MCVersion end
-struct v1_20 <: MCVersion end
-struct v1_21 <: MCVersion end
+const VERSION_NAMES = (
+    :v1beta1_7, 
+    :v1beta1_8,
+    :v1_0_0, 
+    :v1_1_0, 
+    :v1_2_5, 
+    :v1_3_2, 
+    :v1_4_2, 
+    :v1_5_2, 
+    :v1_6_4, 
+    :v1_7_10,
+    :v1_8_9, 
+    :v1_9_4, 
+    :v1_10_2, 
+    :v1_11_2, 
+    :v1_12_2, 
+    :v1_13_2, 
+    :v1_14_4, 
+    :v1_15_2,
+    :v1_16_1, 
+    :v1_16_5, 
+    :v1_17_1, 
+    :v1_18_2, 
+    :v1_19_2, 
+    :v1_19_4, 
+    :v1_20, 
+    :v1_21,
+)
+for name in VERSION_NAMES
+    @eval struct $name <: MCVersion end
+end
+const VERSION_TYPES = map(name -> getfield(@__MODULE__, name), VERSION_NAMES)
 
 remove_first(x::AbstractString) = chop(x; head = 1, tail = 0)
 
-function _to_jl_version(x::MCVersion)
+function _to_jl_version(x::MCVersion)::VersionNumber
     return typeof(x) |>
         nameof |> string |>              # Module1.Module2.v1_8_9
         Fix2(split, ".") |> last |>      # v1_8_9
@@ -62,14 +65,14 @@ function _to_jl_version(x::MCVersion)
         VersionNumber                    # v"1.8.9"
 end
 
-const VERSIONS_DICT = Dict(_to_jl_version(x()) => x() for x in subtypes(MCVersion))
+const VERSIONS_DICT = Dict(_to_jl_version(x()) => x() for x in VERSION_TYPES)
 const VERSIONS = keys(VERSIONS_DICT) |> collect |> sort |> Tuple
 const MC_VERSIONS = Tuple([VERSIONS_DICT[x] for x in VERSIONS])
 const VERSIONS_DICT_JL = Dict(zip(values(VERSIONS_DICT), keys(VERSIONS_DICT)))
 
 to_jl_version(x::MCVersion) = VERSIONS_DICT_JL[x]
 
-const vNEWEST = MC_VERSIONS[end]
+# const vNEWEST = MC_VERSIONS[end]
 struct vUNDEF <: MCVersion end
 
 for (i, version_jl) in enumerate(VERSIONS)
@@ -105,7 +108,7 @@ end
 
 function str_to_mcversion(str)
     str == "undef" && return vUNDEF
-    str == "newest" && return vNEWEST
+    # str == "newest" && return vNEWEST
     if startswith(str, "beta")
         str = "1" * str
     end
@@ -150,8 +153,8 @@ function _mcvt(str)
         _, part2 = split(remain, sign2; limit = 2)
 
         v1, v2 = VersionNumber(strip(part1)), VersionNumber(strip(part2))
-        func1 = @eval Base.Fix1($(Symbol(sign1)), $v1)
-        func2 = @eval Base.Fix2($(Symbol(sign2)), $v2)
+        func1 = @eval Fix1($(Symbol(sign1)), $v1)
+        func2 = @eval Fix2($(Symbol(sign2)), $v2)
         func = x -> func1(x) && func2(x)
     end
     filtered_versions = filter(func, VERSIONS)
@@ -173,6 +176,7 @@ The syntax is:
     The place holder `x` can be anything, can even be empty. The supported operations are **only** `<, <=`.
 
 # Examples
+
 ```julia-repl
 julia> end_type(::mcvt"<1.0.0") = nothing
 end_type (generic function with 3 methods)

@@ -1,7 +1,6 @@
 using Base.Cartesian: @nexprs
 
 using OhMyThreads: tforeach
-using StaticArrays: MVector
 
 using ..Utils: @only_float32, lerp
 using .BiomeTrees: BiomeTree, getbiome_tree
@@ -12,18 +11,6 @@ using .BiomeTrees: BiomeTree, getbiome_tree
 # ---------------------------------------------------------------------------- #
 
 abstract type NoiseParameter end
-
-# only here to help the editor, poor baby :(
-#! format: off
-amplitudes(::NoiseParameter) = throw(MethodError(amplitudes, (NoiseParameter,)))
-octave_min(::NoiseParameter, large) = throw(MethodError(octave_min, (NoiseParameter, typeof(large))))
-trimmed_amplitudes(::NoiseParameter) = throw(MethodError(trimmed_amplitudes, (NoiseParameter,)))
-trimmed_end_amplitudes(::NoiseParameter) = throw(MethodError(trimmed_end_amplitudes, (NoiseParameter,)))
-nb_octaves(::NoiseParameter) = throw(MethodError(nb_octaves, (NoiseParameter,)))
-create_octaves(::NoiseParameter, ::Val) =  throw(MethodError(create_octaves, (NoiseParameter, typeof(n))))
-magic_xlo(::NoiseParameter, large) = throw(MethodError(magic_xlo, (NoiseParameter, typeof(large))))
-magic_xhi(::NoiseParameter, large) = throw(MethodError(magic_xhi, (NoiseParameter, typeof(large))))
-#! format: on
 
 function create_noise_param(noise_param, amp, oct, id_str, oct_large)
     amp = float.(amp)
@@ -203,7 +190,7 @@ function Base.show(io::IO, mime::MIME"text/plain", bn::BiomeNoise{V}) where {V}
         println(io, "$prefix $np_name noise:")
 
         # Display the noise details with proper indentation
-        noise_lines = split(repr(mime, noise), '\n')
+        noise_lines = split(string(repr(mime, noise)), '\n')
         for (j, line) in enumerate(noise_lines)
             if j == 1
                 continue  # Skip the title line
@@ -367,9 +354,9 @@ end
     # 11 child splines if bl is true
     return locations, child_splines
 end
-additional_ridge_splines(x1, x2, x3, x5, spline_6, ::Val{false}) = (), ()
+additional_ridge_splines(_x1, _x2, _x3, _x5, _spline_6, ::Val{false}) = (), ()
 
-zerolike(::NTuple{N, T}) where {N, T} = ntuple(i -> zero(T), Val{N}())
+zerolike(::NTuple{N, T}) where {N, T} = ntuple(_ -> zero(T), Val{N}())
 zerolike(x::Tuple{}) = x
 
 @only_float32 function erosion_offset_spline(x1, x2, x3, x4, x5, x6, bl::Val{BL}) where {BL}
@@ -486,8 +473,10 @@ function getbiome(
         bn::BiomeNoise, coord::NTuple{3, Real}, ::Scale{1};
         skip_shift = false, skip_depth = false, spline = SPLINE_STACK,
     )
+    sha = bn.sha[]
+    @argcheck !isnothing(sha)
     return getbiome(
-        bn, voronoi_access(bn.sha[], coord), Scale(4);
+        bn, voronoi_access(sha, coord), Scale(4);
         skip_shift, skip_depth, spline,
     )
 end
@@ -668,7 +657,7 @@ function genbiomes!(
     scale = S >> 2
     mid = scale >> 1
     coord_mid = CartesianIndex(mid, mid, 0)
-    return tforeach(coordinates(map3D); scheduler = threading) do coord
+    tforeach(coordinates(map3D); scheduler = threading) do coord
         coord_scale4 = coord .* scale .+ coord_mid
         map3D[coord] = getbiome(bn, coord_scale4.I, Scale(4); skip_depth, skip_shift)
     end
