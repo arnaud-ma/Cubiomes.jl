@@ -18,7 +18,7 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
 ArgCheck = "2.5.0"
-CEnum = "0.5"
+CEnum = "0.5, 1.0"
 Colors = "0.13"
 MD5 = "0.2"
 OffsetArrays = "1"
