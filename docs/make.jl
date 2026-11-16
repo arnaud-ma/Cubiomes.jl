@@ -44,7 +44,7 @@ makedocs(;
     format = Documenter.HTML(
         size_threshold = 2_000_000,
     ),
-    plugins = [CodeBlocks(line_numbers=false)],
+    plugins = [CodeBlocks(line_numbers = false)],
     pages = [
         "Cubiomes.jl" => "index.md",
         "Manual" => [
