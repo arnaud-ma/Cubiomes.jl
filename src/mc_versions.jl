@@ -12,7 +12,7 @@ export @mcv_str, @mcvt_str, MCVersion, MC_VERSIONS
 public vUNDEF
 #!format: on
 
-using Base: Fix1, Fix2, nextminor
+using Base: Fix, nextminor
 
 """
     MCVersion
@@ -22,31 +22,31 @@ The parent type of every Minecraft version.
 abstract type MCVersion end
 
 const VERSION_NAMES = (
-    :v1beta1_7, 
+    :v1beta1_7,
     :v1beta1_8,
-    :v1_0_0, 
-    :v1_1_0, 
-    :v1_2_5, 
-    :v1_3_2, 
-    :v1_4_2, 
-    :v1_5_2, 
-    :v1_6_4, 
+    :v1_0_0,
+    :v1_1_0,
+    :v1_2_5,
+    :v1_3_2,
+    :v1_4_2,
+    :v1_5_2,
+    :v1_6_4,
     :v1_7_10,
-    :v1_8_9, 
-    :v1_9_4, 
-    :v1_10_2, 
-    :v1_11_2, 
-    :v1_12_2, 
-    :v1_13_2, 
-    :v1_14_4, 
+    :v1_8_9,
+    :v1_9_4,
+    :v1_10_2,
+    :v1_11_2,
+    :v1_12_2,
+    :v1_13_2,
+    :v1_14_4,
     :v1_15_2,
-    :v1_16_1, 
-    :v1_16_5, 
-    :v1_17_1, 
-    :v1_18_2, 
-    :v1_19_2, 
-    :v1_19_4, 
-    :v1_20, 
+    :v1_16_1,
+    :v1_16_5,
+    :v1_17_1,
+    :v1_18_2,
+    :v1_19_2,
+    :v1_19_4,
+    :v1_20,
     :v1_21,
 )
 for name in VERSION_NAMES
@@ -59,9 +59,9 @@ remove_first(x::AbstractString) = chop(x; head = 1, tail = 0)
 function _to_jl_version(x::MCVersion)::VersionNumber
     return typeof(x) |>
         nameof |> string |>              # Module1.Module2.v1_8_9
-        Fix2(split, ".") |> last |>      # v1_8_9
+        Fix{2}(split, ".") |> last |>      # v1_8_9
         remove_first |>                  # 1_8_9
-        Fix2(replace, "_" => ".") |>     # 1.8.9
+        Fix{2}(replace, "_" => ".") |>     # 1.8.9
         VersionNumber                    # v"1.8.9"
 end
 
@@ -153,8 +153,8 @@ function _mcvt(str)
         _, part2 = split(remain, sign2; limit = 2)
 
         v1, v2 = VersionNumber(strip(part1)), VersionNumber(strip(part2))
-        func1 = @eval Fix1($(Symbol(sign1)), $v1)
-        func2 = @eval Fix2($(Symbol(sign2)), $v2)
+        func1 = @eval Fix{1}($(Symbol(sign1)), $v1)
+        func2 = @eval Fix{2}($(Symbol(sign2)), $v2)
         func = x -> func1(x) && func2(x)
     end
     filtered_versions = filter(func, VERSIONS)
