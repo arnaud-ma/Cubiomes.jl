@@ -44,6 +44,12 @@ struct Scale{N}
 end
 Scale(N::Integer) = Scale{N}()
 
+
+"""
+    @📏_str
+
+String macro to parse a string to a [`Scale`](@ref)
+"""
 macro 📏_str(str)
     splitted = split(str, ':')
     if length(splitted) != 2

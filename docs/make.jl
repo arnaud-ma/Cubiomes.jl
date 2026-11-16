@@ -1,6 +1,7 @@
 using Documenter
 using Literate
 using Cubiomes
+using DocumenterCodeBlocks: CodeBlocks
 
 LITERATE_FILES = map(
     p -> joinpath(@__DIR__, p),
@@ -43,6 +44,7 @@ makedocs(;
     format = Documenter.HTML(
         size_threshold = 2_000_000,
     ),
+    plugins = [CodeBlocks(line_numbers=false)],
     pages = [
         "Cubiomes.jl" => "index.md",
         "Manual" => [
