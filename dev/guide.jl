@@ -145,7 +145,7 @@ worldmap[-255, 45] # show_error
 # ## The scale object
 
 # In [`getbiome`](@ref) and [`genbiomes!`](@ref), there is an optional final argument: the [`Scale`](@ref) object.
-# A scale can be created using 📏"1:N", where N is a power of 4.
+# A scale can be created using [`📏`](@ref @📏_str)`"1:N"`, where N is a power of 4.
 
 worldmap2 = WorldMap(-50:50, -50:50, 16)
 genbiomes!(overworld, worldmap2, 📏"1:4")
@@ -168,4 +168,4 @@ DisplayAs.PNG(to_color(view2d(worldmap2))) # hide
 # coordinates by the scale, since Minecraft's biome generation algorithm inherently divides
 # the world into regions multiple times until reaching scale `📏"1:1"`.
 
-Threads.nthreads() # hide
+Threads.nthreads(); # hide
