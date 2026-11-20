@@ -12,6 +12,7 @@ OpenCV = "f878e3a2-a245-4720-8660-60795d644f2a"
 [compat]
 DisplayAs = "0.1"
 Documenter = "1"
+DocumenterCodeBlocks = "1.5.1"
 ImageIO = "0.6"
 ImageMagick = "1"
 ImageShow = "0.3"
